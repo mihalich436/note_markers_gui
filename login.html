@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход - NotesApp</title>
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>📝 Вход в NotesApp</h1>
+            <p style="color: #666; margin-bottom: 30px;">Управляйте проектами и заметками</p>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Имя пользователя</label>
+                    <input type="text" id="username" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>Пароль</label>
+                    <input type="password" id="password" required autocomplete="current-password">
+                </div>
+                <button type="submit">Войти</button>
+            </form>
+            
+            <p style="margin-top: 20px; text-align: center;">
+                Нет аккаунта? <a href="./register.html">Зарегистрироваться</a>
+            </p>
+        </div>
+    </div>
+    
+    <script src="./js/common.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('username', data.username);
+                    
+                    // Проверяем, есть ли ожидающее приглашение
+                    const pendingInvite = localStorage.getItem('pendingInvite');
+                    if (pendingInvite) {
+                        localStorage.removeItem('pendingInvite');
+                        window.location.href = `/invite.html?token=${pendingInvite}`;
+                    } else {
+                        window.location.href = './projects.html';
+                    }
+                } else {
+                    showMessage(data.message || 'Ошибка входа');
+                }
+            } catch (error) {
+                showMessage('Ошибка соединения с сервером');
+            }
+        });
+    </script>
+</body>
+</html>

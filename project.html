@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Заметки - NotesApp</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <div class="logo">📝 NotesApp</div>
+            <div class="user-info">
+                <span class="username" id="username"></span>
+                <button onclick="logout()" class="logout-btn">Выйти</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <button onclick="window.location.href='./projects.html'" class="secondary" style="margin-bottom: 20px;">
+                ← Назад к проектам
+            </button>
+            
+            <div id="projectInfo">
+                <div style="text-align: center;">Загрузка проекта...</div>
+            </div>
+            
+            <button onclick="showCreateNoteModal()" class="add-button">+ Новая заметка</button>
+            
+            <div id="notesList" class="notes-list">
+                <div style="text-align: center;">Загрузка заметок...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно создания/редактирования заметки -->
+    <div id="noteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="noteModalTitle">Создать заметку</h3>
+                <button class="close-modal" onclick="closeNoteModal()">&times;</button>
+            </div>
+            <form id="noteForm">
+                <div class="form-group">
+                    <label>Заголовок заметки</label>
+                    <input type="text" id="noteTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>Содержание</label>
+                    <textarea id="noteContent" rows="6"></textarea>
+                </div>
+                <button type="submit">Сохранить</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/js/common.js"></script>
+    <script src="/js/project.js"></script>
+</body>
+</html>

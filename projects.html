@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мои проекты - NotesApp</title>
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <div class="logo">📝 NotesApp</div>
+            <div class="user-info">
+                <span class="username" id="username"></span>
+                <button onclick="logout()" class="logout-btn">Выйти</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>📁 Мои проекты</h2>
+                <button onclick="showCreateProjectModal()" class="add-button">+ Новый проект</button>
+            </div>
+            <div id="projectsList" class="projects-grid">
+                <div style="text-align: center; grid-column: 1/-1;">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно создания/редактирования проекта -->
+    <div id="projectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="projectModalTitle">Создать проект</h3>
+                <button class="close-modal" onclick="closeProjectModal()">&times;</button>
+            </div>
+            <form id="projectForm">
+                <div class="form-group">
+                    <label>Название проекта</label>
+                    <input type="text" id="projectTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea id="projectDescription" rows="4"></textarea>
+                </div>
+                <button type="submit">Сохранить</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="./js/common.js"></script>
+    <script src="./js/projects.js"></script>
+</body>
+</html>
