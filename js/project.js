@@ -2,7 +2,7 @@
 const urlParams = new URLSearchParams(window.location.search);
 const projectId = urlParams.get('id');
 
-let editingNoteId = null;
+let editingMapId = null;
 
 if (!projectId) {
     window.location.href = './projects.html';
@@ -14,8 +14,12 @@ async function loadProject() {
         const response = await apiRequest(`/projects/${projectId}`);
         
         if (response.ok) {
-            const project = await response.json();
-            displayProjectInfo(project);
+            this.project = await response.json();
+            console.log(this.project)
+            displayProjectInfo(this.project);
+            if (this.project.maps) {
+                displayMaps(this.project.maps);
+            }
         } else if (response.status === 403) {
             showMessage('У вас нет доступа к этому проекту');
             setTimeout(() => {
@@ -58,13 +62,13 @@ function toggleDescription() {
 }
 
 // Загрузка заметок (отдельный запрос, только для этого проекта)
-async function loadNotes() {
+async function loadMaps() {
     try {
-        const response = await apiRequest(`/projects/${projectId}/notes`);
+        const response = await apiRequest(`/projects/${projectId}/maps`);
         
         if (response.ok) {
-            const notes = await response.json();
-            displayNotes(notes);
+            const maps = await response.json();
+            displayMaps(maps);
         } else {
             showMessage('Ошибка загрузки заметок');
         }
@@ -73,117 +77,132 @@ async function loadNotes() {
     }
 }
 
-function displayNotes(notes) {
-    const container = document.getElementById('notesList');
+function displayMaps(maps) {
+    const container = document.getElementById('mapsList');
     
-    if (notes.length === 0) {
+    if (maps.length === 0) {
         container.innerHTML = '<p style="color: #666; text-align: center;">В этом проекте пока нет заметок</p>';
         return;
     }
     
-    container.innerHTML = notes.map(note => `
-        <div class="note-item">
-            <div class="note-title">📌 ${escapeHtml(note.title)}</div>
-            <div class="note-content">${escapeHtml(note.content || 'Нет содержания')}</div>
+    container.innerHTML = maps.map(map => `
+        <div class="map-item">
+            <div class="map-title">📌 ${escapeHtml(map.title)}</div>
+            <div class="map-description">${escapeHtml(map.description || 'Нет содержания')}</div>
             <div style="margin-top: 10px; display: flex; gap: 10px;">
-                <button class="expand-btn" onclick="editNote(${note.id}, '${escapeHtml(note.title)}', ${JSON.stringify(escapeHtml(note.content || ''))})" style="color: #28a745;">✏️ Редактировать</button>
-                <button class="expand-btn" onclick="deleteNote(${note.id})" style="color: #dc3545;">🗑️ Удалить</button>
+                <button class="expand-btn" onclick="editMap(${map.id})" style="color: #28a745;">✏️ Редактировать</button>
+                <button class="expand-btn" onclick="deleteMap(${map.id})" style="color: #dc3545;">🗑️ Удалить</button>
             </div>
         </div>
     `).join('');
 }
 
-// Создание заметки
-async function createNote(title, content) {
+// Создание карты
+async function createMap(title, description, imageUrl) {
     try {
-        const response = await apiRequest(`/projects/${projectId}/notes`, {
+        const response = await apiRequest(`/projects/${projectId}/maps`, {
             method: 'POST',
-            body: JSON.stringify({ title, content })
+            body: JSON.stringify({ title, description, imageUrl })
         });
         
         if (response.ok) {
-            closeNoteModal();
-            loadNotes(); // Перезагружаем только заметки
-            showMessage('Заметка создана успешно', 'success');
+            const map = await response.json();
+            closeMapModal();
+            this.project.maps.push(map);
+            // loadMaps(); // Перезагружаем только карты
+            displayMaps(this.project.maps);
+            showMessage('Карта создана успешно', 'success');
         } else {
-            showMessage('Ошибка создания заметки');
+            showMessage('Ошибка создания карты');
         }
     } catch (error) {
-        showMessage('Ошибка создания заметки');
+        showMessage('Ошибка создания карты');
     }
 }
 
-// Редактирование заметки
-async function updateNote(id, title, content) {
+// Редактирование карты
+async function updateMap(id, title, description, imageUrl) {
     try {
-        const response = await apiRequest(`/projects/${projectId}/notes/${id}`, {
+        const response = await apiRequest(`/projects/${projectId}/maps/${id}`, {
             method: 'PUT',
-            body: JSON.stringify({ title, content })
+            body: JSON.stringify({ title, description, imageUrl })
         });
         
         if (response.ok) {
-            closeNoteModal();
-            loadNotes();
-            showMessage('Заметка обновлена успешно', 'success');
+            const map = await response.json();
+            closeMapModal();
+            const updatedMap = this.project.maps.find(m => map.id === m.id);
+            if (updatedMap) {
+                updatedMap.title = map.title;
+                updatedMap.description = map.description;
+                updatedMap.imageUrl = map.imageUrl;
+                displayMaps(this.project.maps);
+            }
+            // loadMaps();
+            showMessage('Карта обновлена успешно', 'success');
         } else {
-            showMessage('Ошибка обновления заметки');
+            showMessage('Ошибка обновления карты');
         }
     } catch (error) {
-        showMessage('Ошибка обновления заметки');
+        showMessage('Ошибка обновления карты');
     }
 }
 
-// Удаление заметки
-async function deleteNote(id) {
-    if (confirm('Вы уверены, что хотите удалить эту заметку?')) {
+// Удаление карты
+async function deleteMap(id) {
+    if (confirm('Вы уверены, что хотите удалить эту карту?')) {
         try {
-            const response = await apiRequest(`/projects/${projectId}/notes/${id}`, {
+            const response = await apiRequest(`/projects/${projectId}/maps/${id}`, {
                 method: 'DELETE'
             });
             
             if (response.ok) {
-                loadNotes();
-                showMessage('Заметка удалена успешно', 'success');
+                loadMaps();
+                showMessage('Карта удалена успешно', 'success');
             } else {
-                showMessage('Ошибка удаления заметки');
+                showMessage('Ошибка удаления карты');
             }
         } catch (error) {
-            showMessage('Ошибка удаления заметки');
+            showMessage('Ошибка удаления карты');
         }
     }
 }
 
 // Модальное окно
-function showCreateNoteModal() {
-    editingNoteId = null;
-    document.getElementById('noteModalTitle').textContent = 'Создать заметку';
-    document.getElementById('noteTitle').value = '';
-    document.getElementById('noteContent').value = '';
-    document.getElementById('noteModal').classList.add('active');
+function showCreateMapModal() {
+    editingMapId = null;
+    document.getElementById('mapModalTitle').textContent = 'Создать карту';
+    document.getElementById('mapTitle').value = '';
+    document.getElementById('mapDescription').value = '';
+    document.getElementById('mapImageUrl').value = '';
+    document.getElementById('mapModal').classList.add('active');
 }
 
-function editNote(id, title, content) {
-    editingNoteId = id;
-    document.getElementById('noteModalTitle').textContent = 'Редактировать заметку';
-    document.getElementById('noteTitle').value = title;
-    document.getElementById('noteContent').value = content;
-    document.getElementById('noteModal').classList.add('active');
+function editMap(id) {
+    editingMapId = id;
+    const map = this.project.maps.find(m => m.id === id);
+    document.getElementById('mapModalTitle').textContent = 'Редактировать карту';
+    document.getElementById('mapTitle').value = map.title;
+    document.getElementById('mapDescription').value = map.description;
+    document.getElementById('mapImageUrl').value = map.imageUrl;
+    document.getElementById('mapModal').classList.add('active');
 }
 
-function closeNoteModal() {
-    document.getElementById('noteModal').classList.remove('active');
+function closeMapModal() {
+    document.getElementById('mapModal').classList.remove('active');
 }
 
 // Обработчик формы
-document.getElementById('noteForm').addEventListener('submit', async (e) => {
+document.getElementById('mapForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const title = document.getElementById('noteTitle').value;
-    const content = document.getElementById('noteContent').value;
+    const title = document.getElementById('mapTitle').value;
+    const description = document.getElementById('mapDescription').value;
+    const imageUrl = document.getElementById('mapImageUrl').value;
     
-    if (editingNoteId) {
-        await updateNote(editingNoteId, title, content);
+    if (editingMapId) {
+        await updateMap(editingMapId, title, description, imageUrl);
     } else {
-        await createNote(title, content);
+        await createMap(title, description, imageUrl);
     }
 });
 
@@ -191,4 +210,4 @@ document.getElementById('noteForm').addEventListener('submit', async (e) => {
 checkAuth();
 loadUserInfo();
 loadProject();
-loadNotes();
+// loadMaps();
