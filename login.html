@@ -10,12 +10,12 @@
     <div class="container">
         <div class="card">
             <h1>📝 Вход в NotesApp</h1>
-            <p style="color: #666; margin-bottom: 30px;">Управляйте проектами и заметками</p>
+            <p style="color: #666; margin-bottom: 30px;">Управляйте заметками для локаций на вашей карте</p>
             
             <form id="loginForm">
                 <div class="form-group">
-                    <label>Имя пользователя</label>
-                    <input type="text" id="username" required autocomplete="username">
+                    <label>Почта</label>
+                    <input type="text" id="email" required autocomplete="email">
                 </div>
                 <div class="form-group">
                     <label>Пароль</label>
@@ -35,14 +35,14 @@
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             
             try {
                 const response = await fetch(`${API_URL}/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ email, password })
                 });
                 
                 const data = await response.json();

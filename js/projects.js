@@ -68,7 +68,7 @@ function openProject(projectId) {
 
 // Управление доступом
 function shareProject(projectId) {
-    window.location.href = `/share.html?id=${projectId}`;
+    window.location.href = `./share.html?id=${projectId}`;
 }
 
 // Создание проекта
