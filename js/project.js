@@ -1,4 +1,4 @@
-// Получаем ID проекта из URL (поддержка нескольких окон)
+// Получаем ID проекта из URL
 const urlParams = new URLSearchParams(window.location.search);
 const projectId = urlParams.get('id');
 
@@ -92,6 +92,7 @@ function displayMaps(maps) {
             <div style="margin-top: 10px; display: flex; gap: 10px;">
                 <button class="expand-btn" onclick="editMap(${map.id})" style="color: #28a745;">✏️ Редактировать</button>
                 <button class="expand-btn" onclick="deleteMap(${map.id})" style="color: #dc3545;">🗑️ Удалить</button>
+                <button class="expand-btn" onclick="openMap(${map.id})" style="color: #28a745;">Открыть \></button>
             </div>
         </div>
     `).join('');
@@ -186,6 +187,10 @@ function editMap(id) {
     document.getElementById('mapDescription').value = map.description;
     document.getElementById('mapImageUrl').value = map.imageUrl;
     document.getElementById('mapModal').classList.add('active');
+}
+
+function openMap(id) {
+    window.location.href = `./map.html?mapId=${id}`;
 }
 
 function closeMapModal() {

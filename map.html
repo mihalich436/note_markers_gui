@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Маркеры на карте</title>
+    <link rel="stylesheet" href="./css/map_styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Верхняя панель инструментов -->
+        <div class="top-toolbar">
+            <div class="toolbar-group">
+                <button id="fileMenuBtn" class="toolbar-btn" title="Файл">📁<span class="toolbar-btn-text"> Файл</span></button>
+                <button id="markerSettingsBtn" class="toolbar-btn" title="Настройки маркеров">⚙️<span class="toolbar-btn-text"> Настройки</span></button>
+                <button id="showMarkersListBtn" class="toolbar-btn" title="Список маркеров">📋<span class="toolbar-btn-text"> Список</span></button>
+                <button id="generalInfoBtn" class="toolbar-btn" title="Общая информация">📖<span class="toolbar-btn-text"> Общее</span></button>
+                <button id="helpBtn" class="toolbar-btn" title="Как пользоваться сайтом">❓<span class="toolbar-btn-text"> Справка</span></button>
+            </div>
+            <div class="toolbar-group">
+                <input type="file" id="imageUpload" accept="image/*" class="file-input">
+                <button id="zoomIn" title="Приблизить (Ctrl +)">🔍 +</button>
+                <button id="zoomOut" title="Отдалить (Ctrl -)">🔍 −</button>
+                <button id="resetZoom" title="Сбросить масштаб">🔄 Сброс</button>
+            </div>
+        </div>
+
+        <!-- Выпадающее меню файла -->
+        <div id="fileMenu" class="file-menu hidden">
+            <div class="file-menu-item" id="loadImageBtn">
+                <span>📤 Загрузить изображение</span>
+                <small>Загрузите изображение с устройства</small>
+            </div>
+            <div class="file-menu-item" id="saveToFileBtn">
+                <span>💾 Сохранить в файл</span>
+                <small>Сохранить все маркеры и изображение</small>
+            </div>
+            <div class="file-menu-item" id="loadFromFileBtn">
+                <span>📂 Загрузить из файла</span>
+                <small>Загрузить ранее сохраненный проект</small>
+            </div>
+            <div class="file-menu-item" id="exportMarkersBtn">
+                <span>📝 Экспорт маркеров</span>
+                <small>Сохранить только маркеры (JSON)</small>
+            </div>
+            <div class="file-menu-item" id="importMarkersBtn">
+                <span>📥 Импорт маркеров</span>
+                <small>Загрузить маркеры из JSON</small>
+            </div>
+            <div class="file-menu-item" id="clearLocalStorageBtn">
+                <span>🗑️ Очистить localStorage</span>
+                <small>Удалить сохраненные данные</small>
+            </div>
+        </div>
+
+        <!-- Основной контент -->
+        <div class="main-content">
+            <!-- Контейнер с изображением -->
+            <div class="image-container-wrapper" id="imageContainerWrapper">
+                <div class="image-container" id="imageContainer">
+                    <div class="transform-container" id="transform-container">
+                        <img id="mainImage" src="#" alt="Загрузите изображение" style="display: none;">
+                        <div id="markersLayer"></div>
+                    </div>
+                    <div id="tooltip" class="tooltip hidden"></div>
+                </div>
+            </div>
+
+            <div id="viewModal" class="view-modal">
+                <!-- Панель просмотра / чата -->
+                <div id="viewModalContent" class="view-modal-content hidden">
+                    <div class="view-modal-header">
+                        <h3 id="viewModalTitle">Просмотр маркера</h3>
+                        <div class="view-modal-controls">
+                            <button id="expandViewModal" class="view-modal-btn" title="Развернуть">⤢</button>
+                            <button id="closeViewModal" class="view-modal-btn" title="Закрыть">✖</button>
+                        </div>
+                    </div>
+                    <div class="view-modal-body">
+                        <div id="chatMessages" class="chat-messages"></div>
+                        <div class="chat-input-area">
+                            <textarea id="chatInput" placeholder="Введите сообщение..." class="chat-input" rows="1"></textarea>
+                            <button id="sendChatBtn" class="view-modal-btn primary">Отправить</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Панель редактирования маркера (без изменений) -->
+                <div class="edit-panel" id="editPanel">
+                    <div class="edit-panel-header">
+                        <h3>Редактирование маркера</h3>
+                        <button class="close-panel-btn" id="closeEditPanel">✖</button>
+                    </div>
+                    <div class="edit-panel-content">
+                        <input type="text" id="markerTitle" placeholder="Название маркера..." class="marker-title-input">
+                        <input type="text" id="noteText" placeholder="Краткая заметка (видна на маркере)..." class="marker-title-input">
+                        <textarea id="descriptionText" placeholder="Подробное описание (скрытое)..." rows="4"></textarea>
+                        
+                        <!-- Настройки для текущего маркера -->
+                        <div class="marker-current-settings">
+                            <h4>Внешний вид</h4>
+                            <div class="current-color-shape">
+                                <div class="color-picker-mini">
+                                    <label>Цвет:</label>
+                                    <input type="color" id="currentMarkerColor" value="#ef4444">
+                                </div>
+                                <div class="shape-picker-mini">
+                                    <label>Форма:</label>
+                                    <select id="currentMarkerShape">
+                                        <option value="circle">Круг</option>
+                                        <option value="square">Квадрат</option>
+                                        <option value="triangle">Треугольник</option>
+                                        <option value="star">Звезда</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-buttons">
+                            <button id="saveNote" disabled>💾 Сохранить</button>
+                            <button id="cancelNote" disabled>❌ Отмена</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Панель со списком маркеров -->
+            <div class="markers-panel" id="markersPanel">
+                <div class="markers-panel-header">
+                    <h3>Список маркеров</h3>
+                    <button class="close-panel-btn" id="closeMarkersPanel">✖</button>
+                </div>
+                <div class="markers-panel-content">
+                    <div id="markersList" class="markers-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно настроек маркеров -->
+    <div id="markerSettingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Настройки маркеров</h2>
+                <span class="close-modal close-settings">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3>Форма маркера по умолчанию</h3>
+                    <div class="shape-selector">
+                        <label class="shape-option">
+                            <input type="radio" name="markerShape" value="circle" checked>
+                            <span class="shape-preview circle"></span>
+                            <span>Круг</span>
+                        </label>
+                        <label class="shape-option">
+                            <input type="radio" name="markerShape" value="square">
+                            <span class="shape-preview square"></span>
+                            <span>Квадрат</span>
+                        </label>
+                        <label class="shape-option">
+                            <input type="radio" name="markerShape" value="triangle">
+                            <span class="shape-preview triangle"></span>
+                            <span>Треугольник</span>
+                        </label>
+                        <label class="shape-option">
+                            <input type="radio" name="markerShape" value="star">
+                            <span class="shape-preview star">★</span>
+                            <span>Звезда</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Цвет маркера по умолчанию</h3>
+                    <div class="color-settings">
+                        <div class="color-presets">
+                            <button class="color-preset" style="background: #ef4444" data-color="#ef4444"></button>
+                            <button class="color-preset" style="background: #3b82f6" data-color="#3b82f6"></button>
+                            <button class="color-preset" style="background: #22c55e" data-color="#22c55e"></button>
+                            <button class="color-preset" style="background: #eab308" data-color="#eab308"></button>
+                            <button class="color-preset" style="background: #a855f7" data-color="#a855f7"></button>
+                            <button class="color-preset" style="background: #ec4899" data-color="#ec4899"></button>
+                            <button class="color-preset" style="background: #f97316" data-color="#f97316"></button>
+                            <button class="color-preset" style="background: #06b6d4" data-color="#06b6d4"></button>
+                        </div>
+                        <div class="custom-color">
+                            <label>Свой цвет:</label>
+                            <input type="color" id="customColor" value="#ef4444">
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Размер маркера по умолчанию</h3>
+                    <div class="size-slider">
+                        <input type="range" id="markerSize" min="20" max="60" value="36" step="2">
+                        <span id="sizeValue">36px</span>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Показывать заметки</h3>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="showNotes" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Показывать заметки рядом с маркерами</span>
+                    </label>
+                </div>
+                <div class="settings-section">
+                    <h3>Масштаб для подписей</h3>
+                    <div class="size-slider">
+                        <input type="range" id="minZoomForLabels" min="0.5" max="3" value="1.5" step="0.1">
+                        <span id="zoomValue">1.5x</span>
+                    </div>
+                    <small style="color: #868e96; display: block; margin-top: 5px;">
+                        При меньшем масштабе подписи скрываются (показываются при наведении)
+                    </small>
+                </div>
+                <div class="settings-actions">
+                    <button id="applyMarkerSettings" class="settings-btn primary">Применить ко всем</button>
+                    <button id="saveDefaultSettings" class="settings-btn">Сохранить как default</button>
+                    <button id="resetMarkerSettings" class="settings-btn">Сбросить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно справки -->
+    <div id="helpModal" class="help-modal hidden">
+        <div class="help-modal-content">
+            <div class="help-modal-header">
+                <h3>Справка по использованию</h3>
+                <button class="close-panel-btn" id="close-help">✖</button>
+            </div>
+            <div class="help-modal-body">
+                <h4>🎯 Работа с заметками</h4>
+                <p><strong>➕ Клик правой кнопкой мыши по изображению</strong>, чтобы добавить маркер</p>
+                <p><strong>Клик по маркеру</strong> - открывает панель чата с сообщениями</p>
+                <p><strong>Клик по маркеру правой кнопкой мыши</strong> - для его редактирования или выбора новой позиции</p>
+                <p><strong>📋 Список</strong> - показывает список всех маркеров</p>
+                <p><strong>📖 Общее</strong> - открывает панель для редактирования общей информации по изображению</p>
+                <hr>
+                <h4>🖱️ Управление изображением</h4>
+                <p><strong>Колесико мыши</strong> - масштабирование</p>
+                <p><strong>Зажмите и двигайте</strong> - перемещение по изображению</p>
+                <p><strong>Кнопки масштаба</strong> - приближение/отдаление/сброс</p>
+                <hr>
+                <h4>📁 Работа с файлами</h4>
+                <p><strong>Загрузить изображение</strong> - загружает изображение с устройства для дальнейшего редактирования</p>
+                <p><strong>Сохранить в файл</strong> - сохраняет изображение и все маркеры в один файл</p>
+                <p><strong>Загрузить из файла</strong> - загружает ранее сохраненный проект</p>
+                <p><strong>Экспорт маркеров</strong> - сохраняет только маркеры в JSON формате</p>
+                <p><strong>Импорт маркеров</strong> - загружает маркеры из JSON файла поверх изображения</p>
+                <hr>
+                <h4>💾 Сохранение данных</h4>
+                <p>Данные автоматически сохраняются в localStorage браузера</p>
+                <p>Используйте "Сохранить в файл" для переноса между компьютерами</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Скрытый input для загрузки файлов -->
+    <input type="file" id="fileLoader" accept=".json, .markerapp" style="display: none;">
+
+    <script src="./js/common.js"></script>
+    <script src="./js/map.js"></script>
+</body>
+</html>
