@@ -29,7 +29,7 @@
         <div id="fileMenu" class="file-menu hidden">
             <div class="file-menu-item" id="loadImageBtn">
                 <span>📤 Загрузить изображение</span>
-                <small>Загрузите изображение с устройства</small>
+                <small>Загрузите изображение по ссылке</small>
             </div>
             <div class="file-menu-item" id="saveToFileBtn">
                 <span>💾 Сохранить в файл</span>
@@ -244,7 +244,7 @@
                 <p><strong>Кнопки масштаба</strong> - приближение/отдаление/сброс</p>
                 <hr>
                 <h4>📁 Работа с файлами</h4>
-                <p><strong>Загрузить изображение</strong> - загружает изображение с устройства для дальнейшего редактирования</p>
+                <p><strong>Загрузить изображение</strong> - загружает изображение по прямой ссылке для создания заметок на нем</p>
                 <p><strong>Сохранить в файл</strong> - сохраняет изображение и все маркеры в один файл</p>
                 <p><strong>Загрузить из файла</strong> - загружает ранее сохраненный проект</p>
                 <p><strong>Экспорт маркеров</strong> - сохраняет только маркеры в JSON формате</p>
@@ -253,6 +253,25 @@
                 <h4>💾 Сохранение данных</h4>
                 <p>Данные автоматически сохраняются в localStorage браузера</p>
                 <p>Используйте "Сохранить в файл" для переноса между компьютерами</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="image-upload-modal hidden" id="imageUploadModal">
+        <!-- Панель редактирования ссылки на изображение -->
+        <div id="imageSourceContent" class="image-upload-content">
+            <div class="view-modal-header">
+                <h3 id="imageSourceTitle">Фоновое изображение</h3>
+                <div class="view-modal-controls">
+                    <button id="closeImageSource" class="view-modal-btn" title="Закрыть">✖</button>
+                </div>
+            </div>
+            <div class="view-modal-body">
+                <p>Вставьте ПРЯМУЮ ссылку на изображение.</p>
+                <div class="chat-input-area">
+                    <textarea id="imageSourceInput" placeholder="Вставьте ссылку на изображение..." class="chat-input" rows="1"></textarea>
+                    <button id="imageSourceSaveBtn" class="view-modal-btn primary">Загрузить</button>
+                </div>
             </div>
         </div>
     </div>

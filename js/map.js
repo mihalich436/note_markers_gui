@@ -41,7 +41,7 @@ class MarkerApp {
 
     init() {
         // DOM элементы - основные
-        this.imageUpload = document.getElementById('imageUpload');
+        // this.imageUpload = document.getElementById('imageUpload');
         this.mainImage = document.getElementById('mainImage');
         this.transformContainer = document.getElementById('transform-container');
         this.imageContainer = document.getElementById('imageContainer');
@@ -111,7 +111,7 @@ class MarkerApp {
             this.countZoomLimits();
         });
         ro.observe(this.imageContainer);
-        this.imageUpload.addEventListener('change', this.handleImageUpload.bind(this));
+        // this.imageUpload.addEventListener('change', this.handleImageUpload.bind(this));
         this.saveNoteBtn.addEventListener('click', this.saveNote.bind(this));
         this.cancelNoteBtn.addEventListener('click', this.cancelNote.bind(this));
         this.zoomInBtn.addEventListener('click', this.zoomIn.bind(this));
@@ -152,7 +152,8 @@ class MarkerApp {
         this.generalInfoBtn.addEventListener('click', this.toggleGeneralInfoPanel.bind(this));
         this.closeHelpBtn.addEventListener('click', this.closeHelp.bind(this));
         
-        this.loadImageBtn.addEventListener('click', () => this.imageUpload.click());
+        // this.loadImageBtn.addEventListener('click', () => this.imageUpload.click());
+        this.loadImageBtn.addEventListener('click', () => this.showImageUploadForm());
         this.saveToFileBtn.addEventListener('click', this.saveToFile.bind(this));
         this.loadFromFileBtn.addEventListener('click', () => this.fileLoader.click());
         this.exportMarkersBtn.addEventListener('click', this.exportMarkers.bind(this));
@@ -251,6 +252,9 @@ class MarkerApp {
         // Создаем модальное окно просмотра
         this.initViewModal();
 
+        //Инициализация окна загрузки изображения
+        this.initImageUpload();
+
         // Загрузка из localStorage
         // this.loadFromStorage();
         this.loadMap();
@@ -293,6 +297,16 @@ class MarkerApp {
 
         // Режим редактирования общей информации
         this.editGeneralInfo = false;
+    }
+
+    initImageUpload() {
+        this.imageUploadPanel = document.getElementById('imageUploadModal');
+        this.imageUploadInput = document.getElementById('imageSourceInput');
+        this.imageUploadSaveBtn = document.getElementById('imageSourceSaveBtn');
+        this.imageUploadCloseBtn = document.getElementById('closeImageSource');
+
+        this.imageUploadCloseBtn.addEventListener('click', this.closeImageUploadPanel.bind(this));
+        this.imageUploadInput.addEventListener('click', this.uploadImageFromUrl.bind(this));
     }
 
     sendChatMessage() {
@@ -559,14 +573,14 @@ class MarkerApp {
             else {
                 // Контекстное меню для загрузки изображения
                 this.showContextMenu(e.clientX, e.clientY, [
-                    //> by link
-                    // { 
-                    //     icon: '📤', 
-                    //     text: 'Загрузить изображение', 
-                    //     action: () => {
-                    //         this.imageUpload.click();
-                    //     }
-                    // },
+                    { 
+                        icon: '📤', 
+                        text: 'Загрузить изображение', 
+                        action: () => {
+                            // this.imageUpload.click();
+                             this.showImageUploadForm();
+                        }
+                    },
                     { 
                         icon: '📂', 
                         text: 'Загрузить из файла', 
@@ -578,6 +592,21 @@ class MarkerApp {
             }
             
         }
+    }
+
+    showImageUploadForm() {
+        this.imageUploadPanel.classList.remove('hidden');
+        this.imageUploadInput.value = this.imageUrl || '';
+
+    }
+
+    closeImageUploadPanel() {
+        this.imageUploadPanel.classList.add('hidden');
+    }
+
+    uploadImageFromUrl() {
+        //> try to load new image by link
+        //> if success, send request to change map's imageUrl
     }
 
     addMarkerAtPosition(e) {
