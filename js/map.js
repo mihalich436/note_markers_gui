@@ -23,6 +23,7 @@ class MarkerApp {
         
         // Настройки маркеров
         this.markerSettings = {
+            defaultVisibility: false,
             defaultShape: 'circle',
             defaultColor: '#ef4444',
             defaultSize: 36,
@@ -80,6 +81,7 @@ class MarkerApp {
         this.markerSettingsBtn = document.getElementById('markerSettingsBtn');
         this.markerSettingsModal = document.getElementById('markerSettingsModal');
         this.closeSettingsBtn = document.querySelector('.close-settings');
+        this.changeMarkerVisibility = document.getElementById('changeMarkerVisibility');
         this.currentMarkerColor = document.getElementById('currentMarkerColor');
         this.currentMarkerShape = document.getElementById('currentMarkerShape');
         this.markerSize = document.getElementById('markerSize');
@@ -112,6 +114,7 @@ class MarkerApp {
         });
         ro.observe(this.imageContainer);
         // this.imageUpload.addEventListener('change', this.handleImageUpload.bind(this));
+        this.changeMarkerVisibility.addEventListener('click', this.toggleMarkerVisibility.bind(this));
         this.saveNoteBtn.addEventListener('click', this.saveNote.bind(this));
         this.cancelNoteBtn.addEventListener('click', this.cancelNote.bind(this));
         this.zoomInBtn.addEventListener('click', this.zoomIn.bind(this));
@@ -527,6 +530,14 @@ class MarkerApp {
                                 this.isAddingNote = true;
                                 
                                 // Устанавливаем цвет и форму текущего маркера
+                                if (marker.visibility) {
+                                    this.changeMarkerVisibility.textContent = '👁️';
+                                    this.changeMarkerVisibility.title = 'Маркер будет виден всем';
+                                }
+                                else {
+                                    this.changeMarkerVisibility.textContent = '🚫';
+                                    this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
+                                }
                                 if (marker.color) this.currentMarkerColor.value = marker.color;
                                 if (marker.shape) this.currentMarkerShape.value = marker.shape;
                                 
@@ -637,6 +648,15 @@ class MarkerApp {
             this.descriptionText.value = '';
             
             // Устанавливаем цвет и форму по умолчанию
+            if (this.markerSettings.defaultVisibility) {
+                this.changeMarkerVisibility.textContent = '👁️';
+                this.changeMarkerVisibility.title = 'Маркер будет виден всем';
+            }
+            else {
+                this.changeMarkerVisibility.textContent = '🚫';
+                this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
+            }
+            
             this.currentMarkerColor.value = this.markerSettings.defaultColor;
             this.currentMarkerShape.value = this.markerSettings.defaultShape;
             
@@ -1104,7 +1124,7 @@ class MarkerApp {
         try {
                 const response = await apiRequest(`/maps/${this.mapId}/markers`, {
                     method: 'POST',
-                    body: JSON.stringify(marker)
+                    body: JSON.stringify(getMarkerDTO(marker))
                 });
                 
                 if (response.ok) {
@@ -1129,7 +1149,8 @@ class MarkerApp {
             description: marker.description,
             color: marker.color,
             shape: marker.shape,
-            size: marker.size
+            size: marker.size,
+            visibility: marker.visibility
         };
     }
 
@@ -1152,6 +1173,17 @@ class MarkerApp {
             return null;
     }
 
+    toggleMarkerVisibility() {
+        if (this.changeMarkerVisibility.textContent === '🚫') {
+            this.changeMarkerVisibility.textContent = '👁️';
+            this.changeMarkerVisibility.title = 'Маркер будет виден всем';
+        }
+        else {
+            this.changeMarkerVisibility.textContent = '🚫';
+            this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
+        }
+    }
+
     async saveNote() {
         if (this.tempMarker) {
             const title = this.markerTitle.value.trim() || `Маркер #${this.tempMarker.id.toString().slice(-4)}`;
@@ -1164,6 +1196,7 @@ class MarkerApp {
             this.tempMarker.updatedAt = new Date().toLocaleString();
             
             // Добавляем цвет и форму для нового маркера
+            this.tempMarker.visibility = this.changeMarkerVisibility.textContent === '👁️';
             this.tempMarker.color = this.currentMarkerColor.value || this.markerSettings.defaultColor;
             this.tempMarker.shape = this.currentMarkerShape.value || this.markerSettings.defaultShape;
             this.tempMarker.size = this.markerSettings.defaultSize;
@@ -1200,6 +1233,7 @@ class MarkerApp {
                 marker.updatedAt = new Date().toLocaleString();
                 
                 // Обновляем цвет и форму
+                marker.visibility = this.changeMarkerVisibility.textContent === '👁️';
                 marker.color = this.currentMarkerColor.value || marker.color;
                 marker.shape = this.currentMarkerShape.value || marker.shape;
 
@@ -1272,6 +1306,14 @@ class MarkerApp {
             this.isAddingNote = true;
             
             // Устанавливаем цвет и форму текущего маркера
+            if (marker.visibility) {
+                this.changeMarkerVisibility.textContent = '👁️';
+                this.changeMarkerVisibility.title = 'Маркер будет виден всем';
+            }
+            else {
+                this.changeMarkerVisibility.textContent = '🚫';
+                this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
+            }
             if (marker.color) this.currentMarkerColor.value = marker.color;
             if (marker.shape) this.currentMarkerShape.value = marker.shape;
             
@@ -1329,6 +1371,7 @@ class MarkerApp {
     }
 
     updateButtonsState() {
+        this.changeMarkerVisibility.disabled = !this.isAddingNote;
         this.saveNoteBtn.disabled = !this.isAddingNote;
         this.cancelNoteBtn.disabled = !this.isAddingNote;
         
@@ -1782,6 +1825,7 @@ class MarkerApp {
             }
         });
         
+        //> add button for default marker visibility
         this.customColor.value = this.markerSettings.defaultColor;
         this.markerSize.value = this.markerSettings.defaultSize;
         this.sizeValue.textContent = this.markerSettings.defaultSize + 'px';
