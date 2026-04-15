@@ -496,7 +496,9 @@ class MarkerApp {
 
     handleContextMenu(e) {
         e.preventDefault();
-        
+
+        if (!(this.currentRole && (this.currentRole == 'EDITOR' || this.currentRole == 'ADMIN'))) return;
+
         if (!this.mainImage.src || this.mainImage.src === '#') return;
 
         // Проверяем, кликнули ли на маркер
@@ -1124,7 +1126,7 @@ class MarkerApp {
         try {
                 const response = await apiRequest(`/maps/${this.mapId}/markers`, {
                     method: 'POST',
-                    body: JSON.stringify(getMarkerDTO(marker))
+                    body: JSON.stringify(this.getMarkerDTO(marker))
                 });
                 
                 if (response.ok) {
@@ -1222,7 +1224,7 @@ class MarkerApp {
             this.renderMarkers();
             
             this.showTooltip('Маркер сохранен', 1500);
-            this.saveToStorage();
+            // this.saveToStorage();
         } else if (this.selectedMarkerId) {
             const marker = this.markers.find(m => m.id === this.selectedMarkerId);
             if (marker) {
@@ -1253,7 +1255,7 @@ class MarkerApp {
                 this.renderMarkers();
                 
                 this.showTooltip('Маркер обновлен', 1500);
-                this.saveToStorage();
+                // this.saveToStorage();
             }
         }
     }
@@ -1344,29 +1346,51 @@ class MarkerApp {
         this.renderMarkers();
     }
 
+    deleteMarkerImpl(markerId) {
+        const markerDiv = document.getElementById(`marker-${markerId}`);
+        if (markerDiv) markerDiv.remove();
+        this.markers = this.markers.filter(m => m.id !== markerId);
+        
+        if (this.selectedMarkerId === markerId) {
+            this.selectedMarkerId = null;
+            this.isAddingNote = false;
+            this.markerTitle.value = '';
+            this.noteText.value = '';
+            this.descriptionText.value = '';
+            this.updateButtonsState();
+            
+            this.editPanel.classList.add('hidden');
+            this.closeViewModal();
+        }
+        
+        this.renderMarkers();
+    }
+
     deleteMarker(markerId, e) {
         e.stopPropagation();
-        if (confirm('Удалить этот маркер?')) {
-            const markerDiv = document.getElementById(`marker-${markerId}`);
-            if (markerDiv) markerDiv.remove();
-            this.markers = this.markers.filter(m => m.id !== markerId);
-            
-            if (this.selectedMarkerId === markerId) {
-                this.selectedMarkerId = null;
-                this.isAddingNote = false;
-                this.markerTitle.value = '';
-                this.noteText.value = '';
-                this.descriptionText.value = '';
-                this.updateButtonsState();
-                
-                this.editPanel.classList.add('hidden');
-                this.closeViewModal();
+        if (confirm('Удалить маркер?')) {
+            this.requestDeleteMarker(markerId);
+            // this.deleteMarkerImpl(markerId);
+            // this.showTooltip('Маркер удален', 1500);
+            // this.saveToStorage();
+        }
+    }
+
+    async requestDeleteMarker(markerId) {
+        try {
+            const response = await apiRequest(`/markers/${markerId}`, {
+                method: 'DELETE'
+                // body: JSON.stringify(getMarkerDTO(marker))
+            });            
+            if (response.ok) {
+                const markerId = await response.json();
+                this.deleteMarkerImpl(markerId);
+                this.showTooltip('Маркер удален', 1500);
+            } else {
+                this.showTooltip('Ошибка удаления маркера', 1500);
             }
-            
-            this.renderMarkers();
-            
-            this.showTooltip('Маркер удален', 1500);
-            this.saveToStorage();
+        } catch (error) {
+            this.showTooltip('Ошибка удаления маркера', 1500);
         }
     }
 
@@ -1913,10 +1937,11 @@ class MarkerApp {
         this.showNotification('Настройки сброшены');
     }
 
+    //> to remove
     saveToStorage() {
         if (this.mainImage.src && this.mainImage.src !== '#' && this.imageData) {
             const data = {
-                imageData: this.imageData, // Сохраняем копию изображения
+                imageUrl: this.imageUrl, // Сохраняем ссылку изображения
                 generalInfo: this.generalInfo,
                 markers: this.markers,
                 zoom: this.currentZoom,
@@ -1926,25 +1951,6 @@ class MarkerApp {
         }
     }
 
-    //>
-    // async apiRequest(endpoint, options = {}) {
-    //     const API_URL = 'http://localhost:8080/api';
-    //     const response = await fetch(`${API_URL}${endpoint}`, {
-    //         ...options,
-    //         headers: {
-    //             'Content-Type': 'application/json',
-    //             ...options.headers
-    //         }
-    //     });
-        
-    //     if (response.status === 401) {
-    //         throw new Error('Неавторизован');
-    //     }
-        
-    //     return response;
-    // }
-
-    //> test method
     async loadMap() {
         try {
             const response = await apiRequest(`/maps/${this.mapId}`);
@@ -1952,9 +1958,12 @@ class MarkerApp {
             
             if (response.ok) {
                 const data = await response.json();
-                console.log(data)
-                if (data.imageUrl) {
-                    const url = data.imageUrl;
+                const map = data.map;
+                this.currentRole = data.role;
+                console.log(map)
+                console.log(this.currentRole)
+                if (map.imageUrl) {
+                    const url = map.imageUrl;
                     if (!url) {
                         this.showNotification('Нет ссылки на изображение', 'error');
                         return;
@@ -1966,10 +1975,10 @@ class MarkerApp {
                         this.mainImage.src = url;
                         this.mainImage.onload = () => {
                             this.countZoomLimits();
-                            this.generalInfo = data.generalInfo || {};
-                            this.markers = data.markers || [];
-                            this.currentZoom = data.zoom || this.minZoom;
-                            this.imagePosition = data.position || { x: 0, y: 0 };
+                            this.generalInfo = map.generalInfo || {};
+                            this.markers = map.markers || [];
+                            this.currentZoom = map.zoom || this.minZoom;
+                            this.imagePosition = map.position || { x: 0, y: 0 };
                             this.updateImageTransform();
                             this.showLabels = (this.currentZoom > this.markerSettings.minZoomForLabels);
 
@@ -1986,8 +1995,6 @@ class MarkerApp {
                     };
                     
                     img.src = url;
-                    // this.imageData = data.imageData;
-                    // this.mainImage.src = this.imageData;
                     this.mainImage.style.display = 'block';
                     
                 }
