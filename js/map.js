@@ -498,7 +498,7 @@ class MarkerApp {
         e.preventDefault();
 
         if (!(this.currentRole && (this.currentRole == 'EDITOR' || this.currentRole == 'ADMIN'))) return;
-
+        if (this.movingMarkerId !== null) return;
         if (!this.mainImage.src || this.mainImage.src === '#') return;
 
         // Проверяем, кликнули ли на маркер
@@ -1013,7 +1013,7 @@ class MarkerApp {
     }
 
     startDrag(e) {
-        if (e.button !== 0) return;
+        if (e.button !== 0 || this.movingMarkerId !== null) return;
         
         if (e.target === this.mainImage || e.target === this.markersLayer || e.target === this.imageContainer) {
             this.isDragging = true;
@@ -1087,6 +1087,30 @@ class MarkerApp {
         };
     }
 
+    async requestMoveMarker(marker, x, y) {
+        try {
+            const response = await apiRequest(`/markers/${marker.id}/move`, {
+                method: 'POST',
+                body: JSON.stringify({x: x, y: y})
+            });
+            
+            if (response.ok) {
+                const markerRes = await response.json();
+                const marker = this.markers.find(m => m.id === markerRes.id);
+                marker.x = markerRes.x;
+                marker.y = markerRes.y;
+                marker.isUpdated = true;
+                
+                this.renderMarkers();
+                this.showTooltip('Маркер перемещен', 1500);
+            } else {
+                this.showTooltip('Ошибка обновления маркера', 1500);
+            }
+        } catch (error) {
+            this.showTooltip('Ошибка обновления маркера', 1500);
+        }
+    }
+
     handleContainerClick(e) {
         // Проверяем режим перемещения маркера
         if (this.movingMarkerId) {
@@ -1098,14 +1122,7 @@ class MarkerApp {
                 
                 if (mousePos.x >= 0 && mousePos.x <= 100 && 
                     mousePos.y >= 0 && mousePos.y <= 100) {
-                    
-                    marker.x = mousePos.x;
-                    marker.y = mousePos.y;
-                    marker.isUpdated = true;
-                    
-                    this.renderMarkers();
-                    this.showTooltip('Маркер перемещен', 1500);
-                    this.saveToStorage();
+                    this.requestMoveMarker(marker, mousePos.x, mousePos.y);
                 }
             }
             return;
@@ -1131,17 +1148,32 @@ class MarkerApp {
                 
                 if (response.ok) {
                     const marker = await response.json();
-                    return marker;
+                    console.log(marker)
+                    if (marker) this.markers.push(marker);
+
+                    this.removeTempMarker();
+                    this.isAddingNote = false;
+                    this.selectedMarkerId = null;
+                    
+                    this.markerTitle.value = '';
+                    this.noteText.value = '';
+                    this.descriptionText.value = '';
+                    
+                    this.updateButtonsState();
+                    
+                    this.editPanel.classList.add('hidden');
+                    
+                    this.renderMarkers();
+                    
+                    this.showTooltip('Маркер сохранен', 1500);
                 } else {
                     this.showTooltip('Ошибка сохранения маркера', 1500);
                 }
             } catch (error) {
                 this.showTooltip('Ошибка сохранения маркера', 1500);
             }
-            return null;
     }
 
-    //> don't send messages
     getMarkerDTO(marker) {
         return {
             x: marker.x,
@@ -1156,24 +1188,82 @@ class MarkerApp {
         };
     }
 
-    async requestUpdateMarker(marker) {
+    async requestUpdateMarker(markerId, markerDto) {
         try {
-                const response = await apiRequest(`/markers/${marker.id}`, {
-                    method: 'POST',
-                    body: JSON.stringify(this.getMarkerDTO(marker))
-                });
-                
-                if (response.ok) {
-                    const marker = await response.json();
-                    return marker;
-                } else {
-                    this.showTooltip('Ошибка обновления маркера', 1500);
+            const response = await apiRequest(`/markers/${markerId}`, {
+                method: 'POST',
+                body: JSON.stringify(markerDto)
+            });
+            
+            if (response.ok) {
+                const markerRes = await response.json();
+                const marker = this.markers.find(m => m.id === markerRes.id);
+                if (marker) {
+                    marker.isUpdated = true;
+                    marker.title = markerRes.title;
+                    marker.note = markerRes.note;
+                    marker.description = markerRes.description;
+                    marker.updatedAt = markerRes.updatedAt;
+                    marker.visibility = markerRes.visibility;
+                    marker.color = markerRes.color;
+                    marker.shape = markerRes.shape;
                 }
-            } catch (error) {
+                else {
+                    this.showTooltip('Попытка обновить несуществующий маркер', 1500);
+                }
+
+                this.selectedMarkerId = null;
+                this.isAddingNote = false;
+                
+                this.markerTitle.value = '';
+                this.noteText.value = '';
+                this.descriptionText.value = '';
+                
+                this.updateButtonsState();
+                
+                this.editPanel.classList.add('hidden');
+                
+                this.renderMarkers();
+                
+                this.showTooltip('Маркер обновлен', 1500);
+            } else {
                 this.showTooltip('Ошибка обновления маркера', 1500);
             }
-            return null;
+        } catch (error) {
+            this.showTooltip('Ошибка обновления маркера', 1500);
+        }
     }
+
+    // async requestUpdateMarker(marker) {
+    //     try {
+    //         const response = await apiRequest(`/markers/${marker.id}`, {
+    //             method: 'POST',
+    //             body: JSON.stringify(this.getMarkerDTO(marker))
+    //         });
+            
+    //         if (response.ok) {
+    //             this.selectedMarkerId = null;
+    //             this.isAddingNote = false;
+                
+    //             this.markerTitle.value = '';
+    //             this.noteText.value = '';
+    //             this.descriptionText.value = '';
+                
+    //             this.updateButtonsState();
+                
+    //             this.editPanel.classList.add('hidden');
+                
+    //             this.renderMarkers();
+                
+    //             this.showTooltip('Маркер обновлен', 1500);
+    //             // return marker;
+    //         } else {
+    //             this.showTooltip('Ошибка обновления маркера', 1500);
+    //         }
+    //     } catch (error) {
+    //         this.showTooltip('Ошибка обновления маркера', 1500);
+    //     }
+    // }
 
     toggleMarkerVisibility() {
         if (this.changeMarkerVisibility.textContent === '🚫') {
@@ -1186,7 +1276,7 @@ class MarkerApp {
         }
     }
 
-    async saveNote() {
+    saveNote() {
         if (this.tempMarker) {
             const title = this.markerTitle.value.trim() || `Маркер #${this.tempMarker.id.toString().slice(-4)}`;
             const note = this.noteText.value.trim();
@@ -1204,58 +1294,23 @@ class MarkerApp {
             this.tempMarker.size = this.markerSettings.defaultSize;
             this.tempMarker.isUpdated = true;
 
-            const newMarker = await this.requestSaveMarker(this.tempMarker);
-            console.log(newMarker)
-            if (newMarker) this.markers.push(newMarker);
-            
-            // this.tempMarker = null;
-            this.removeTempMarker();
-            this.isAddingNote = false;
-            this.selectedMarkerId = null;
-            
-            this.markerTitle.value = '';
-            this.noteText.value = '';
-            this.descriptionText.value = '';
-            
-            this.updateButtonsState();
-            
-            this.editPanel.classList.add('hidden');
-            
-            this.renderMarkers();
-            
-            this.showTooltip('Маркер сохранен', 1500);
-            // this.saveToStorage();
+            this.requestSaveMarker(this.tempMarker);
         } else if (this.selectedMarkerId) {
             const marker = this.markers.find(m => m.id === this.selectedMarkerId);
             if (marker) {
-                marker.isUpdated = true;
-                if (this.markerTitle.value.trim()) marker.title = this.markerTitle.value.trim();
-                marker.note = this.noteText.value.trim();
-                marker.description = this.descriptionText.value.trim();
-                marker.updatedAt = new Date().toLocaleString();
-                
-                // Обновляем цвет и форму
-                marker.visibility = this.changeMarkerVisibility.textContent === '👁️';
-                marker.color = this.currentMarkerColor.value || marker.color;
-                marker.shape = this.currentMarkerShape.value || marker.shape;
+                const markerDto = this.getMarkerDTO({
+                    x: marker.x,
+                    y: marker.y,
+                    title: this.markerTitle.value.trim() || marker.title,
+                    note: this.noteText.value.trim(),
+                    description: this.descriptionText.value.trim(),
+                    color: this.currentMarkerColor.value || marker.color,
+                    shape: this.currentMarkerShape.value || marker.shape,
+                    size: marker.size,
+                    visibility: this.changeMarkerVisibility.textContent === '👁️'
+                });
 
-                this.requestUpdateMarker(marker);
-                
-                this.selectedMarkerId = null;
-                this.isAddingNote = false;
-                
-                this.markerTitle.value = '';
-                this.noteText.value = '';
-                this.descriptionText.value = '';
-                
-                this.updateButtonsState();
-                
-                this.editPanel.classList.add('hidden');
-                
-                this.renderMarkers();
-                
-                this.showTooltip('Маркер обновлен', 1500);
-                // this.saveToStorage();
+                this.requestUpdateMarker(marker.id, markerDto);
             }
         }
     }
