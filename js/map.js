@@ -36,6 +36,12 @@ class MarkerApp {
 
         const urlParams = new URLSearchParams(window.location.search);
         this.mapId = urlParams.get('mapId');
+
+        this.wsClient = new WsClient(getToken(), this.mapId);
+        this.wsClient.onMessage(this.responseSaveMarker.bind(this));
+        this.wsClient.onMessage(this.responseUpdateMarker.bind(this));
+        this.wsClient.onMessage(this.responseDeleteMarker.bind(this));
+        this.wsClient.onMessage(this.responseMoveMarker.bind(this));
         
         this.init();
     }
@@ -265,6 +271,11 @@ class MarkerApp {
         // Убеждаемся, что панели скрыты при загрузке
         this.editPanel.classList.add('hidden');
         this.markersPanel.classList.add('hidden');
+
+        window.addEventListener('beforeunload', () => {
+            this.wsClient.disconnect();
+        });
+        this.wsClient.connect();
     }
 
     createContextMenu() {
@@ -325,7 +336,6 @@ class MarkerApp {
             });
             this.renderChatMessages(this.generalInfo);
             this.chatInput.value = '';
-            this.saveToStorage();
         }
         else {
             if (!text || !this.selectedMarkerId) return;
@@ -340,8 +350,6 @@ class MarkerApp {
             marker.isUpdated = true;
             this.renderChatMessages(marker);
             this.chatInput.value = '';
-            this.saveToStorage();
-            // this.renderMarkers();
         }
         
     }
@@ -349,11 +357,11 @@ class MarkerApp {
     renderChatMessages(entity) {
         if (!this.chatMessages) return;
         this.chatMessages.innerHTML = '';
+        if (entity.description) this.appendMessageToChat({text: '<strong>Описание</strong><br>' + entity.description});
         if (!entity.messages || entity.messages.length === 0) {
-            this.chatMessages.innerHTML = '<div class="chat-empty">Нет заметок</div>';
+            if (!entity.description) this.chatMessages.innerHTML = '<div class="chat-empty">Нет заметок</div>';
             return;
         }
-        if (entity.description) this.appendMessageToChat({text: '<strong>Описание</strong><br>' + entity.description});
         entity.messages.forEach(msg => this.appendMessageToChat(msg));
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     }
@@ -441,7 +449,6 @@ class MarkerApp {
             this.generalInfo.note = this.viewModalNoteText.value.trim();
             this.generalInfo.description = this.viewModalDescriptionText.value.trim();
             this.closeViewModal();
-            this.saveToStorage();
             return;
         }
         if (!this.currentViewMarkerId) return;
@@ -464,7 +471,6 @@ class MarkerApp {
             this.renderMarkers();
             this.closeViewModal();
             this.showTooltip('Маркер обновлен', 1500);
-            this.saveToStorage();
         }
         else {
             this.closeViewModal();
@@ -1087,23 +1093,22 @@ class MarkerApp {
         };
     }
 
+    responseMoveMarker(response) {
+        if (!response || response.entityType != 'marker' || response.action != 'move') return;
+        console.log('response move marker')
+        const markerRes = response.object;
+        const marker = this.markers.find(m => m.id === markerRes.id);
+        marker.x = markerRes.x;
+        marker.y = markerRes.y;
+        marker.isUpdated = true;
+        
+        this.renderMarkers();
+        this.showTooltip('Маркер перемещен', 1500);
+    }
+
     async requestMoveMarker(marker, x, y) {
         try {
-            const response = await apiRequest(`/markers/${marker.id}/move`, {
-                method: 'POST',
-                body: JSON.stringify({x: x, y: y})
-            });
-            
-            if (response.ok) {
-                const markerRes = await response.json();
-                const marker = this.markers.find(m => m.id === markerRes.id);
-                marker.x = markerRes.x;
-                marker.y = markerRes.y;
-                marker.isUpdated = true;
-                
-                this.renderMarkers();
-                this.showTooltip('Маркер перемещен', 1500);
-            } else {
+            if (!this.wsClient.sendMessage(`/markers/${marker.id}/move`, {x: x, y: y})) {
                 this.showTooltip('Ошибка обновления маркера', 1500);
             }
         } catch (error) {
@@ -1139,39 +1144,39 @@ class MarkerApp {
         this.clickStarted = false;
     }
 
-    async requestSaveMarker(marker) {
-        try {
-                const response = await apiRequest(`/maps/${this.mapId}/markers`, {
-                    method: 'POST',
-                    body: JSON.stringify(this.getMarkerDTO(marker))
-                });
-                
-                if (response.ok) {
-                    const marker = await response.json();
-                    console.log(marker)
-                    if (marker) this.markers.push(marker);
+    responseSaveMarker(response) {
+        if (!response || response.entityType != 'marker' || response.action != 'add') return;
+        console.log('response save marker')
+        const marker = response.object;
+        console.log(marker)
+        if (marker) this.markers.push(marker);
 
-                    this.removeTempMarker();
-                    this.isAddingNote = false;
-                    this.selectedMarkerId = null;
-                    
-                    this.markerTitle.value = '';
-                    this.noteText.value = '';
-                    this.descriptionText.value = '';
-                    
-                    this.updateButtonsState();
-                    
-                    this.editPanel.classList.add('hidden');
-                    
-                    this.renderMarkers();
-                    
-                    this.showTooltip('Маркер сохранен', 1500);
-                } else {
-                    this.showTooltip('Ошибка сохранения маркера', 1500);
-                }
-            } catch (error) {
-                this.showTooltip('Ошибка сохранения маркера', 1500);
+        this.removeTempMarker();
+        this.isAddingNote = false;
+        this.selectedMarkerId = null;
+        
+        this.markerTitle.value = '';
+        this.noteText.value = '';
+        this.descriptionText.value = '';
+        
+        this.updateButtonsState();
+        
+        this.editPanel.classList.add('hidden');
+        
+        this.renderMarkers();
+        
+        this.showTooltip('Добавлен маркер', 1500);
+    }
+
+    async requestSaveMarker(marker) {
+        console.log('requestSaveMarker')
+        try {
+            if (!this.wsClient.sendMessage(`/map/${this.mapId}/markers`, this.getMarkerDTO(marker))) {
+                this.showTooltip('Ошибка обновления маркера', 1500);
             }
+        } catch (error) {
+            this.showTooltip('Ошибка сохранения маркера', 1500);
+        }
     }
 
     getMarkerDTO(marker) {
@@ -1188,82 +1193,58 @@ class MarkerApp {
         };
     }
 
+    responseUpdateMarker(response) {
+        if (!response || response.entityType != 'marker' || response.action != 'upd') return;
+        console.log('response update marker')
+        const markerRes = response.object;
+        console.log(markerRes)
+        if (!markerRes) return;
+        const marker = this.markers.find(m => m.id === markerRes.id);
+        if (marker) {
+            if (!markerRes.visibility && this.currentRole !== 'ADMIN') {
+                this.deleteMarkerImpl(markerRes.id);
+            }
+            marker.isUpdated = true;
+            marker.title = markerRes.title;
+            marker.note = markerRes.note;
+            marker.description = markerRes.description;
+            marker.updatedAt = markerRes.updatedAt;
+            marker.visibility = markerRes.visibility;
+            marker.color = markerRes.color;
+            marker.shape = markerRes.shape;
+        }
+        else {
+            markerRes.isUpdated = true;
+            this.markers.push(markerRes);
+            this.renderMarkers();
+            this.showTooltip('Появился маркер', 1500);
+        }
+
+        this.selectedMarkerId = null;
+        this.isAddingNote = false;
+        
+        this.markerTitle.value = '';
+        this.noteText.value = '';
+        this.descriptionText.value = '';
+        
+        this.updateButtonsState();
+        
+        this.editPanel.classList.add('hidden');
+        
+        this.renderMarkers();
+        
+        this.showTooltip('Маркер обновлен', 1500);
+    }
+
     async requestUpdateMarker(markerId, markerDto) {
         try {
-            const response = await apiRequest(`/markers/${markerId}`, {
-                method: 'POST',
-                body: JSON.stringify(markerDto)
-            });
-            
-            if (response.ok) {
-                const markerRes = await response.json();
-                const marker = this.markers.find(m => m.id === markerRes.id);
-                if (marker) {
-                    marker.isUpdated = true;
-                    marker.title = markerRes.title;
-                    marker.note = markerRes.note;
-                    marker.description = markerRes.description;
-                    marker.updatedAt = markerRes.updatedAt;
-                    marker.visibility = markerRes.visibility;
-                    marker.color = markerRes.color;
-                    marker.shape = markerRes.shape;
-                }
-                else {
-                    this.showTooltip('Попытка обновить несуществующий маркер', 1500);
-                }
-
-                this.selectedMarkerId = null;
-                this.isAddingNote = false;
-                
-                this.markerTitle.value = '';
-                this.noteText.value = '';
-                this.descriptionText.value = '';
-                
-                this.updateButtonsState();
-                
-                this.editPanel.classList.add('hidden');
-                
-                this.renderMarkers();
-                
-                this.showTooltip('Маркер обновлен', 1500);
-            } else {
+            if (!this.wsClient.sendMessage(`/markers/${markerId}`, markerDto)) {
                 this.showTooltip('Ошибка обновления маркера', 1500);
             }
         } catch (error) {
             this.showTooltip('Ошибка обновления маркера', 1500);
         }
     }
-
-    // async requestUpdateMarker(marker) {
-    //     try {
-    //         const response = await apiRequest(`/markers/${marker.id}`, {
-    //             method: 'POST',
-    //             body: JSON.stringify(this.getMarkerDTO(marker))
-    //         });
-            
-    //         if (response.ok) {
-    //             this.selectedMarkerId = null;
-    //             this.isAddingNote = false;
-                
-    //             this.markerTitle.value = '';
-    //             this.noteText.value = '';
-    //             this.descriptionText.value = '';
-                
-    //             this.updateButtonsState();
-                
-    //             this.editPanel.classList.add('hidden');
-                
-    //             this.renderMarkers();
-                
-    //             this.showTooltip('Маркер обновлен', 1500);
-    //             // return marker;
-    //         } else {
-    //             this.showTooltip('Ошибка обновления маркера', 1500);
-    //         }
-    //     } catch (error) {
-    //         this.showTooltip('Ошибка обновления маркера', 1500);
-    //     }
-    // }
 
     toggleMarkerVisibility() {
         if (this.changeMarkerVisibility.textContent === '🚫') {
@@ -1427,27 +1408,44 @@ class MarkerApp {
             this.requestDeleteMarker(markerId);
             // this.deleteMarkerImpl(markerId);
             // this.showTooltip('Маркер удален', 1500);
-            // this.saveToStorage();
         }
+    }
+
+    responseDeleteMarker(response) {
+        if (!response || response.entityType != 'marker' || response.action != 'del') return;
+        console.log('response delete marker')
+        const markerId = response.object;
+        this.deleteMarkerImpl(markerId);
+        this.showTooltip('Маркер удален', 1500);
     }
 
     async requestDeleteMarker(markerId) {
         try {
-            const response = await apiRequest(`/markers/${markerId}`, {
-                method: 'DELETE'
-                // body: JSON.stringify(getMarkerDTO(marker))
-            });            
-            if (response.ok) {
-                const markerId = await response.json();
-                this.deleteMarkerImpl(markerId);
-                this.showTooltip('Маркер удален', 1500);
-            } else {
+            if (!this.wsClient.sendMessage(`/markers/${markerId}/delete`, {})) {
                 this.showTooltip('Ошибка удаления маркера', 1500);
             }
         } catch (error) {
             this.showTooltip('Ошибка удаления маркера', 1500);
         }
     }
+
+    // async requestDeleteMarker(markerId) {
+    //     try {
+    //         const response = await apiRequest(`/markers/${markerId}`, {
+    //             method: 'DELETE'
+    //             // body: JSON.stringify(getMarkerDTO(marker))
+    //         });            
+    //         if (response.ok) {
+    //             const markerId = await response.json();
+    //             this.deleteMarkerImpl(markerId);
+    //             this.showTooltip('Маркер удален', 1500);
+    //         } else {
+    //             this.showTooltip('Ошибка удаления маркера', 1500);
+    //         }
+    //     } catch (error) {
+    //         this.showTooltip('Ошибка удаления маркера', 1500);
+    //     }
+    // }
 
     updateButtonsState() {
         this.changeMarkerVisibility.disabled = !this.isAddingNote;
@@ -1740,7 +1738,6 @@ class MarkerApp {
         
         this.editPanel.classList.add('hidden');
         this.closeViewModal();
-        this.saveToStorage();
     }
 
     // Методы для работы с файлами
@@ -1814,8 +1811,6 @@ class MarkerApp {
                         this.updateImageTransform();
                         this.renderMarkers();
                         this.showNotification('Проект успешно загружен');
-                        
-                        this.saveToStorage();
                     };
                 } else if (Array.isArray(data)) {
                     // Только маркеры
@@ -1823,7 +1818,6 @@ class MarkerApp {
                     this.markers = data;
                     this.renderMarkers();
                     this.showNotification('Маркеры импортированы');
-                    this.saveToStorage();
                 } else {
                     throw new Error('Неизвестный формат файла');
                 }
@@ -1960,7 +1954,6 @@ class MarkerApp {
         this.shapeIsChanged = false;
         
         this.showNotification('Настройки применены ко всем маркерам');
-        this.saveToStorage();
     }
 
     saveMarkerSettingsAsDefault() {

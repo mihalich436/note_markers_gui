@@ -78,14 +78,14 @@
                     </div>
                     <div class="view-modal-body">
                         <div id="chatMessages" class="chat-messages"></div>
-                        <div class="chat-input-area">
+                        <div class="chat-input-area hidden"> <!-- //> remove hidden when chat is ready -->
                             <textarea id="chatInput" placeholder="Введите сообщение..." class="chat-input" rows="1"></textarea>
                             <button id="sendChatBtn" class="view-modal-btn primary">Отправить</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Панель редактирования маркера (без изменений) -->
+                <!-- Панель редактирования маркера -->
                 <div class="edit-panel" id="editPanel">
                     <div class="edit-panel-header">
                         <h3>Редактирование маркера</h3>
@@ -283,7 +283,11 @@
     <!-- Скрытый input для загрузки файлов -->
     <input type="file" id="fileLoader" accept=".json, .markerapp" style="display: none;">
 
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
     <script src="./js/common.js"></script>
+    <script src="./js/WsClient.js"></script>
     <script src="./js/map.js"></script>
 </body>
 </html>
