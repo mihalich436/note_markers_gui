@@ -1,4 +1,5 @@
 const WS_REQ_PREFIX = '/app';
+const WS_URL = 'http://localhost:8080/ws';
 
 class WsClient {
     constructor(token, mapId) {
@@ -12,7 +13,7 @@ class WsClient {
     // Подключение к WebSocket
     connect() {
         // Используем SockJS для надежности (работает везде)
-        const socket = new SockJS(`http://localhost:8080/ws`/*, connectHeaders: {'Authorization': `Bearer ${this.token}`}*/);
+        const socket = new SockJS(WS_URL/*, connectHeaders: {'Authorization': `Bearer ${this.token}`}*/);
         this.stompClient = Stomp.over(socket);
 
         // this.stompClient.connectHeaders = {'Authorization': `Bearer ${this.token}`};

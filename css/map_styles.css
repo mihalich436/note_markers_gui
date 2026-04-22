@@ -304,6 +304,10 @@ body {
     backface-visibility: hidden;
 }
 
+.marker.invisible {
+    opacity: 0.7;
+}
+
 .marker.circle {
     width: 36px;
     height: 36px;
@@ -409,15 +413,21 @@ body {
 
 .visibility-picker-mini,
 .color-picker-mini,
-.shape-picker-mini {
+.shape-picker-mini,
+.size-picker-mini {
     display: flex;
     flex-direction: column;
     gap: 5px;
 }
 
+.size-picker-mini {
+    margin-top: 5px;
+}
+
 /*.visibility-picker-mini label,*/
 .color-picker-mini label,
-.shape-picker-mini label {
+.shape-picker-mini label,
+.size-picker-mini label {
     font-size: 11px;
     color: #868e96;
     font-weight: 500;

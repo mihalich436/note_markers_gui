@@ -92,6 +92,8 @@ class MarkerApp {
         this.currentMarkerShape = document.getElementById('currentMarkerShape');
         this.markerSize = document.getElementById('markerSize');
         this.sizeValue = document.getElementById('sizeValue');
+        this.markerSizeDefault = document.getElementById('markerSizeDefault');
+        this.sizeValueDefault = document.getElementById('sizeValueDefault');
         this.showNotes = document.getElementById('showNotes');
         this.customColor = document.getElementById('customColor');
         this.applyMarkerSettings = document.getElementById('applyMarkerSettings');
@@ -128,7 +130,7 @@ class MarkerApp {
         this.resetZoomBtn.addEventListener('click', this.resetZoom.bind(this));
         
         this.customColor.addEventListener('click', this.customColorChanged.bind(this));
-        this.markerSize.addEventListener('click', this.markerSizeChanged.bind(this));
+        this.markerSizeDefault.addEventListener('click', this.markerSizeChanged.bind(this));
         const shapeRadios = document.querySelectorAll('input[name="markerShape"]');
         shapeRadios.forEach(radio => {
             radio.addEventListener('click', this.shapeChanged.bind(this));
@@ -231,6 +233,10 @@ class MarkerApp {
         });
 
         // Обновление значения размера
+        this.markerSizeDefault.addEventListener('input', (e) => {
+            this.sizeValueDefault.textContent = e.target.value + 'px';
+        });
+
         this.markerSize.addEventListener('input', (e) => {
             this.sizeValue.textContent = e.target.value + 'px';
         });
@@ -303,7 +309,7 @@ class MarkerApp {
         this.closeViewModalBtn = document.getElementById('closeViewModal');
 
         // События модального окна
-        this.sendChatBtn.addEventListener('click', this.sendChatMessage.bind(this));
+        // this.sendChatBtn.addEventListener('click', this.sendChatMessage.bind(this)); //> return when ready
         // this.viewModalSaveBtn.addEventListener('click', this.saveViewModalChanges.bind(this));
         // this.viewModalCancelBtn.addEventListener('click', this.closeViewModal.bind(this));
         this.expandViewModal.addEventListener('click', this.toggleViewModalSize.bind(this));
@@ -323,7 +329,8 @@ class MarkerApp {
         this.imageUploadInput.addEventListener('click', this.uploadImageFromUrl.bind(this));
     }
 
-    sendChatMessage() {
+    //> return when ready
+    /*sendChatMessage() {
         const text = this.chatInput.value.trim();
         if (this.editGeneralInfo) {
             if (!text) return;
@@ -352,12 +359,12 @@ class MarkerApp {
             this.chatInput.value = '';
         }
         
-    }
+    }*/
 
     renderChatMessages(entity) {
         if (!this.chatMessages) return;
         this.chatMessages.innerHTML = '';
-        if (entity.description) this.appendMessageToChat({text: '<strong>Описание</strong><br>' + entity.description});
+        if (entity.description) this.appendMessageToChat({text: entity.description});
         if (!entity.messages || entity.messages.length === 0) {
             if (!entity.description) this.chatMessages.innerHTML = '<div class="chat-empty">Нет заметок</div>';
             return;
@@ -548,6 +555,10 @@ class MarkerApp {
                                 }
                                 if (marker.color) this.currentMarkerColor.value = marker.color;
                                 if (marker.shape) this.currentMarkerShape.value = marker.shape;
+                                if (marker.size) {
+                                    this.markerSize.value = marker.size;
+                                    this.sizeValue.textContent = marker.size + 'px';
+                                }
                                 
                                 this.centerOnMarker(marker);
                                 this.showEditPanel();
@@ -667,6 +678,8 @@ class MarkerApp {
             
             this.currentMarkerColor.value = this.markerSettings.defaultColor;
             this.currentMarkerShape.value = this.markerSettings.defaultShape;
+            this.markerSize.value = this.markerSettings.defaultSize;
+            this.sizeValue.textContent = this.markerSettings.defaultSize + 'px';
             
             this.showEditPanel();
             this.markerTitle.focus();
@@ -1212,6 +1225,7 @@ class MarkerApp {
             marker.visibility = markerRes.visibility;
             marker.color = markerRes.color;
             marker.shape = markerRes.shape;
+            marker.size = markerRes.size;
         }
         else {
             markerRes.isUpdated = true;
@@ -1272,7 +1286,7 @@ class MarkerApp {
             this.tempMarker.visibility = this.changeMarkerVisibility.textContent === '👁️';
             this.tempMarker.color = this.currentMarkerColor.value || this.markerSettings.defaultColor;
             this.tempMarker.shape = this.currentMarkerShape.value || this.markerSettings.defaultShape;
-            this.tempMarker.size = this.markerSettings.defaultSize;
+            this.tempMarker.size = this.markerSize.value || this.markerSettings.defaultSize;
             this.tempMarker.isUpdated = true;
 
             this.requestSaveMarker(this.tempMarker);
@@ -1287,7 +1301,7 @@ class MarkerApp {
                     description: this.descriptionText.value.trim(),
                     color: this.currentMarkerColor.value || marker.color,
                     shape: this.currentMarkerShape.value || marker.shape,
-                    size: marker.size,
+                    size: this.markerSize.value || marker.size,
                     visibility: this.changeMarkerVisibility.textContent === '👁️'
                 });
 
@@ -1354,6 +1368,10 @@ class MarkerApp {
             }
             if (marker.color) this.currentMarkerColor.value = marker.color;
             if (marker.shape) this.currentMarkerShape.value = marker.shape;
+            if (marker.size) {
+                this.markerSize.value = marker.size;
+                this.sizeValue.textContent = marker.size + 'px';
+            }
             
             this.centerOnMarker(marker);
             // this.showEditPanel();
@@ -1492,6 +1510,7 @@ class MarkerApp {
             let className = `marker ${shape}`;
             if (isSelected) className += ' selected';
             if (marker.description) className += ' has-description';
+            if (!marker.visibility) className += ' invisible';
             
             markerDiv.className = className;
             markerDiv.id = `marker-${marker.id}`;
@@ -1900,8 +1919,8 @@ class MarkerApp {
         
         //> add button for default marker visibility
         this.customColor.value = this.markerSettings.defaultColor;
-        this.markerSize.value = this.markerSettings.defaultSize;
-        this.sizeValue.textContent = this.markerSettings.defaultSize + 'px';
+        this.markerSizeDefault.value = this.markerSettings.defaultSize;
+        this.sizeValueDefault.textContent = this.markerSettings.defaultSize + 'px';
         this.showNotes.checked = this.markerSettings.showNotes;
         
         // Подсветка выбранного цвета
@@ -1933,7 +1952,7 @@ class MarkerApp {
     applyMarkerSettingsToAll() {
         const shape = document.querySelector('input[name="markerShape"]:checked')?.value || 'circle';
         const color = this.customColor.value;
-        const size = parseInt(this.markerSize.value);
+        const size = parseInt(this.markerSizeDefault.value);
         const showNotes = this.showNotes.checked;
         
         this.markers.forEach(marker => {
@@ -1959,7 +1978,7 @@ class MarkerApp {
     saveMarkerSettingsAsDefault() {
         this.markerSettings.defaultShape = document.querySelector('input[name="markerShape"]:checked')?.value || 'circle';
         this.markerSettings.defaultColor = this.customColor.value;
-        this.markerSettings.defaultSize = parseInt(this.markerSize.value);
+        this.markerSettings.defaultSize = parseInt(this.markerSizeDefault.value);
         this.markerSettings.showNotes = this.showNotes.checked;
         
         // Сохраняем значение ползунка масштаба подписей, если он есть
@@ -2023,7 +2042,7 @@ class MarkerApp {
                         this.mainImage.src = url;
                         this.mainImage.onload = () => {
                             this.countZoomLimits();
-                            this.generalInfo = map.generalInfo || {};
+                            this.generalInfo = map.description ? {description: map.description} : {}; //> temp
                             this.markers = map.markers || [];
                             this.currentZoom = map.zoom || this.minZoom;
                             this.imagePosition = map.position || { x: 0, y: 0 };

@@ -39,7 +39,7 @@ function displayProjects(projects) {
                 ${project.description ? escapeHtml(project.description) : 'Описание отсутствует'}
             </div>
             <div style="margin-top: 15px; display: flex; gap: 10px;">
-                <button class="expand-btn" onclick="event.stopPropagation(); editProject(${project.id}, '${escapeHtml(project.title)}', ${JSON.stringify(escapeHtml(project.description || ''))})" style="color: #28a745;">✏️ Редактировать</button>
+                <button class="expand-btn" onclick="event.stopPropagation(); editProject(${project.id}, '${escapeHtml(project.title)}', '${escapeHtml(project.description || '')}')" style="color: #28a745;">✏️ Редактировать</button>
                 <button class="expand-btn" onclick="event.stopPropagation(); shareProject(${project.id})" style="color: #667eea;">👥 Поделиться</button>
                 <button class="expand-btn" onclick="event.stopPropagation(); deleteProject(${project.id})" style="color: #dc3545;">🗑️ Удалить</button>
             </div>

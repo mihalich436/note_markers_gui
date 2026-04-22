@@ -29,7 +29,7 @@
                 <h3 style="margin-bottom: 15px;">Пригласить пользователя</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <input type="email" id="inviteEmail" placeholder="Email пользователя" style="flex: 1; min-width: 200px;">
-                    <input type="text" id="nickname" placeholder="Ник" title="Ник для обозначения пользователя в проекте" style="flex: 1; min-width: 100px;">
+                    <input type="text" id="nickname" placeholder="Ник" title="Ник для обозначения пользователя в проекте" style="flex: 1; min-width: 100px; display: none;">
                     <select id="roleSelect" style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; background: white;">
                         <option value="READ_ONLY">📖 Только чтение</option>
                         <option value="CHAT">💬 Только заметки</option>
@@ -49,7 +49,7 @@
                         <tr>
                             <th>Пользователь</th>
                             <th>Email</th>
-                            <th>Ник</th>
+                            <th><!-- Ник --></th>
                             <th>Роль</th>
                             <th>Действия</th>
                         </tr>
