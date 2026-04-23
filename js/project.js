@@ -68,6 +68,7 @@ async function loadMaps() {
         
         if (response.ok) {
             const maps = await response.json();
+            this.project.maps = maps;
             displayMaps(maps);
         } else {
             showMessage('Ошибка загрузки заметок');
@@ -158,6 +159,11 @@ async function deleteMap(id) {
             });
             
             if (response.ok) {
+                // const mapId = await response.json();
+                // const index = this.project.maps.findIndex(m => mapId === m.id);
+                // if (index !== -1) {
+                //     this.project.maps.splice(index, 1);
+                // }
                 loadMaps();
                 showMessage('Карта удалена успешно', 'success');
             } else {
