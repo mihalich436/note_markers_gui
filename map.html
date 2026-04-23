@@ -72,6 +72,7 @@
                     <div class="view-modal-header">
                         <h3 id="viewModalTitle">Просмотр маркера</h3>
                         <div class="view-modal-controls">
+                            <button id="editViewModal" class="view-modal-btn" title="Редактировать">✏️</button>
                             <button id="expandViewModal" class="view-modal-btn" title="Развернуть">⤢</button>
                             <button id="closeViewModal" class="view-modal-btn" title="Закрыть">✖</button>
                         </div>
@@ -128,8 +129,8 @@
                         </div>
 
                         <div class="form-buttons">
-                            <button id="saveNote" disabled>💾 Сохранить</button>
                             <button id="cancelNote" disabled>❌ Отмена</button>
+                            <button id="saveNote" disabled>💾 Сохранить</button>
                         </div>
                     </div>
                 </div>
@@ -290,8 +291,8 @@
     <!-- Скрытый input для загрузки файлов -->
     <input type="file" id="fileLoader" accept=".json, .markerapp" style="display: none;">
 
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script src="./js/sockjs.min.js"></script>
+    <script src="./js/stomp.min.js"></script>
 
     <script src="./js/common.js"></script>
     <script src="./js/WsClient.js"></script>
