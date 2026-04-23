@@ -305,6 +305,7 @@ class MarkerApp {
         this.chatInput = document.getElementById('chatInput');
         this.sendChatBtn = document.getElementById('sendChatBtn');
         this.viewModalTitle = document.getElementById('viewModalTitle');
+        this.editViewModal = document.getElementById('editViewModal');
         this.expandViewModal = document.getElementById('expandViewModal');
         this.closeViewModalBtn = document.getElementById('closeViewModal');
 
@@ -312,6 +313,7 @@ class MarkerApp {
         // this.sendChatBtn.addEventListener('click', this.sendChatMessage.bind(this)); //> return when ready
         // this.viewModalSaveBtn.addEventListener('click', this.saveViewModalChanges.bind(this));
         // this.viewModalCancelBtn.addEventListener('click', this.closeViewModal.bind(this));
+        this.editViewModal.addEventListener('click', this.openEditMarkerView.bind(this));
         this.expandViewModal.addEventListener('click', this.toggleViewModalSize.bind(this));
         this.closeViewModalBtn.addEventListener('click', this.closeViewModal.bind(this));
 
@@ -507,6 +509,52 @@ class MarkerApp {
         this.contextMenu.classList.add('hidden');
     }
 
+    openEditMarkerView() {
+        this.openEditMarkerViewImpl(this.selectedMarkerId);
+    }
+
+    openEditMarkerViewImpl(markerId) {
+        this.removeTempMarker();
+        if (this.selectedMarkerId) {
+            const oldMarker = this.markers.find(m => m.id === this.selectedMarkerId);
+            if (oldMarker) {
+                oldMarker.isUpdated = true;
+            }
+        }
+        this.selectedMarkerId = markerId;
+        const marker = this.markers.find(m => m.id === markerId);
+        if (marker) {
+            marker.isUpdated = true;
+            this.markerTitle.value = marker.title || '';
+            this.noteText.value = marker.note || '';
+            this.descriptionText.value = marker.description || '';
+            this.isAddingNote = true;
+            
+            // Устанавливаем цвет и форму текущего маркера
+            if (marker.visibility) {
+                this.changeMarkerVisibility.textContent = '👁️';
+                this.changeMarkerVisibility.title = 'Маркер будет виден всем';
+            }
+            else {
+                this.changeMarkerVisibility.textContent = '🚫';
+                this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
+            }
+            if (marker.color) this.currentMarkerColor.value = marker.color;
+            if (marker.shape) this.currentMarkerShape.value = marker.shape;
+            if (marker.size) {
+                this.markerSize.value = marker.size;
+                this.sizeValue.textContent = marker.size + 'px';
+            }
+            
+            this.centerOnMarker(marker);
+            this.showEditPanel();
+            this.closeViewModal();
+            
+        }
+        this.updateButtonsState();
+        this.renderMarkers();
+    }
+
     handleContextMenu(e) {
         e.preventDefault();
 
@@ -528,45 +576,7 @@ class MarkerApp {
                         icon: '✏️', 
                         text: 'Редактировать', 
                         action: () => {
-                            this.removeTempMarker();
-                            if (this.selectedMarkerId) {
-                                const oldMarker = this.markers.find(m => m.id === this.selectedMarkerId);
-                                if (oldMarker) {
-                                    oldMarker.isUpdated = true;
-                                }
-                            }
-                            this.selectedMarkerId = markerId;
-                            const marker = this.markers.find(m => m.id === markerId);
-                            if (marker) {
-                                marker.isUpdated = true;
-                                this.markerTitle.value = marker.title || '';
-                                this.noteText.value = marker.note || '';
-                                this.descriptionText.value = marker.description || '';
-                                this.isAddingNote = true;
-                                
-                                // Устанавливаем цвет и форму текущего маркера
-                                if (marker.visibility) {
-                                    this.changeMarkerVisibility.textContent = '👁️';
-                                    this.changeMarkerVisibility.title = 'Маркер будет виден всем';
-                                }
-                                else {
-                                    this.changeMarkerVisibility.textContent = '🚫';
-                                    this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
-                                }
-                                if (marker.color) this.currentMarkerColor.value = marker.color;
-                                if (marker.shape) this.currentMarkerShape.value = marker.shape;
-                                if (marker.size) {
-                                    this.markerSize.value = marker.size;
-                                    this.sizeValue.textContent = marker.size + 'px';
-                                }
-                                
-                                this.centerOnMarker(marker);
-                                this.showEditPanel();
-                                this.closeViewModal();
-                                
-                            }
-                            this.updateButtonsState();
-                            this.renderMarkers();
+                            this.openEditMarkerViewImpl(markerId);
                         }
                     },
                     { 
@@ -1159,8 +1169,9 @@ class MarkerApp {
 
     responseSaveMarker(response) {
         if (!response || response.entityType != 'marker' || response.action != 'add') return;
-        console.log('response save marker')
         const marker = response.object;
+        if (!marker.visibility && this.currentRole !== 'ADMIN') return;
+        console.log('response save marker')
         console.log(marker)
         if (marker) this.markers.push(marker);
 
