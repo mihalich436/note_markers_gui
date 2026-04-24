@@ -1,5 +1,5 @@
 // Конфигурация
-const API_URL = 'http://localhost:8080/api'; //> Замените на ваш URL
+const API_URL = URL + '/api';
 
 // Общие функции
 function getToken() {

@@ -1,0 +1,1 @@
+const URL = 'https://api.lazydmnotes.ru';

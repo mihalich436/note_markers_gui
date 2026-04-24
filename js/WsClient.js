@@ -1,5 +1,5 @@
 const WS_REQ_PREFIX = '/app';
-const WS_URL = 'http://localhost:8080/ws';
+const WS_URL = URL + '/ws';
 
 class WsClient {
     constructor(token, mapId) {
