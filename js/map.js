@@ -77,11 +77,11 @@ class MarkerApp {
         
         // Кнопки действий с файлами
         this.loadImageBtn = document.getElementById('loadImageBtn');
-        this.saveToFileBtn = document.getElementById('saveToFileBtn');
-        this.loadFromFileBtn = document.getElementById('loadFromFileBtn');
-        this.exportMarkersBtn = document.getElementById('exportMarkersBtn');
-        this.importMarkersBtn = document.getElementById('importMarkersBtn');
-        this.clearLocalStorageBtn = document.getElementById('clearLocalStorageBtn');
+        // this.saveToFileBtn = document.getElementById('saveToFileBtn'); //> return when ready
+        // this.loadFromFileBtn = document.getElementById('loadFromFileBtn');
+        // this.exportMarkersBtn = document.getElementById('exportMarkersBtn');
+        // this.importMarkersBtn = document.getElementById('importMarkersBtn');
+        // this.clearLocalStorageBtn = document.getElementById('clearLocalStorageBtn');
 
         // Элементы настроек маркеров
         this.markerSettingsBtn = document.getElementById('markerSettingsBtn');
@@ -165,14 +165,14 @@ class MarkerApp {
         
         // this.loadImageBtn.addEventListener('click', () => this.imageUpload.click());
         this.loadImageBtn.addEventListener('click', () => this.showImageUploadForm());
-        this.saveToFileBtn.addEventListener('click', this.saveToFile.bind(this));
-        this.loadFromFileBtn.addEventListener('click', () => this.fileLoader.click());
-        this.exportMarkersBtn.addEventListener('click', this.exportMarkers.bind(this));
-        this.importMarkersBtn.addEventListener('click', () => {
-            this.fileLoader.accept = '.json';
-            this.fileLoader.click();
-        });
-        this.clearLocalStorageBtn.addEventListener('click', this.clearLocalStorage.bind(this));
+        // this.saveToFileBtn.addEventListener('click', this.saveToFile.bind(this)); //> (return when fixed)
+        // this.loadFromFileBtn.addEventListener('click', () => this.fileLoader.click());
+        // this.exportMarkersBtn.addEventListener('click', this.exportMarkers.bind(this));
+        // this.importMarkersBtn.addEventListener('click', () => {
+        //     this.fileLoader.accept = '.json';
+        //     this.fileLoader.click();
+        // });
+        // this.clearLocalStorageBtn.addEventListener('click', this.clearLocalStorage.bind(this));
         
         // Событие загрузки файла
         this.fileLoader.addEventListener('change', this.handleFileLoad.bind(this));
