@@ -313,7 +313,7 @@ class MarkerApp {
         // this.sendChatBtn.addEventListener('click', this.sendChatMessage.bind(this)); //> return when ready
         // this.viewModalSaveBtn.addEventListener('click', this.saveViewModalChanges.bind(this));
         // this.viewModalCancelBtn.addEventListener('click', this.closeViewModal.bind(this));
-        this.editViewModal.addEventListener('click', this.openEditMarkerView.bind(this));
+
         this.expandViewModal.addEventListener('click', this.toggleViewModalSize.bind(this));
         this.closeViewModalBtn.addEventListener('click', this.closeViewModal.bind(this));
 
@@ -2040,6 +2040,12 @@ class MarkerApp {
                 this.currentRole = data.role;
                 console.log(map)
                 console.log(this.currentRole)
+                if (this.currentRole && (this.currentRole == 'EDITOR' || this.currentRole == 'ADMIN')) {
+                    this.editViewModal.addEventListener('click', this.openEditMarkerView.bind(this));
+                }
+                else {
+                    this.editViewModal.classList.add('hidden');
+                }
                 if (map.imageUrl) {
                     const url = map.imageUrl;
                     if (!url) {
