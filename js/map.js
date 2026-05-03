@@ -503,6 +503,14 @@ class MarkerApp {
             });
             this.contextMenu.appendChild(menuItem);
         });
+
+        const rect = this.contextMenu.getBoundingClientRect();
+        if (rect.right > window.innerWidth || rect.right > document.documentElement.innerWidth) {
+            this.contextMenu.style.left = (x - rect.width) + 'px';
+        }
+        if (rect.bottom > window.innerHeight || rect.right > document.documentElement.innerHeight) {
+            this.contextMenu.style.top = (y - rect.height) + 'px';
+        }
     }
 
     closeContextMenu() {
