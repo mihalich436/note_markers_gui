@@ -378,13 +378,16 @@ class MarkerApp {
     appendMessageToChat(msg) {
             const div = document.createElement('div');
             div.className = 'chat-message';
-            const authorSpan = document.createElement('span');
-            authorSpan.className = 'chat-author';
-            authorSpan.textContent = msg.author ? (msg.author + ': ') : '';
+            if (msg.author) {
+                const authorSpan = document.createElement('span');
+                authorSpan.className = 'chat-author';
+                authorSpan.textContent = msg.author + ': ';
+                div.appendChild(authorSpan);
+            }
+            
             const textSpan = document.createElement('span');
             textSpan.className = 'chat-text';
             textSpan.innerHTML = this.linkify(msg.text);
-            div.appendChild(authorSpan);
             div.appendChild(textSpan);
             const timeSpan = document.createElement('div');
             timeSpan.className = 'chat-time';
