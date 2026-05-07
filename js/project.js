@@ -87,13 +87,12 @@ function displayMaps(maps) {
     }
     
     container.innerHTML = maps.map(map => `
-        <div class="map-item">
+        <div class="map-item" onclick="openMap(${map.id})">
             <div class="map-title">📌 ${escapeHtml(map.title)}</div>
             <div class="map-description">${escapeHtml(map.description || 'Нет содержания')}</div>
             <div style="margin-top: 10px; display: flex; gap: 10px;">
-                <button class="expand-btn" onclick="editMap(${map.id})" style="color: #28a745;">✏️ Редактировать</button>
-                <button class="expand-btn" onclick="deleteMap(${map.id})" style="color: #dc3545;">🗑️ Удалить</button>
-                <button class="expand-btn" onclick="openMap(${map.id})" style="color: #28a745;">Открыть \></button>
+                <button class="expand-btn" onclick="event.stopPropagation(); editMap(${map.id})" style="color: #28a745;">✏️ Редактировать</button>
+                <button class="expand-btn" onclick="event.stopPropagation(); deleteMap(${map.id})" style="color: #dc3545;">🗑️ Удалить</button>
             </div>
         </div>
     `).join('');

@@ -235,6 +235,12 @@ button.danger {
     padding: 15px;
     margin-bottom: 10px;
     border-left: 4px solid #667eea;
+    cursor: pointer;
+}
+
+.map-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
 }
 
 .map-title {
