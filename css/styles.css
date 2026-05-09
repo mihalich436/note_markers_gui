@@ -457,19 +457,6 @@ button.danger {
     font-weight: 600;
 }
 
-/* Предотвращение выделения при тапе */
-/*.logout-btn,
-.secondary,
-.project-card,
-.map-item,
-.menu-trigger-btn,
-.menu-item,
-.menu-item-danger,
-.expand-btn {
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
-}*/
-
 /* Адаптивность */
 @media (max-width: 768px) {
     .card {
