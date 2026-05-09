@@ -30,27 +30,27 @@ function displayProjects(projects) {
     }
     
     container.innerHTML = projects.map(project => `
-        <div class="project-card" data-project-id="${project.id}" data-project-title="${escapeHtml(project.title)}" data-project-description="${escapeHtml(project.description || '')}">
+        <div class="project-card" data-project-id="${project.id}" data-project-title="${escapeHtml(project.title)}" data-project-description="${escapeHtml(project.description || '')}" onclick="openProject(${project.id})">
             <div class="project-card-header">
-                <div class="project-title">📁 ${escapeHtml(project.title)}</div>
+                <div class="project-title">🗁 ${escapeHtml(project.title)}</div>
                 <div class="project-menu-container">
-                    <button class="menu-trigger-btn" data-menu-trigger="${project.id}" aria-label="Меню проекта">
+                    <button class="menu-trigger-btn" onclick="event.stopPropagation(); toggleProjectMenu(${project.id}, this)">
                         ⋮
                     </button>
                     <div id="menu-${project.id}" class="project-context-menu">
-                        <div class="menu-item" data-edit-project="${project.id}">
+                        <div class="menu-item" onclick="event.stopPropagation(); editProjectFromCard(${project.id})">
                             ✏️ Редактировать
                         </div>
-                        <div class="menu-item" data-share-project="${project.id}">
+                        <div class="menu-item" onclick="event.stopPropagation(); shareProject(${project.id})">
                             👥 Поделиться
                         </div>
-                        <div class="menu-item menu-item-danger" data-delete-project="${project.id}">
+                        <div class="menu-item menu-item-danger" onclick="event.stopPropagation(); deleteProjectFromCard(${project.id})">
                             🗑️ Удалить
                         </div>
                     </div>
                 </div>
             </div>
-            <button class="expand-btn" data-toggle-desc="${project.id}">
+            <button class="expand-btn" onclick="event.stopPropagation(); toggleDescription(${project.id})">
                 📖 Показать описание
             </button>
             <div id="desc-${project.id}" class="project-description hidden">
@@ -58,94 +58,6 @@ function displayProjects(projects) {
             </div>
         </div>
     `).join('');
-    
-    // Привязываем обработчики событий после отрисовки
-    attachProjectEventListeners();
-}
-
-// Привязка обработчиков событий
-function attachProjectEventListeners() {
-    // Открытие проекта по клику на карточку
-    document.querySelectorAll('[data-project-id]').forEach(el => {
-        const handler = (e) => {
-            e.stopPropagation();
-            const projectId = el.getAttribute('data-project-id');
-            openProject(projectId);
-        };
-        el.removeEventListener('click', handler);
-        el.removeEventListener('touchstart', handler);
-        el.addEventListener('click', handler);
-        el.addEventListener('touchstart', handler);
-    });
-    
-    // Переключение описания
-    document.querySelectorAll('[data-toggle-desc]').forEach(el => {
-        const handler = (e) => {
-            e.stopPropagation();
-            const projectId = el.getAttribute('data-toggle-desc');
-            toggleDescription(projectId);
-        };
-        el.removeEventListener('click', handler);
-        el.removeEventListener('touchstart', handler);
-        el.addEventListener('click', handler);
-        el.addEventListener('touchstart', handler);
-    });
-    
-    // Открытие меню
-    document.querySelectorAll('[data-menu-trigger]').forEach(el => {
-        const handler = (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            const projectId = el.getAttribute('data-menu-trigger');
-            toggleProjectMenu(projectId, el);
-        };
-        el.removeEventListener('click', handler);
-        el.removeEventListener('touchstart', handler);
-        el.addEventListener('click', handler);
-        el.addEventListener('touchstart', handler);
-    });
-    
-    // Редактирование проекта
-    document.querySelectorAll('[data-edit-project]').forEach(el => {
-        const handler = (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            const projectId = el.getAttribute('data-edit-project');
-            editProjectFromCard(projectId);
-        };
-        el.removeEventListener('click', handler);
-        el.removeEventListener('touchstart', handler);
-        el.addEventListener('click', handler);
-        el.addEventListener('touchstart', handler);
-    });
-    
-    // Шеринг проекта
-    document.querySelectorAll('[data-share-project]').forEach(el => {
-        const handler = (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            const projectId = el.getAttribute('data-share-project');
-            shareProject(projectId);
-        };
-        el.removeEventListener('click', handler);
-        el.removeEventListener('touchstart', handler);
-        el.addEventListener('click', handler);
-        el.addEventListener('touchstart', handler);
-    });
-    
-    // Удаление проекта
-    document.querySelectorAll('[data-delete-project]').forEach(el => {
-        const handler = (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            const projectId = el.getAttribute('data-delete-project');
-            deleteProjectFromCard(projectId);
-        };
-        el.removeEventListener('click', handler);
-        el.removeEventListener('touchstart', handler);
-        el.addEventListener('click', handler);
-        el.addEventListener('touchstart', handler);
-    });
 }
 
 // Закрыть все открытые меню
@@ -157,6 +69,7 @@ function closeAllMenus() {
 
 // Переключение контекстного меню
 function toggleProjectMenu(projectId, btn) {
+    event.stopPropagation();
     const menu = document.getElementById(`menu-${projectId}`);
     const isActive = menu.classList.contains('active');
     
@@ -165,21 +78,14 @@ function toggleProjectMenu(projectId, btn) {
     
     if (!isActive) {
         menu.classList.add('active');
-        
-        // Функция для закрытия меню
-        const closeMenu = (e) => {
-            // Проверяем, был ли клик по меню или по кнопке-триггеру
-            if (!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
-                menu.classList.remove('active');
-                document.removeEventListener('click', closeMenu);
-                document.removeEventListener('touchstart', closeMenu);
-            }
-        };
-        
         // Закрыть меню при клике вне его
         setTimeout(() => {
-            document.addEventListener('click', closeMenu);
-            document.addEventListener('touchstart', closeMenu);
+            document.addEventListener('click', function closeMenu(e) {
+                if (!menu.contains(e.target) && e.target !== btn) {
+                    menu.classList.remove('active');
+                    document.removeEventListener('click', closeMenu);
+                }
+            });
         }, 0);
     }
 }
@@ -198,11 +104,11 @@ function getProjectCardData(projectId) {
 
 // Редактирование проекта (из контекстного меню)
 function editProjectFromCard(projectId) {
-    closeAllMenus();
     const projectData = getProjectCardData(projectId);
     if (projectData) {
         editProject(projectId, projectData.title, projectData.description);
     }
+    closeAllMenus();
 }
 
 // Удаление проекта (из контекстного меню)
@@ -213,7 +119,7 @@ function deleteProjectFromCard(projectId) {
 
 function toggleDescription(projectId) {
     const descElement = document.getElementById(`desc-${projectId}`);
-    const btn = document.querySelector(`[data-toggle-desc="${projectId}"]`);
+    const btn = descElement.previousElementSibling;
     
     if (descElement.classList.contains('hidden')) {
         descElement.classList.remove('hidden');

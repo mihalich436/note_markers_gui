@@ -36,9 +36,9 @@ async function loadProject() {
 function displayProjectInfo(project) {
     const container = document.getElementById('projectInfo');
     container.innerHTML = `
-        <h2>📁 ${escapeHtml(project.title)}</h2>
+        <h2>🗁 ${escapeHtml(project.title)}</h2>
         <div style="margin: 15px 0;">
-            <button class="expand-btn" id="toggleDescBtn">
+            <button class="expand-btn" onclick="toggleDescription()">
                 📖 ${project.description ? 'Скрыть описание' : 'Показать описание'}
             </button>
             <div id="projectFullDesc" style="${project.description ? '' : 'display: none;'} margin-top: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
@@ -46,21 +46,11 @@ function displayProjectInfo(project) {
             </div>
         </div>
     `;
-    
-    // Привязываем обработчик для кнопки описания
-    const toggleBtn = document.getElementById('toggleDescBtn');
-    if (toggleBtn) {
-        const handler = () => toggleDescription();
-        toggleBtn.removeEventListener('click', handler);
-        toggleBtn.removeEventListener('touchstart', handler);
-        toggleBtn.addEventListener('click', handler);
-        toggleBtn.addEventListener('touchstart', handler);
-    }
 }
 
 function toggleDescription() {
     const descElement = document.getElementById('projectFullDesc');
-    const btn = document.getElementById('toggleDescBtn');
+    const btn = descElement.previousElementSibling;
     
     if (descElement.style.display === 'none') {
         descElement.style.display = 'block';
@@ -97,6 +87,7 @@ function closeAllMapMenus() {
 
 // Переключение контекстного меню карты
 function toggleMapMenu(mapId, btn) {
+    event.stopPropagation();
     const menu = document.getElementById(`map-menu-${mapId}`);
     const isActive = menu.classList.contains('active');
     
@@ -105,20 +96,14 @@ function toggleMapMenu(mapId, btn) {
     
     if (!isActive) {
         menu.classList.add('active');
-        
-        // Функция для закрытия меню
-        const closeMenu = (e) => {
-            if (!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
-                menu.classList.remove('active');
-                document.removeEventListener('click', closeMenu);
-                document.removeEventListener('touchstart', closeMenu);
-            }
-        };
-        
         // Закрыть меню при клике вне его
         setTimeout(() => {
-            document.addEventListener('click', closeMenu);
-            document.addEventListener('touchstart', closeMenu);
+            document.addEventListener('click', function closeMenu(e) {
+                if (!menu.contains(e.target) && e.target !== btn) {
+                    menu.classList.remove('active');
+                    document.removeEventListener('click', closeMenu);
+                }
+            });
         }, 0);
     }
 }
@@ -138,11 +123,11 @@ function getMapCardData(mapId) {
 
 // Редактирование карты (из контекстного меню)
 function editMapFromCard(mapId) {
-    closeAllMapMenus();
     const mapData = getMapCardData(mapId);
     if (mapData) {
         editMap(mapId, mapData.title, mapData.description, mapData.imageUrl);
     }
+    closeAllMapMenus();
 }
 
 // Удаление карты (из контекстного меню)
@@ -162,22 +147,22 @@ function displayMaps(maps) {
     container.innerHTML = maps.map(map => `
         <div class="map-item" data-map-id="${map.id}" data-map-title="${escapeHtml(map.title)}" data-map-description="${escapeHtml(map.description || '')}" data-map-imageurl="${escapeHtml(map.imageUrl || '')}">
             <div class="map-item-header">
-                <div class="map-title">🗺️ ${escapeHtml(map.title)}</div>
+                <div class="map-title" onclick="openMap(${map.id})">🗺️ ${escapeHtml(map.title)}</div>
                 <div class="map-menu-container">
-                    <button class="menu-trigger-btn" data-map-menu-trigger="${map.id}" aria-label="Меню карты">
+                    <button class="menu-trigger-btn" onclick="event.stopPropagation(); toggleMapMenu(${map.id}, this)">
                         ⋮
                     </button>
                     <div id="map-menu-${map.id}" class="map-context-menu">
-                        <div class="menu-item" data-edit-map="${map.id}">
+                        <div class="menu-item" onclick="event.stopPropagation(); editMapFromCard(${map.id})">
                             ✏️ Редактировать
                         </div>
-                        <div class="menu-item menu-item-danger" data-delete-map="${map.id}">
+                        <div class="menu-item menu-item-danger" onclick="event.stopPropagation(); deleteMapFromCard(${map.id})">
                             🗑️ Удалить
                         </div>
                     </div>
                 </div>
             </div>
-            <button class="expand-btn" data-toggle-desc="${map.id}">
+            <button class="expand-btn" onclick="event.stopPropagation(); toggleMapDescription(${map.id})">
                 📖 Показать описание
             </button>
             <div id="map-desc-${map.id}" class="map-description hidden">
@@ -185,11 +170,9 @@ function displayMaps(maps) {
             </div>
         </div>
     `).join('');
-    
-    // Привязываем обработчики событий
-    attachMapEventListeners();
 }
 
+// Функция для сворачивания/разворачивания описания карты
 function toggleMapDescription(mapId) {
     event.stopPropagation();
     const descElement = document.getElementById(`map-desc-${mapId}`);
@@ -202,76 +185,6 @@ function toggleMapDescription(mapId) {
         descElement.classList.add('hidden');
         btn.textContent = '📖 Показать описание';
     }
-}
-
-function attachMapEventListeners() {
-    // Открытие карты
-    document.querySelectorAll('[data-map-id]').forEach(el => {
-        const handler = (e) => {
-            e.stopPropagation();
-            const mapId = el.getAttribute('data-map-id');
-            openMap(mapId);
-        };
-        el.removeEventListener('click', handler);
-        el.removeEventListener('touchstart', handler);
-        el.addEventListener('click', handler);
-        el.addEventListener('touchstart', handler);
-    });
-
-    // Переключение описания
-    document.querySelectorAll('[data-toggle-desc]').forEach(el => {
-        const handler = (e) => {
-            e.stopPropagation();
-            const mapId = el.getAttribute('data-toggle-desc');
-            toggleMapDescription(mapId);
-        };
-        el.removeEventListener('click', handler);
-        el.removeEventListener('touchstart', handler);
-        el.addEventListener('click', handler);
-        el.addEventListener('touchstart', handler);
-    });
-    
-    // Открытие меню карты
-    document.querySelectorAll('[data-map-menu-trigger]').forEach(el => {
-        const handler = (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            const mapId = el.getAttribute('data-map-menu-trigger');
-            toggleMapMenu(mapId, el);
-        };
-        el.removeEventListener('click', handler);
-        el.removeEventListener('touchstart', handler);
-        el.addEventListener('click', handler);
-        el.addEventListener('touchstart', handler);
-    });
-    
-    // Редактирование карты
-    document.querySelectorAll('[data-edit-map]').forEach(el => {
-        const handler = (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            const mapId = el.getAttribute('data-edit-map');
-            editMapFromCard(mapId);
-        };
-        el.removeEventListener('click', handler);
-        el.removeEventListener('touchstart', handler);
-        el.addEventListener('click', handler);
-        el.addEventListener('touchstart', handler);
-    });
-    
-    // Удаление карты
-    document.querySelectorAll('[data-delete-map]').forEach(el => {
-        const handler = (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            const mapId = el.getAttribute('data-delete-map');
-            deleteMapFromCard(mapId);
-        };
-        el.removeEventListener('click', handler);
-        el.removeEventListener('touchstart', handler);
-        el.addEventListener('click', handler);
-        el.addEventListener('touchstart', handler);
-    });
 }
 
 // Создание карты
