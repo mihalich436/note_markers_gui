@@ -11,6 +11,10 @@ body {
     padding: 20px;
 }
 
+.hidden {
+    display: none;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -131,7 +135,7 @@ button.danger {
 }
 
 .project-card:hover {
-    transform: translateY(-4px);
+    /*transform: translateY(-4px);*/
     box-shadow: 0 4px 16px rgba(0,0,0,0.15);
 }
 
@@ -152,6 +156,88 @@ button.danger {
 
 .project-description.hidden {
     display: none;
+}
+
+/* Контекстное меню для проектов */
+.project-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.project-title {
+    flex: 1;
+    cursor: pointer;
+}
+
+.project-menu-container {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.menu-trigger-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    font-weight: bold;
+    color: #999;
+    cursor: pointer;
+    padding: 0 8px;
+    line-height: 1;
+    width: auto;
+    transition: color 0.2s;
+}
+
+.menu-trigger-btn:hover {
+    background: none;
+    transform: none;
+    box-shadow: none;
+    color: #333;
+}
+
+.project-context-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    min-width: 150px;
+    z-index: 100;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+}
+
+.project-context-menu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.menu-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    color: #333;
+    font-size: 14px;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.menu-item:hover {
+    background: #f0f0f0;
+}
+
+.menu-item-danger {
+    color: #dc3545;
+    border-top: 1px solid #eee;
+}
+
+.menu-item-danger:hover {
+    background: #fee;
 }
 
 .expand-btn {
@@ -239,7 +325,7 @@ button.danger {
 }
 
 .map-item:hover {
-    transform: translateY(-3px);
+    /*transform: translateY(-3px);*/
     box-shadow: 0 4px 16px rgba(0,0,0,0.15);
 }
 
@@ -251,7 +337,72 @@ button.danger {
 
 .map-description {
     color: #666;
+    line-height: 1.5;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+/* Контекстное меню для карт */
+.map-item {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 4px solid #667eea;
+    position: relative;
+}
+
+.map-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.map-title {
+    flex: 1;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.map-title:hover {
+    color: #667eea;
+}
+
+.map-menu-container {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.map-context-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    min-width: 150px;
+    z-index: 100;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+}
+
+.map-context-menu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.map-description {
+    color: #666;
     margin-top: 8px;
+    word-break: break-word;
 }
 
 /* Сообщения */

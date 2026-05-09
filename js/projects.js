@@ -30,21 +30,91 @@ function displayProjects(projects) {
     }
     
     container.innerHTML = projects.map(project => `
-        <div class="project-card" onclick="openProject(${project.id})">
-            <div class="project-title">📄 ${escapeHtml(project.title)}</div>
+        <div class="project-card" data-project-id="${project.id}" data-project-title="${escapeHtml(project.title)}" data-project-description="${escapeHtml(project.description || '')}" onclick="openProject(${project.id})">
+            <div class="project-card-header">
+                <div class="project-title">🗁 ${escapeHtml(project.title)}</div>
+                <div class="project-menu-container">
+                    <button class="menu-trigger-btn" onclick="event.stopPropagation(); toggleProjectMenu(${project.id}, this)">
+                        ⋮
+                    </button>
+                    <div id="menu-${project.id}" class="project-context-menu">
+                        <div class="menu-item" onclick="event.stopPropagation(); editProjectFromCard(${project.id})">
+                            ✏️ Редактировать
+                        </div>
+                        <div class="menu-item" onclick="event.stopPropagation(); shareProject(${project.id})">
+                            👥 Поделиться
+                        </div>
+                        <div class="menu-item menu-item-danger" onclick="event.stopPropagation(); deleteProjectFromCard(${project.id})">
+                            🗑️ Удалить
+                        </div>
+                    </div>
+                </div>
+            </div>
             <button class="expand-btn" onclick="event.stopPropagation(); toggleDescription(${project.id})">
                 📖 Показать описание
             </button>
             <div id="desc-${project.id}" class="project-description hidden">
                 ${project.description ? escapeHtml(project.description) : 'Описание отсутствует'}
             </div>
-            <div style="margin-top: 15px; display: flex; gap: 10px;">
-                <button class="expand-btn" onclick="event.stopPropagation(); editProject(${project.id}, '${escapeHtml(project.title)}', '${escapeHtml(project.description || '')}')" style="color: #28a745;">✏️ Редактировать</button>
-                <button class="expand-btn" onclick="event.stopPropagation(); shareProject(${project.id})" style="color: #667eea;">👥 Поделиться</button>
-                <button class="expand-btn" onclick="event.stopPropagation(); deleteProject(${project.id})" style="color: #dc3545;">🗑️ Удалить</button>
-            </div>
         </div>
     `).join('');
+}
+
+// Закрыть все открытые меню
+function closeAllMenus() {
+    document.querySelectorAll('.project-context-menu.active').forEach(menu => {
+        menu.classList.remove('active');
+    });
+}
+
+// Переключение контекстного меню
+function toggleProjectMenu(projectId, btn) {
+    event.stopPropagation();
+    const menu = document.getElementById(`menu-${projectId}`);
+    const isActive = menu.classList.contains('active');
+    
+    // Закрываем все другие меню
+    closeAllMenus();
+    
+    if (!isActive) {
+        menu.classList.add('active');
+        // Закрыть меню при клике вне его
+        setTimeout(() => {
+            document.addEventListener('click', function closeMenu(e) {
+                if (!menu.contains(e.target) && e.target !== btn) {
+                    menu.classList.remove('active');
+                    document.removeEventListener('click', closeMenu);
+                }
+            });
+        }, 0);
+    }
+}
+
+// Получение данных проекта из карточки
+function getProjectCardData(projectId) {
+    const card = document.querySelector(`.project-card[data-project-id="${projectId}"]`);
+    if (card) {
+        return {
+            title: card.getAttribute('data-project-title'),
+            description: card.getAttribute('data-project-description')
+        };
+    }
+    return null;
+}
+
+// Редактирование проекта (из контекстного меню)
+function editProjectFromCard(projectId) {
+    const projectData = getProjectCardData(projectId);
+    if (projectData) {
+        editProject(projectId, projectData.title, projectData.description);
+    }
+    closeAllMenus();
+}
+
+// Удаление проекта (из контекстного меню)
+function deleteProjectFromCard(projectId) {
+    closeAllMenus();
+    deleteProject(projectId);
 }
 
 function toggleDescription(projectId) {
@@ -62,12 +132,12 @@ function toggleDescription(projectId) {
 
 // Открытие проекта - переход на отдельную страницу с заметками
 function openProject(projectId) {
-    // Переходим на страницу заметок, передавая ID проекта в URL
     window.location.href = `./project.html?id=${projectId}`;
 }
 
 // Управление доступом
 function shareProject(projectId) {
+    closeAllMenus();
     window.location.href = `./share.html?id=${projectId}`;
 }
 
@@ -82,9 +152,7 @@ async function createProject(title, description) {
         
         if (response.ok) {
             closeProjectModal();
-            // loadProjects(); // Перезагружаем только список проектов
             const project = await response.json();
-            console.log(project)
             this.projects.push(project);
             displayProjects(this.projects);
             showMessage('Проект создан успешно', 'success');
@@ -107,7 +175,7 @@ async function updateProject(id, title, description) {
         if (response.ok) {
             closeProjectModal();
             loadProjects();
-            showMessage('Проект обновлен успешно', 'success');
+            showMessage('Проект обновлён успешно', 'success');
         } else {
             showMessage('Ошибка обновления проекта');
         }
@@ -126,7 +194,7 @@ async function deleteProject(id) {
             
             if (response.ok) {
                 loadProjects();
-                showMessage('Проект удален успешно', 'success');
+                showMessage('Проект удалён успешно', 'success');
             } else {
                 showMessage('Ошибка удаления проекта');
             }
@@ -167,6 +235,13 @@ document.getElementById('projectForm').addEventListener('submit', async (e) => {
         await updateProject(editingProjectId, title, description);
     } else {
         await createProject(title, description);
+    }
+});
+
+// Закрытие меню при нажатии ESC
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeAllMenus();
     }
 });
 

@@ -36,7 +36,7 @@ async function loadProject() {
 function displayProjectInfo(project) {
     const container = document.getElementById('projectInfo');
     container.innerHTML = `
-        <h2>📄 ${escapeHtml(project.title)}</h2>
+        <h2>🗁 ${escapeHtml(project.title)}</h2>
         <div style="margin: 15px 0;">
             <button class="expand-btn" onclick="toggleDescription()">
                 📖 ${project.description ? 'Скрыть описание' : 'Показать описание'}
@@ -78,24 +78,113 @@ async function loadMaps() {
     }
 }
 
+// Закрыть все открытые меню карт
+function closeAllMapMenus() {
+    document.querySelectorAll('.map-context-menu.active').forEach(menu => {
+        menu.classList.remove('active');
+    });
+}
+
+// Переключение контекстного меню карты
+function toggleMapMenu(mapId, btn) {
+    event.stopPropagation();
+    const menu = document.getElementById(`map-menu-${mapId}`);
+    const isActive = menu.classList.contains('active');
+    
+    // Закрываем все другие меню
+    closeAllMapMenus();
+    
+    if (!isActive) {
+        menu.classList.add('active');
+        // Закрыть меню при клике вне его
+        setTimeout(() => {
+            document.addEventListener('click', function closeMenu(e) {
+                if (!menu.contains(e.target) && e.target !== btn) {
+                    menu.classList.remove('active');
+                    document.removeEventListener('click', closeMenu);
+                }
+            });
+        }, 0);
+    }
+}
+
+// Получение данных карты из DOM
+function getMapCardData(mapId) {
+    const card = document.querySelector(`.map-item[data-map-id="${mapId}"]`);
+    if (card) {
+        return {
+            title: card.getAttribute('data-map-title'),
+            description: card.getAttribute('data-map-description'),
+            imageUrl: card.getAttribute('data-map-imageurl')
+        };
+    }
+    return null;
+}
+
+// Редактирование карты (из контекстного меню)
+function editMapFromCard(mapId) {
+    const mapData = getMapCardData(mapId);
+    if (mapData) {
+        editMap(mapId, mapData.title, mapData.description, mapData.imageUrl);
+    }
+    closeAllMapMenus();
+}
+
+// Удаление карты (из контекстного меню)
+function deleteMapFromCard(mapId) {
+    closeAllMapMenus();
+    deleteMap(mapId);
+}
+
 function displayMaps(maps) {
     const container = document.getElementById('mapsList');
     
     if (maps.length === 0) {
-        container.innerHTML = '<p style="color: #666; text-align: center;">В этом проекте пока нет заметок</p>';
+        container.innerHTML = '<p style="color: #666; text-align: center;">В этом проекте пока нет карт</p>';
         return;
     }
     
     container.innerHTML = maps.map(map => `
-        <div class="map-item" onclick="openMap(${map.id})">
-            <div class="map-title">📌 ${escapeHtml(map.title)}</div>
-            <div class="map-description">${escapeHtml(map.description || 'Нет содержания')}</div>
-            <div style="margin-top: 10px; display: flex; gap: 10px;">
-                <button class="expand-btn" onclick="event.stopPropagation(); editMap(${map.id})" style="color: #28a745;">✏️ Редактировать</button>
-                <button class="expand-btn" onclick="event.stopPropagation(); deleteMap(${map.id})" style="color: #dc3545;">🗑️ Удалить</button>
+        <div class="map-item" data-map-id="${map.id}" data-map-title="${escapeHtml(map.title)}" data-map-description="${escapeHtml(map.description || '')}" data-map-imageurl="${escapeHtml(map.imageUrl || '')}">
+            <div class="map-item-header">
+                <div class="map-title" onclick="openMap(${map.id})">🗺️ ${escapeHtml(map.title)}</div>
+                <div class="map-menu-container">
+                    <button class="menu-trigger-btn" onclick="event.stopPropagation(); toggleMapMenu(${map.id}, this)">
+                        ⋮
+                    </button>
+                    <div id="map-menu-${map.id}" class="map-context-menu">
+                        <div class="menu-item" onclick="event.stopPropagation(); editMapFromCard(${map.id})">
+                            ✏️ Редактировать
+                        </div>
+                        <div class="menu-item menu-item-danger" onclick="event.stopPropagation(); deleteMapFromCard(${map.id})">
+                            🗑️ Удалить
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button class="expand-btn" onclick="event.stopPropagation(); toggleMapDescription(${map.id})">
+                📖 Показать описание
+            </button>
+            <div id="map-desc-${map.id}" class="map-description hidden">
+                ${map.description ? escapeHtml(map.description) : 'Описание отсутствует'}
             </div>
         </div>
     `).join('');
+}
+
+// Функция для сворачивания/разворачивания описания карты
+function toggleMapDescription(mapId) {
+    event.stopPropagation();
+    const descElement = document.getElementById(`map-desc-${mapId}`);
+    const btn = descElement.previousElementSibling;
+    
+    if (descElement.classList.contains('hidden')) {
+        descElement.classList.remove('hidden');
+        btn.textContent = '📘 Скрыть описание';
+    } else {
+        descElement.classList.add('hidden');
+        btn.textContent = '📖 Показать описание';
+    }
 }
 
 // Создание карты
@@ -110,7 +199,6 @@ async function createMap(title, description, imageUrl) {
             const map = await response.json();
             closeMapModal();
             this.project.maps.push(map);
-            // loadMaps(); // Перезагружаем только карты
             displayMaps(this.project.maps);
             showMessage('Карта создана успешно', 'success');
         } else {
@@ -139,7 +227,6 @@ async function updateMap(id, title, description, imageUrl) {
                 updatedMap.imageUrl = map.imageUrl;
                 displayMaps(this.project.maps);
             }
-            // loadMaps();
             showMessage('Карта обновлена успешно', 'success');
         } else {
             showMessage('Ошибка обновления карты');
@@ -158,11 +245,6 @@ async function deleteMap(id) {
             });
             
             if (response.ok) {
-                // const mapId = await response.json();
-                // const index = this.project.maps.findIndex(m => mapId === m.id);
-                // if (index !== -1) {
-                //     this.project.maps.splice(index, 1);
-                // }
                 loadMaps();
                 showMessage('Карта удалена успешно', 'success');
             } else {
@@ -184,13 +266,12 @@ function showCreateMapModal() {
     document.getElementById('mapModal').classList.add('active');
 }
 
-function editMap(id) {
+function editMap(id, title, description, imageUrl) {
     editingMapId = id;
-    const map = this.project.maps.find(m => m.id === id);
     document.getElementById('mapModalTitle').textContent = 'Редактировать карту';
-    document.getElementById('mapTitle').value = map.title;
-    document.getElementById('mapDescription').value = map.description;
-    document.getElementById('mapImageUrl').value = map.imageUrl;
+    document.getElementById('mapTitle').value = title;
+    document.getElementById('mapDescription').value = description;
+    document.getElementById('mapImageUrl').value = imageUrl || '';
     document.getElementById('mapModal').classList.add('active');
 }
 
@@ -216,8 +297,14 @@ document.getElementById('mapForm').addEventListener('submit', async (e) => {
     }
 });
 
+// Закрытие меню при нажатии ESC
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeAllMapMenus();
+    }
+});
+
 // Инициализация
 checkAuth();
 loadUserInfo();
 loadProject();
-// loadMaps();
