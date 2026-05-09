@@ -455,6 +455,15 @@ button.danger {
     font-weight: 600;
 }
 
+/* Предотвращение выделения при тапе */
+.menu-trigger-btn,
+.menu-item,
+.menu-item-danger,
+.expand-btn {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
     .card {
@@ -470,7 +479,6 @@ button.danger {
         gap: 10px;
     }
 
-    /* Улучшение touch-областей для мобильных устройств */
     .menu-trigger-btn {
         min-width: 44px;
         min-height: 44px;
@@ -482,13 +490,5 @@ button.danger {
     .menu-item {
         padding: 12px 16px;
         min-height: 44px;
-    }
-
-    /* Предотвращение выделения при тапе */
-    .menu-trigger-btn,
-    .menu-item,
-    .expand-btn {
-        -webkit-tap-highlight-color: transparent;
-        user-select: none;
     }
 }
