@@ -32,7 +32,7 @@ function displayProjects(projects) {
     container.innerHTML = projects.map(project => `
         <div class="project-card" data-project-id="${project.id}" data-project-title="${escapeHtml(project.title)}" data-project-description="${escapeHtml(project.description || '')}" onclick="openProject(${project.id})">
             <div class="project-card-header">
-                <div class="project-title">🗁 ${escapeHtml(project.title)}</div>
+                <div class="project-title">📁 ${escapeHtml(project.title)}</div>
                 <div class="project-menu-container">
                     <button class="menu-trigger-btn" onclick="event.stopPropagation(); toggleProjectMenu(${project.id}, this)">
                         ⋮

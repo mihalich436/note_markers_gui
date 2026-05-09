@@ -36,7 +36,7 @@ async function loadProject() {
 function displayProjectInfo(project) {
     const container = document.getElementById('projectInfo');
     container.innerHTML = `
-        <h2>🗁 ${escapeHtml(project.title)}</h2>
+        <h2>📁 ${escapeHtml(project.title)}</h2>
         <div style="margin: 15px 0;">
             <button class="expand-btn" onclick="toggleDescription()">
                 📖 ${project.description ? 'Скрыть описание' : 'Показать описание'}
