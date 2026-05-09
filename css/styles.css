@@ -2,6 +2,8 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
 }
 
 body {
@@ -456,6 +458,8 @@ button.danger {
 }
 
 /* Предотвращение выделения при тапе */
+/*.logout-btn,
+.secondary,
 .project-card,
 .map-item,
 .menu-trigger-btn,
@@ -464,7 +468,7 @@ button.danger {
 .expand-btn {
     -webkit-tap-highlight-color: transparent;
     user-select: none;
-}
+}*/
 
 /* Адаптивность */
 @media (max-width: 768px) {
