@@ -456,6 +456,8 @@ button.danger {
 }
 
 /* Предотвращение выделения при тапе */
+.project-card,
+.map-item,
 .menu-trigger-btn,
 .menu-item,
 .menu-item-danger,
