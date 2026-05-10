@@ -29,7 +29,7 @@
                 <div style="text-align: center;">Загрузка проекта...</div>
             </div>
             
-            <button onclick="showCreateMapModal()" class="add-button">+ Новая карта</button>
+            <button id="addButton" onclick="showCreateMapModal()" class="add-button">+ Новая карта</button>
             
             <div id="mapsList" class="maps-list">
                 <div style="text-align: center;">Загрузка карт...</div>
@@ -56,6 +56,16 @@
                 <div class="form-group">
                     <label>Ссылка на изображение</label>
                     <input type="text" id="mapImageUrl" title="Прямая ссылка на изображение. Вы можете отправить изображение себе во Вконтакте в виде файла, а затем скопировать прямую ссылку на этот файл сюда.">
+                </div>
+                <div class="visibility-option">
+                    <div class="visibility-label">
+                        <span>Видимость карты</span>
+                        <small>Если выключено, карта будет скрыта от других участников</small>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="mapVisibility" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
                 </div>
                 <button type="submit">Сохранить</button>
             </form>

@@ -13,7 +13,8 @@ async function loadProjectInfo() {
         const response = await apiRequest(`/projects/${projectId}`);
         
         if (response.ok) {
-            currentProject = await response.json();
+            const projectData = await response.json();
+            currentProject = projectData.project;
             //> Если страница доступна только владельцу, то зачем указывать владельца?
             document.getElementById('projectInfo').innerHTML = `
                 <div style="padding: 15px; background: #e8f0fe; border-radius: 8px; border-left: 4px solid #667eea;">
