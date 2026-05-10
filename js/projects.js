@@ -20,20 +20,8 @@ async function loadProjects() {
     }
 }
 
-// Отображение проектов
-function displayProjects(projects) {
-    const container = document.getElementById('projectsList');
-    
-    if (projects.length === 0) {
-        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #666;">У вас пока нет проектов. Создайте первый!</p>';
-        return;
-    }
-    
-    container.innerHTML = projects.map(project => `
-        <div class="project-card" data-project-id="${project.id}" data-project-title="${escapeHtml(project.title)}" data-project-description="${escapeHtml(project.description || '')}" onclick="openProject(${project.id})">
-            <div class="project-card-header">
-                <div class="project-title">📁 ${escapeHtml(project.title)}</div>
-                <div class="project-menu-container">
+function getProjectContextDiv(project) {
+    return project.owner ? `<div class="project-menu-container">
                     <button class="menu-trigger-btn" onclick="event.stopPropagation(); toggleProjectMenu(${project.id}, this)">
                         ⋮
                     </button>
@@ -48,7 +36,23 @@ function displayProjects(projects) {
                             🗑️ Удалить
                         </div>
                     </div>
-                </div>
+                </div>` : '';
+}
+
+// Отображение проектов
+function displayProjects(projects) {
+    const container = document.getElementById('projectsList');
+    
+    if (projects.length === 0) {
+        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #666;">У вас пока нет проектов. Создайте первый!</p>';
+        return;
+    }
+    
+    container.innerHTML = projects.map(project => `
+        <div class="project-card" data-project-id="${project.id}" data-project-title="${escapeHtml(project.title)}" data-project-description="${escapeHtml(project.description || '')}" onclick="openProject(${project.id})">
+            <div class="project-card-header">
+                <div class="project-title">📁 ${escapeHtml(project.title)}</div>
+                ${getProjectContextDiv(project)}
             </div>
             <button class="expand-btn" onclick="event.stopPropagation(); toggleDescription(${project.id})">
                 📖 Показать описание
