@@ -55,7 +55,7 @@ function displayProjects(projects) {
                 ${getProjectContextDiv(project)}
             </div>
             <button class="expand-btn" onclick="event.stopPropagation(); toggleDescription(${project.id})">
-                📖 Показать описание
+                ► Описание
             </button>
             <div id="desc-${project.id}" class="project-description hidden">
                 ${project.description ? escapeHtml(project.description) : 'Описание отсутствует'}
@@ -127,10 +127,10 @@ function toggleDescription(projectId) {
     
     if (descElement.classList.contains('hidden')) {
         descElement.classList.remove('hidden');
-        btn.textContent = '📘 Скрыть описание';
+        btn.textContent = '▼ Описание';
     } else {
         descElement.classList.add('hidden');
-        btn.textContent = '📖 Показать описание';
+        btn.textContent = '► Описание';
     }
 }
 

@@ -41,11 +41,16 @@ async function loadProject() {
 function displayProjectInfo(project) {
     const container = document.getElementById('projectInfo');
     container.innerHTML = `
-        <h2>📁 ${escapeHtml(project.title)}</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; justify-content: center; align-items: center;">
+                <button onclick="window.location.href='./projects.html'" class="menu-trigger-btn">
+                    🡰
+                </button>
+                <h2> ${escapeHtml(project.title)}</h2>
+            </div>
+            <button id="toggleDescBtn" class="menu-trigger-btn" onclick="toggleDescription()" title="${project.description ? 'Скрыть описание' : 'Показать описание'}">ⓘ</button>
+        </div>
         <div style="margin: 15px 0;">
-            <button class="expand-btn" onclick="toggleDescription()">
-                📖 ${project.description ? 'Скрыть описание' : 'Показать описание'}
-            </button>
             <div id="projectFullDesc" style="${project.description ? '' : 'display: none;'} margin-top: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
                 ${project.description ? escapeHtml(project.description) : 'Описание отсутствует'}
             </div>
@@ -55,14 +60,16 @@ function displayProjectInfo(project) {
 
 function toggleDescription() {
     const descElement = document.getElementById('projectFullDesc');
-    const btn = descElement.previousElementSibling;
+    const btn = document.getElementById("toggleDescBtn");
     
     if (descElement.style.display === 'none') {
         descElement.style.display = 'block';
-        btn.textContent = '📘 Скрыть описание';
+        // btn.textContent = 'ⓘ';
+        btn.title = 'Скрыть описание';
     } else {
         descElement.style.display = 'none';
-        btn.textContent = '📖 Показать описание';
+        // btn.textContent = 'ⓘ';
+        btn.title = 'Показать описание';
     }
 }
 
@@ -190,7 +197,7 @@ function displayMaps(maps) {
                     ${menuDiv}
                 </div>
                 <button class="expand-btn" onclick="event.stopPropagation(); toggleMapDescription(${map.id})">
-                    📖 Показать описание
+                    ► Описание
                 </button>
                 <div id="map-desc-${map.id}" class="map-description hidden">
                     ${map.description ? escapeHtml(map.description) : 'Описание отсутствует'}
@@ -208,10 +215,10 @@ function toggleMapDescription(mapId) {
     
     if (descElement.classList.contains('hidden')) {
         descElement.classList.remove('hidden');
-        btn.textContent = '📘 Скрыть описание';
+        btn.textContent = '▼ Описание';
     } else {
         descElement.classList.add('hidden');
-        btn.textContent = '📖 Показать описание';
+        btn.textContent = '► Описание';
     }
 }
 

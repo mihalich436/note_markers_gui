@@ -405,7 +405,7 @@ class MarkerApp {
 
     toggleViewModalSize() {
         this.viewModal.classList.toggle('expanded');
-        this.expandViewModal.textContent = this.viewModal.classList.contains('expanded') ? '⤓' : '⤢';
+        this.expandViewModal.textContent = this.viewModal.classList.contains('expanded') ? '⭲' : '⤢';
     }
 
     openViewModal(markerId) {
