@@ -44,11 +44,10 @@ function displayProjectInfo(project) {
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; justify-content: center; align-items: center;">
                 <button onclick="window.location.href='./projects.html'" class="menu-trigger-btn">
-                    🡰
+                    ❮
                 </button>
                 <h2> ${escapeHtml(project.title)}</h2>
             </div>
-            <button id="toggleDescBtn" class="menu-trigger-btn" onclick="toggleDescription()" title="${project.description ? 'Скрыть описание' : 'Показать описание'}">ⓘ</button>
         </div>
         <div style="margin: 15px 0;">
             <div id="projectFullDesc" style="${project.description ? '' : 'display: none;'} margin-top: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
@@ -58,20 +57,20 @@ function displayProjectInfo(project) {
     `;
 }
 
-function toggleDescription() {
-    const descElement = document.getElementById('projectFullDesc');
-    const btn = document.getElementById("toggleDescBtn");
+// function toggleDescription() {
+//     const descElement = document.getElementById('projectFullDesc');
+//     const btn = document.getElementById("toggleDescBtn");
     
-    if (descElement.style.display === 'none') {
-        descElement.style.display = 'block';
-        // btn.textContent = 'ⓘ';
-        btn.title = 'Скрыть описание';
-    } else {
-        descElement.style.display = 'none';
-        // btn.textContent = 'ⓘ';
-        btn.title = 'Показать описание';
-    }
-}
+//     if (descElement.style.display === 'none') {
+//         descElement.style.display = 'block';
+//         // btn.textContent = 'ⓘ';
+//         btn.title = 'Скрыть описание';
+//     } else {
+//         descElement.style.display = 'none';
+//         // btn.textContent = 'ⓘ';
+//         btn.title = 'Показать описание';
+//     }
+// }
 
 // Загрузка заметок (отдельный запрос, только для этого проекта)
 async function loadMaps() {
