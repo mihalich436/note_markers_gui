@@ -17,9 +17,9 @@ async function loadProject() {
             const projectData = await response.json();
             this.role = projectData.role;
             this.project = projectData.project;
-            if (this.role != 'ADMIN') {
+            if (this.role !== 'ADMIN') {
                 const addBtn = document.getElementById('addButton');
-                if (addBtn) addBtn.classList.add('hidden');
+                if (addBtn) addBtn.remove();
             }
             displayProjectInfo(this.project);
             if (this.project.maps) {
@@ -94,6 +94,8 @@ function closeAllMapMenus() {
     document.querySelectorAll('.map-context-menu.active').forEach(menu => {
         menu.classList.remove('active');
     });
+    const addBtn = document.getElementById('addButton');
+    if (addBtn) addBtn.style.display = 'flex';
 }
 
 // Переключение контекстного меню карты
@@ -106,6 +108,8 @@ function toggleMapMenu(mapId, btn) {
     closeAllMapMenus();
     
     if (!isActive) {
+        const addBtn = document.getElementById('addButton');
+        if (addBtn) addBtn.style.display = 'none';
         menu.classList.add('active');
         // Закрыть меню при клике вне его
         setTimeout(() => {
@@ -113,6 +117,8 @@ function toggleMapMenu(mapId, btn) {
                 if (!menu.contains(e.target) && e.target !== btn) {
                     menu.classList.remove('active');
                     document.removeEventListener('click', closeMenu);
+                    const addBtn = document.getElementById('addButton');
+                    if (addBtn) addBtn.style.display = 'flex';
                 }
             });
         }, 0);

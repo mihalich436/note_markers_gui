@@ -27,7 +27,7 @@
         </div>
         
         <div class="card"> 
-            <button id="addButton" onclick="showCreateMapModal()" class="add-button">+ Новая карта</button>
+            <!-- <button id="addButton" onclick="showCreateMapModal()" class="add-button">+ Новая карта</button> -->
             
             <div id="mapsList" class="maps-list">
                 <div style="text-align: center;">Загрузка карт...</div>
@@ -69,6 +69,9 @@
             </form>
         </div>
     </div>
+
+    <!-- Плавающая кнопка создания карты -->
+    <button id="addButton" class="fab" onclick="showCreateMapModal()" aria-label="Создать карту">+</button>
     
     <script src="./js/config.js"></script>
     <script src="./js/common.js"></script>

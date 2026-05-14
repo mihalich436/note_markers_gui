@@ -23,7 +23,7 @@
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h2>Мои проекты</h2>
-                <button onclick="showCreateProjectModal()" class="add-button">+ Новый проект</button>
+                <!-- <button onclick="showCreateProjectModal()" class="add-button">+ Новый проект</button> -->
             </div>
             <div id="projectsList" class="projects-grid">
                 <div style="text-align: center; grid-column: 1/-1;">Загрузка...</div>
@@ -51,6 +51,9 @@
             </form>
         </div>
     </div>
+
+    <!-- Плавающая кнопка создания проекта -->
+    <button class="fab" onclick="showCreateProjectModal()" aria-label="Создать проект">+</button>
     
     <script src="./js/config.js"></script>
     <script src="./js/common.js"></script>

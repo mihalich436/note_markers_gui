@@ -504,9 +504,15 @@ input:checked + .toggle-slider:before {
 
 /* Сообщения */
 .error-message, .success-message {
+    position: fixed;
+    bottom: 10px;
+    left: 20px;
+    z-index: 9999;
+    pointer-events: none;
     padding: 10px;
     border-radius: 8px;
     margin-bottom: 20px;
+    animation: slideIn 0.3s ease;
 }
 
 .error-message {
@@ -519,6 +525,17 @@ input:checked + .toggle-slider:before {
     background: #d4edda;
     color: #155724;
     border: 1px solid #c3e6cb;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 /* Таблица участников */
@@ -538,6 +555,43 @@ input:checked + .toggle-slider:before {
 .shared-users-table th {
     background: #f8f9fa;
     font-weight: 600;
+}
+
+/* Floating Action Button (FAB) - плавающая круглая кнопка */
+.fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #948069 0%, #734666 100%);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 400;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s, box-shadow 0.2s;
+    z-index: 100;
+    padding: 0;
+    line-height: 1;
+}
+
+.fab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.fab:active {
+    transform: translateY(1px);
+}
+
+.fab:hidden {
+    display: none;
 }
 
 /* Адаптивность */
