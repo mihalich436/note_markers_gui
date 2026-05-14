@@ -69,6 +69,8 @@ function closeAllMenus() {
     document.querySelectorAll('.project-context-menu.active').forEach(menu => {
         menu.classList.remove('active');
     });
+    const addBtn = document.getElementById('addButton');
+    if (addBtn) addBtn.style.display = 'flex';
 }
 
 // Переключение контекстного меню
@@ -81,6 +83,8 @@ function toggleProjectMenu(projectId, btn) {
     closeAllMenus();
     
     if (!isActive) {
+        const addBtn = document.getElementById('addButton');
+        if (addBtn) addBtn.style.display = 'none';
         menu.classList.add('active');
         // Закрыть меню при клике вне его
         setTimeout(() => {
@@ -88,6 +92,8 @@ function toggleProjectMenu(projectId, btn) {
                 if (!menu.contains(e.target) && e.target !== btn) {
                     menu.classList.remove('active');
                     document.removeEventListener('click', closeMenu);
+                    const addBtn = document.getElementById('addButton');
+                    if (addBtn) addBtn.style.display = 'flex';
                 }
             });
         }, 0);
