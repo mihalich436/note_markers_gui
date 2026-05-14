@@ -544,7 +544,7 @@ class MarkerApp {
             this.isAddingNote = true;
             
             // Устанавливаем цвет и форму текущего маркера
-            if (marker.visibility) {
+            if (marker.visibility || this.currentRole !== 'ADMIN') {
                 this.changeMarkerVisibility.textContent = '👁️';
                 this.changeMarkerVisibility.title = 'Маркер будет виден всем';
             }
@@ -689,7 +689,7 @@ class MarkerApp {
             this.descriptionText.value = '';
             
             // Устанавливаем цвет и форму по умолчанию
-            if (this.markerSettings.defaultVisibility) {
+            if (this.markerSettings.defaultVisibility || this.currentRole !== 'ADMIN') {
                 this.changeMarkerVisibility.textContent = '👁️';
                 this.changeMarkerVisibility.title = 'Маркер будет виден всем';
             }
@@ -1289,6 +1289,7 @@ class MarkerApp {
     }
 
     toggleMarkerVisibility() {
+        if (this.currentRole !== 'ADMIN') return;
         if (this.changeMarkerVisibility.textContent === '🚫') {
             this.changeMarkerVisibility.textContent = '👁️';
             this.changeMarkerVisibility.title = 'Маркер будет виден всем';
@@ -1386,7 +1387,7 @@ class MarkerApp {
             this.isAddingNote = true;
             
             // Устанавливаем цвет и форму текущего маркера
-            if (marker.visibility) {
+            if (marker.visibility || this.currentRole !== 'ADMIN') {
                 this.changeMarkerVisibility.textContent = '👁️';
                 this.changeMarkerVisibility.title = 'Маркер будет виден всем';
             }
