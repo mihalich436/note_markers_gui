@@ -12,17 +12,18 @@
         <!-- Верхняя панель инструментов -->
         <div class="top-toolbar">
             <div class="toolbar-group">
-                <button id="fileMenuBtn" class="toolbar-btn" title="Файл">📁<span class="toolbar-btn-text"> Файл</span></button>
-                <button id="markerSettingsBtn" class="toolbar-btn" title="Настройки маркеров">⚙️<span class="toolbar-btn-text"> Настройки</span></button>
-                <button id="showMarkersListBtn" class="toolbar-btn" title="Список маркеров">📋<span class="toolbar-btn-text"> Список</span></button>
+                <button id="fileMenuBtn" class="toolbar-btn" title="Файл">☰<span class="toolbar-btn-text"> Меню</span></button>
+                <!-- <button id="markerSettingsBtn" class="toolbar-btn" title="Настройки маркеров">⚙️<span class="toolbar-btn-text"> Настройки</span></button> -->
+                <!-- <button id="showMarkersListBtn" class="toolbar-btn" title="Список маркеров">📋<span class="toolbar-btn-text"> Список</span></button> -->
                 <button id="generalInfoBtn" class="toolbar-btn" title="Общая информация">📖<span class="toolbar-btn-text"> Общее</span></button>
-                <button id="helpBtn" class="toolbar-btn" title="Как пользоваться сайтом">❓<span class="toolbar-btn-text"> Справка</span></button>
+                <!-- <button id="helpBtn" class="toolbar-btn" title="Как пользоваться сайтом">❓<span class="toolbar-btn-text"> Справка</span></button> -->
             </div>
             <div class="toolbar-group">
                 <input type="file" id="imageUpload" accept="image/*" class="file-input">
-                <button id="zoomIn" title="Приблизить (Ctrl +)">🔍 +</button>
-                <button id="zoomOut" title="Отдалить (Ctrl -)">🔍 −</button>
-                <button id="resetZoom" title="Сбросить масштаб">🔄 Сброс</button>
+                <span>🔍 </span>
+                <button id="zoomIn" title="Приблизить (Ctrl +)">+</button>
+                <button id="zoomOut" title="Отдалить (Ctrl -)">−</button>
+                <button id="resetZoom" title="Сбросить масштаб">⟳</button>
             </div>
         </div>
 
@@ -30,7 +31,19 @@
         <div id="fileMenu" class="file-menu hidden">
             <div class="file-menu-item" id="loadImageBtn">
                 <span>📤 Загрузить изображение</span>
-                <small>Загрузите изображение по ссылке</small>
+                <small>Загрузить изображение по ссылке</small>
+            </div>
+            <div class="file-menu-item" id="markerSettingsBtn">
+                <span>⚙️ Настройки маркеров</span>
+                <small>Настроить стили маркеров по умолчанию и др.</small>
+            </div>
+            <div class="file-menu-item" id="showMarkersListBtn">
+                <span>📋 Список маркеров</span>
+                <small>Показать список маркеров на карте</small>
+            </div>
+            <div class="file-menu-item" id="helpBtn">
+                <span>❓ Справка</span>
+                <small>Показать подсказку о сайте</small>
             </div>
             <!-- <div class="file-menu-item" id="saveToFileBtn">
                 <span>💾 Сохранить в файл</span>
@@ -203,19 +216,27 @@
                     </div>
                 </div>
                 <div class="settings-section">
+                    <h3>Показывать подсказки</h3>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="showNotes" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Показывать короткие заметки рядом с маркерами</span>
+                    </label>
+                </div>
+                <div class="settings-section">
+                    <h3>Видимость маркера</h3>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="defaultVisibility">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Создавать маркер видимым для всех</span>
+                    </label>
+                </div>
+                <div class="settings-section">
                     <h3>Размер маркера по умолчанию</h3>
                     <div class="size-slider">
                         <input type="range" id="markerSizeDefault" min="20" max="60" value="36" step="2">
                         <span id="sizeValueDefault">36px</span>
                     </div>
-                </div>
-                <div class="settings-section">
-                    <h3>Показывать заметки</h3>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="showNotes" checked>
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-label">Показывать заметки рядом с маркерами</span>
-                    </label>
                 </div>
                 <div class="settings-section">
                     <h3>Масштаб для подписей</h3>

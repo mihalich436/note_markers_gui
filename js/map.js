@@ -23,11 +23,11 @@ class MarkerApp {
         
         // Настройки маркеров
         this.markerSettings = {
-            defaultVisibility: false,
             defaultShape: 'circle',
             defaultColor: '#ef4444',
             defaultSize: 36,
             showNotes: true,
+            defaultVisibility: false,
             minZoomForLabels: 1 // Минимальный масштаб для отображения всех подписей
         };
         
@@ -95,6 +95,7 @@ class MarkerApp {
         this.markerSizeDefault = document.getElementById('markerSizeDefault');
         this.sizeValueDefault = document.getElementById('sizeValueDefault');
         this.showNotes = document.getElementById('showNotes');
+        this.defaultVisibility = document.getElementById('defaultVisibility');
         this.customColor = document.getElementById('customColor');
         this.applyMarkerSettings = document.getElementById('applyMarkerSettings');
         this.saveDefaultSettings = document.getElementById('saveDefaultSettings');
@@ -670,7 +671,6 @@ class MarkerApp {
             mousePos.y >= 0 && mousePos.y <= 100) {
             
             this.tempMarker = {
-                // id: Date.now(),
                 x: mousePos.x,
                 y: mousePos.y,
                 title: '',
@@ -808,7 +808,7 @@ class MarkerApp {
                     
                     // Обновляем отображение подписей в зависимости от масштаба
                     const showLabelsOld = this.showLabels;
-                    this.showLabels = (this.currentZoom > this.markerSettings.minZoomForLabels);
+                    this.showLabels = this.getShowLabels();
                     const updateShowLabels = (this.showLabels != showLabelsOld);
                     
                     this.renderMarkers(updateShowLabels);
@@ -876,6 +876,10 @@ class MarkerApp {
         */
         // Сбрасываем позиции для следующего жеста
         this.touchStartPositions = [];
+    }
+
+    getShowLabels() {
+        return (this.currentZoom > this.minZoom * this.markerSettings.minZoomForLabels) && this.markerSettings.showNotes;
     }
 
     customColorChanged() {
@@ -1040,7 +1044,7 @@ class MarkerApp {
             
             this.updateImageTransform();
             
-            this.showLabels = (this.currentZoom > this.markerSettings.minZoomForLabels);
+            this.showLabels = this.getShowLabels();
             const updateShowLabels = (this.showLabels != showLabelsOld);
             
             this.renderMarkers(updateShowLabels);
@@ -1727,7 +1731,7 @@ class MarkerApp {
             this.constrainImagePosition();
             
             this.updateImageTransform();
-            this.showLabels = (this.currentZoom > this.markerSettings.minZoomForLabels);
+            this.showLabels = this.getShowLabels();
             const updateShowLabels = (this.showLabels != showLabelsOld);
             this.renderMarkers(updateShowLabels);
         }
@@ -1736,7 +1740,7 @@ class MarkerApp {
     resetZoom() {
         const showLabelsOld = this.showLabels;
         this.currentZoom = this.minZoom;
-        this.showLabels = (this.currentZoom > this.markerSettings.minZoomForLabels);
+        this.showLabels = this.getShowLabels();
         const updateShowLabels = (this.showLabels != showLabelsOld);
         this.imagePosition = { x: 0, y: 0 };
         this.updateImageTransform();
@@ -1944,6 +1948,7 @@ class MarkerApp {
         this.markerSizeDefault.value = this.markerSettings.defaultSize;
         this.sizeValueDefault.textContent = this.markerSettings.defaultSize + 'px';
         this.showNotes.checked = this.markerSettings.showNotes;
+        this.defaultVisibility.checked = this.markerSettings.defaultVisibility;
         
         // Подсветка выбранного цвета
         document.querySelectorAll('.color-preset').forEach(btn => {
@@ -1975,7 +1980,6 @@ class MarkerApp {
         const shape = document.querySelector('input[name="markerShape"]:checked')?.value || 'circle';
         const color = this.customColor.value;
         const size = parseInt(this.markerSizeDefault.value);
-        const showNotes = this.showNotes.checked;
         
         this.markers.forEach(marker => {
             if (this.shapeIsChanged) marker.shape = shape;
@@ -1983,7 +1987,8 @@ class MarkerApp {
             if (this.markerSizeIsChanged) marker.size = size;
         });
         
-        this.markerSettings.showNotes = showNotes;
+        this.markerSettings.showNotes = this.showNotes.checked;
+        this.markerSettings.defaultVisibility = this.defaultVisibility.checked;
         this.markers.forEach(m => m.isUpdated = true);
         
         this.renderMarkers();
@@ -2002,6 +2007,7 @@ class MarkerApp {
         this.markerSettings.defaultColor = this.customColor.value;
         this.markerSettings.defaultSize = parseInt(this.markerSizeDefault.value);
         this.markerSettings.showNotes = this.showNotes.checked;
+        this.markerSettings.defaultVisibility = this.defaultVisibility.checked;
         
         // Сохраняем значение ползунка масштаба подписей, если он есть
         const minZoomForLabels = document.getElementById('minZoomForLabels');
@@ -2019,6 +2025,7 @@ class MarkerApp {
             defaultColor: '#ef4444',
             defaultSize: 36,
             showNotes: true,
+            defaultVisibility: false,
             minZoomForLabels: 2
         };
         this.saveMarkerSettings();
@@ -2075,7 +2082,7 @@ class MarkerApp {
                             this.currentZoom = map.zoom || this.minZoom;
                             this.imagePosition = map.position || { x: 0, y: 0 };
                             this.updateImageTransform();
-                            this.showLabels = (this.currentZoom > this.markerSettings.minZoomForLabels);
+                            this.showLabels = this.getShowLabels();
 
                             this.renderMarkers();
                             
@@ -2118,7 +2125,7 @@ class MarkerApp {
                         this.currentZoom = data.zoom || this.minZoom;
                         this.imagePosition = data.position || { x: 0, y: 0 };
                         this.updateImageTransform();
-                        this.showLabels = (this.currentZoom > this.markerSettings.minZoomForLabels);
+                        this.showLabels = this.getShowLabels();
 
                         this.renderMarkers();
                         
