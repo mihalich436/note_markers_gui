@@ -225,6 +225,7 @@ class MarkerApp {
 
         // События настроек маркеров
         this.markerSettingsBtn.addEventListener('click', () => {
+            this.fileMenu.classList.add('hidden');
             this.markerSettingsModal.style.display = 'block';
             this.loadSettingsToModal();
         });
@@ -895,6 +896,7 @@ class MarkerApp {
     }
 
     toggleMarkersPanel() {
+        this.fileMenu.classList.add('hidden');
         this.markersPanel.classList.toggle('hidden');
         if (!this.markersPanel.classList.contains('hidden')) {
             this.editPanel.classList.add('hidden');
@@ -1793,6 +1795,7 @@ class MarkerApp {
 
     openHelp() {
         this.helpModal.classList.remove('hidden');
+        this.fileMenu.classList.add('hidden');
     }
 
     closeHelp() {
