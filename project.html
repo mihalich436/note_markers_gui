@@ -14,9 +14,18 @@
                 <img src="./icons/logo.png" alt="📝 " class="logo-img">
                 The Lazy DM's Notes
             </div>
-            <div class="user-info">
-                <span class="username" id="username"></span>
-                <button onclick="logout()" class="logout-btn">Выйти</button>
+            <div class="user-info" onclick="toggleUserMenu()">
+                <div class="user-avatar">
+                    <span id="avatarLetter"></span>
+                </div>
+                <div id="userDropdownMenu" class="user-dropdown">
+                    <div class="user-dropdown-item">
+                        <div class="user-dropdown-username" id="userNameSpan"></div>
+                    </div>
+                    <div class="user-dropdown-logout" onclick="logout(); event.stopPropagation();">
+                        Выйти
+                    </div>
+                </div>
             </div>
         </div>
         

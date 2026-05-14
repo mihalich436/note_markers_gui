@@ -66,16 +66,50 @@ function checkAuth() {
 async function loadUserInfo() {
     const username = localStorage.getItem('username');
     if (username) {
-        document.getElementById('username').textContent = username;
+        updateUserAvatar(username);
     } else {
         // Можно загрузить из JWT или отдельного запроса
         try {
             const token = getToken();
             if (token) {
                 const payload = JSON.parse(atob(token.split('.')[1]));
-                document.getElementById('username').textContent = payload.sub;
-                localStorage.setItem('username', payload.sub);
+                const usernameFromToken = payload.sub;
+                localStorage.setItem('username', usernameFromToken);
+                updateUserAvatar(usernameFromToken);
             }
         } catch (e) {}
     }
 }
+
+// Обновление аватарки пользователя
+function updateUserAvatar(username) {
+    const avatarElement = document.getElementById('userAvatar');
+    const avatarLetterElement = document.getElementById('avatarLetter');
+    const userNameSpan = document.getElementById('userNameSpan');
+    
+    if (avatarLetterElement && username) {
+        avatarLetterElement.textContent = username.charAt(0).toUpperCase();
+    }
+    
+    if (userNameSpan && username) {
+        userNameSpan.textContent = username;
+    }
+}
+
+// Переключение выпадающего меню пользователя
+function toggleUserMenu() {
+    const menu = document.getElementById('userDropdownMenu');
+    if (menu) {
+        menu.classList.toggle('active');
+    }
+}
+
+// Закрытие выпадающего меню при клике вне его
+document.addEventListener('click', function(event) {
+    const userInfo = document.querySelector('.user-info');
+    const menu = document.getElementById('userDropdownMenu');
+    
+    if (userInfo && menu && !userInfo.contains(event.target)) {
+        menu.classList.remove('active');
+    }
+});
