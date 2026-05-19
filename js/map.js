@@ -97,7 +97,7 @@ class MarkerApp {
         this.showNotes = document.getElementById('showNotes');
         this.defaultVisibility = document.getElementById('defaultVisibility');
         this.customColor = document.getElementById('customColor');
-        this.applyMarkerSettings = document.getElementById('applyMarkerSettings');
+        // this.applyMarkerSettings = document.getElementById('applyMarkerSettings');
         this.saveDefaultSettings = document.getElementById('saveDefaultSettings');
         this.resetMarkerSettings = document.getElementById('resetMarkerSettings');
 
@@ -254,9 +254,9 @@ class MarkerApp {
         });
 
         // Применить настройки
-        this.applyMarkerSettings.addEventListener('click', () => {
-            this.applyMarkerSettingsToAll();
-        });
+        // this.applyMarkerSettings.addEventListener('click', () => {
+        //     this.applyMarkerSettingsToAll();
+        // });
 
         this.saveDefaultSettings.addEventListener('click', () => {
             this.saveMarkerSettingsAsDefault();
@@ -1547,23 +1547,20 @@ class MarkerApp {
             // Применяем цвет
             if (shape === 'circle' || shape === 'square') {
                 markerDiv.style.background = color;
-            } else if (shape === 'triangle') {
-                markerDiv.style.borderBottomColor = color;
-            } else if (shape === 'star') {
+            } else if (shape === 'triangle' || shape === 'star') {
                 markerDiv.style.color = color;
             }
             
             // Применяем размер
+            markerDiv.style.width = size + 'px';
+            markerDiv.style.height = size + 'px';
+            // markerDiv.style.lineHeight = '100%';
+
             if (shape === 'circle' || shape === 'square') {
-                markerDiv.style.width = size + 'px';
-                markerDiv.style.height = size + 'px';
-                markerDiv.style.lineHeight = size + 'px';
+                // markerDiv.style.width = size + 'px';
+                // markerDiv.style.height = size + 'px';
                 markerDiv.style.fontSize = `${size/3}px`;
-            } else if (shape === 'triangle') {
-                markerDiv.style.borderLeftWidth = (size/2) + 'px';
-                markerDiv.style.borderRightWidth = (size/2) + 'px';
-                markerDiv.style.borderBottomWidth = (size * 0.86) + 'px';
-            } else if (shape === 'star') {
+            } else if (shape === 'triangle' || shape === 'star') {
                 markerDiv.style.fontSize = size + 'px';
             }
             
@@ -1602,7 +1599,6 @@ class MarkerApp {
                 const labelDiv = document.createElement('div');
                 labelDiv.className = `marker-label ${isSelected ? 'selected-label' : ''}`;
                 labelDiv.style.left = `${size + 1}px`;
-                labelDiv.style.top = `${size/2}px`;
                 if (marker.title) {
                     // Имя маркера всегда отображаем
                     const titleSpan = document.createElement('span');
@@ -1651,7 +1647,6 @@ class MarkerApp {
             const labelDiv = document.createElement('div');
             labelDiv.className = `marker-label ${marker.id === this.selectedMarkerId ? 'selected-label' : ''}`;
             labelDiv.style.left = `${size + 1}px`;
-            labelDiv.style.top = `${size/2}px`;
             if (marker.title) {
                 // Имя маркера всегда отображаем
                 const titleSpan = document.createElement('span');
@@ -1980,31 +1975,31 @@ class MarkerApp {
         this.shapeIsChanged = false;
     }
 
-    applyMarkerSettingsToAll() {
-        const shape = document.querySelector('input[name="markerShape"]:checked')?.value || 'circle';
-        const color = this.customColor.value;
-        const size = parseInt(this.markerSizeDefault.value);
+    // applyMarkerSettingsToAll() {
+    //     const shape = document.querySelector('input[name="markerShape"]:checked')?.value || 'circle';
+    //     const color = this.customColor.value;
+    //     const size = parseInt(this.markerSizeDefault.value);
         
-        this.markers.forEach(marker => {
-            if (this.shapeIsChanged) marker.shape = shape;
-            if (this.customColorIsChanged) marker.color = color;
-            if (this.markerSizeIsChanged) marker.size = size;
-        });
+    //     this.markers.forEach(marker => {
+    //         if (this.shapeIsChanged) marker.shape = shape;
+    //         if (this.customColorIsChanged) marker.color = color;
+    //         if (this.markerSizeIsChanged) marker.size = size;
+    //     });
         
-        this.markerSettings.showNotes = this.showNotes.checked;
-        this.markerSettings.defaultVisibility = this.defaultVisibility.checked;
-        this.markers.forEach(m => m.isUpdated = true);
+    //     this.markerSettings.showNotes = this.showNotes.checked;
+    //     this.markerSettings.defaultVisibility = this.defaultVisibility.checked;
+    //     this.markers.forEach(m => m.isUpdated = true);
         
-        this.renderMarkers();
+    //     this.renderMarkers();
         
-        this.markerSettingsModal.style.display = 'none';
+    //     this.markerSettingsModal.style.display = 'none';
         
-        this.customColorIsChanged = false;
-        this.markerSizeIsChanged = false;
-        this.shapeIsChanged = false;
+    //     this.customColorIsChanged = false;
+    //     this.markerSizeIsChanged = false;
+    //     this.shapeIsChanged = false;
         
-        this.showNotification('Настройки применены ко всем маркерам');
-    }
+    //     this.showNotification('Настройки применены ко всем маркерам');
+    // }
 
     saveMarkerSettingsAsDefault() {
         this.markerSettings.defaultShape = document.querySelector('input[name="markerShape"]:checked')?.value || 'circle';
