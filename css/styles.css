@@ -359,8 +359,7 @@ button.danger {
 }
 
 .map-item.invisible {
-    background: #E8E8E8;
-    border-left: 4px solid #9E9E9E;
+    border-left: 4px solid #E8E8E8;
 }
 
 .map-item:hover {
