@@ -15,16 +15,7 @@ async function loadProjectInfo() {
         if (response.ok) {
             const projectData = await response.json();
             currentProject = projectData.project;
-            //> Если страница доступна только владельцу, то зачем указывать владельца?
-            document.getElementById('projectInfo').innerHTML = `
-                <div style="padding: 15px; background: #e8f0fe; border-radius: 8px; border-left: 4px solid #667eea;">
-                    <strong style="font-size: 18px;">📄 ${escapeHtml(currentProject.title)}</strong>
-                    ${currentProject.description ? `<p style="margin-top: 8px; color: #666;">${escapeHtml(currentProject.description)}</p>` : ''}
-                    <p style="margin-top: 8px; font-size: 14px; color: #888;">
-                        Владелец: ${escapeHtml(currentProject.owner?.username || 'Unknown')}
-                    </p>
-                </div>
-            `;
+            document.getElementById('projectInfo').textContent = ` Управление доступом: ${escapeHtml(currentProject.title)}`;
             loadAccessUsers();
         } else if (response.status === 403) {
             showMessage('У вас нет прав на управление доступом к этому проекту');
