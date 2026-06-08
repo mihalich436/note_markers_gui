@@ -93,9 +93,11 @@
                     </div>
                     <div class="view-modal-body">
                         <div id="chatMessages" class="chat-messages"></div>
-                        <div class="chat-input-area hidden"> <!-- //> remove hidden when chat is ready -->
-                            <textarea id="chatInput" placeholder="Введите сообщение..." class="chat-input" rows="1"></textarea>
-                            <button id="sendChatBtn" class="view-modal-btn primary">Отправить</button>
+                        <div id="chatInputArea" class="chat-input-area">
+                            <!-- <textarea id="chatInput" placeholder="Введите заметку..." class="chat-input" rows="1"></textarea> -->
+                            <div id="chatInput" class="chat-input-resizable" contenteditable="plaintext-only"></div>
+                            <button id="visChatBtn" class="visible-message-btn" title="Заметка будет видна всем"></button>
+                            <button id="sendChatBtn" class="send-message-btn"></button>
                         </div>
                     </div>
                 </div>

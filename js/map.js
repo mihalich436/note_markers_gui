@@ -42,6 +42,8 @@ class MarkerApp {
         this.wsClient.onMessage(this.responseUpdateMarker.bind(this));
         this.wsClient.onMessage(this.responseDeleteMarker.bind(this));
         this.wsClient.onMessage(this.responseMoveMarker.bind(this));
+
+        this.wsClient.onMessage(this.responseSaveMessage.bind(this));
         
         this.init();
     }
@@ -305,14 +307,16 @@ class MarkerApp {
         this.viewModal = document.getElementById('viewModalContent');
         this.chatMessages = document.getElementById('chatMessages');
         this.chatInput = document.getElementById('chatInput');
+        this.chatInputArea = document.getElementById('chatInputArea');
         this.sendChatBtn = document.getElementById('sendChatBtn');
+        this.visChatBtn = document.getElementById('visChatBtn');
         this.viewModalTitle = document.getElementById('viewModalTitle');
         this.editViewModal = document.getElementById('editViewModal');
         this.expandViewModal = document.getElementById('expandViewModal');
         this.closeViewModalBtn = document.getElementById('closeViewModal');
 
         // События модального окна
-        // this.sendChatBtn.addEventListener('click', this.sendChatMessage.bind(this)); //> return when ready
+        this.sendChatBtn.addEventListener('click', this.sendChatMessage.bind(this));
         // this.viewModalSaveBtn.addEventListener('click', this.saveViewModalChanges.bind(this));
         // this.viewModalCancelBtn.addEventListener('click', this.closeViewModal.bind(this));
 
@@ -321,6 +325,12 @@ class MarkerApp {
 
         // Режим редактирования общей информации
         this.editGeneralInfo = false;
+
+        // Для блокировки ввода до подтверждения отправки заметки
+        this.messageSendPending = false;
+
+        // Видимость нового сообщения
+        this.newMessageVisibility = true;
     }
 
     initImageUpload() {
@@ -333,42 +343,80 @@ class MarkerApp {
         this.imageUploadInput.addEventListener('click', this.uploadImageFromUrl.bind(this));
     }
 
-    //> return when ready
-    /*sendChatMessage() {
-        const text = this.chatInput.value.trim();
+    responseSaveMessage(response) {
+        if (!response || response.entityType != 'message' || response.action != 'add') return;
+        console.log("responseSaveMessage")
+        const message = response.object;
+        if (message && message.markerId) {
+            const marker = this.markers.find(m => m.id === message.markerId);
+            if ((!marker.visibility || !message.visibility) && this.currentRole !== 'ADMIN') return;
+            console.log(message)
+            marker.messages.push(message);
+            if (this.selectedMarkerId === marker.id && !this.viewModal.classList.contains('hidden')) {
+                if (this.messageSendPending) {
+                    this.messageSendPending = false;
+                    // this.chatInput.value = '';
+                    chatInput.textContent = '';
+                }
+                marker.isUpdated = true;
+                this.renderChatMessages(marker);
+            }
+            
+        }
+        
+    }
+
+    async requestSaveMessage(message) {
+        console.log('requestSaveMessage')
+        this.messageSendPending = true;
+        try {
+            if (!this.wsClient.sendMessage(`/messages`, message)) {
+                this.showTooltip('Ошибка отправки сообщения', 1500);
+                this.messageSendPending = false;
+            }
+        } catch (error) {
+            this.showTooltip('Ошибка отправки сообщения', 1500);
+            this.messageSendPending = false;
+        }
+    }
+
+    sendChatMessage() {
+        // const text = this.chatInput.value.trim();
+        const text = this.chatInput.textContent.trim();
+        console.log(text)
         if (this.editGeneralInfo) {
-            if (!text) return;
-            if (!this.generalInfo.messages) this.generalInfo.messages = [];
-            this.generalInfo.messages.push({
-                id: Date.now(), //> + random? in future get from server?
-                author: 'User',
-                text: text,
-                timestamp: new Date().toLocaleString()
-            });
-            this.renderChatMessages(this.generalInfo);
-            this.chatInput.value = '';
+            //> return when general info is ready
+            // if (!text) return;
+            // if (!this.generalInfo.messages) this.generalInfo.messages = [];
+            // this.generalInfo.messages.push({
+            //     text: text
+            // });
+            // this.renderChatMessages(this.generalInfo);
+            // this.chatInput.value = '';
+            this.chatInput.textContent = '';
         }
         else {
             if (!text || !this.selectedMarkerId) return;
             const marker = this.markers.find(m => m.id === this.selectedMarkerId);
             if (!marker) return;
             if (!marker.messages) marker.messages = [];
-            marker.messages.push({
-                author: 'User',
-                text: text,
-                timestamp: new Date().toLocaleString()
-            });
-            marker.isUpdated = true;
-            this.renderChatMessages(marker);
-            this.chatInput.value = '';
+            const message = {text: text, visibility: this.newMessageVisibility, markerId: marker.id};
+            this.requestSaveMessage(message);
         }
         
-    }*/
+    }
 
+    switchMessageVisibility() {
+        this.visChatBtn.className = this.newMessageVisibility ? 'invisible-message-btn' : 'visible-message-btn';
+        this.visChatBtn.title = this.newMessageVisibility ? 'Только вы будете видеть заметку' : 'Заметка будет видна всем';
+        this.newMessageVisibility = !this.newMessageVisibility;
+    }
+
+    //> do not redraw all messages?
     renderChatMessages(entity) {
         if (!this.chatMessages) return;
         this.chatMessages.innerHTML = '';
-        if (entity.description) this.appendMessageToChat({text: entity.description});
+        if (entity.description) this.appendDescriptionToChat({text: entity.description});
         if (!entity.messages || entity.messages.length === 0) {
             if (!entity.description) this.chatMessages.innerHTML = '<div class="chat-empty">Нет заметок</div>';
             return;
@@ -377,26 +425,38 @@ class MarkerApp {
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     }
 
+    appendDescriptionToChat(msg) {
+        const div = document.createElement('div');
+        div.className = 'chat-message';
+        
+        const textSpan = document.createElement('span');
+        textSpan.className = 'chat-text';
+        textSpan.innerHTML = this.linkify(msg.text);
+        div.appendChild(textSpan);
+        this.chatMessages.appendChild(div);
+    }
+
     appendMessageToChat(msg) {
-            const div = document.createElement('div');
-            div.className = 'chat-message';
-            if (msg.author) {
-                const authorSpan = document.createElement('span');
-                authorSpan.className = 'chat-author';
-                authorSpan.textContent = msg.author + ': ';
-                div.appendChild(authorSpan);
-            }
-            
-            const textSpan = document.createElement('span');
-            textSpan.className = 'chat-text';
-            textSpan.innerHTML = this.linkify(msg.text);
-            div.appendChild(textSpan);
-            const timeSpan = document.createElement('div');
-            timeSpan.className = 'chat-time';
-            timeSpan.textContent = msg.timestamp || '';
-            div.appendChild(timeSpan);
-            this.chatMessages.appendChild(div);
+        if (!msg.visibility && this.currentRole !== 'ADMIN') return;
+        const div = document.createElement('div');
+        div.className = `chat-message${msg.visibility ? '' : ' invisible'}`;
+        if (msg.author) {
+            const authorSpan = document.createElement('span');
+            authorSpan.className = 'chat-author';
+            authorSpan.textContent = msg.author + ': ';
+            div.appendChild(authorSpan);
         }
+        
+        const textSpan = document.createElement('span');
+        textSpan.className = `chat-text${msg.visibility ? '' : ' invisible'}`;
+        textSpan.innerHTML = this.linkify(msg.text);
+        div.appendChild(textSpan);
+        const timeSpan = document.createElement('div');
+        timeSpan.className = 'chat-time';
+        timeSpan.textContent = msg.createdAt || '';
+        div.appendChild(timeSpan);
+        this.chatMessages.appendChild(div);
+    }
 
     linkify(text) {
         const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -413,7 +473,6 @@ class MarkerApp {
     openViewModal(markerId) {
         if (markerId === null) {
             if (this.editGeneralInfo) {
-                this.currentViewMarkerId = null;
                 const marker = this.markers.find(m => m.id === this.selectedMarkerId);
                 this.selectedMarkerId = null;
                 if (marker) {
@@ -432,7 +491,6 @@ class MarkerApp {
             const marker = this.markers.find(m => m.id === markerId);
             if (!marker) return;
 
-            // this.currentViewMarkerId = markerId;
             // this.viewModalMarkerTitle.value = marker.title || '';
             // this.viewModalNoteText.value = marker.note || '';
             // this.viewModalDescriptionText.value = marker.description || '';
@@ -446,7 +504,6 @@ class MarkerApp {
     closeViewModal() {
         this.viewModal.classList.add('hidden');
         this.editGeneralInfo = false;
-        this.currentViewMarkerId = null;
         if (!this.editPanel.classList.contains('hidden')) return;
         const marker = this.markers.find(m => m.id === this.selectedMarkerId);
         this.selectedMarkerId = null;
@@ -455,42 +512,7 @@ class MarkerApp {
             this.drawMarker(marker, false, true);
         }
     }
-/*
-    saveViewModalChanges() {
-        if (this.editGeneralInfo) {
-            this.editGeneralInfo = false;
-            this.generalInfo.title = this.viewModalMarkerTitle.value.trim() || marker.title;
-            this.generalInfo.note = this.viewModalNoteText.value.trim();
-            this.generalInfo.description = this.viewModalDescriptionText.value.trim();
-            this.closeViewModal();
-            return;
-        }
-        if (!this.currentViewMarkerId) return;
 
-        const marker = this.markers.find(m => m.id === this.currentViewMarkerId);
-        if (marker) {
-            marker.isUpdated = true;
-            marker.title = this.viewModalMarkerTitle.value.trim() || marker.title;
-            marker.note = this.viewModalNoteText.value.trim();
-            marker.description = this.viewModalDescriptionText.value.trim();
-            marker.updatedAt = new Date().toLocaleString();
-
-            // Обновляем форму редактирования, если она открыта
-            if (this.selectedMarkerId === this.currentViewMarkerId) {
-                this.markerTitle.value = marker.title;
-                this.noteText.value = marker.note;
-                this.descriptionText.value = marker.description;
-            }
-
-            this.renderMarkers();
-            this.closeViewModal();
-            this.showTooltip('Маркер обновлен', 1500);
-        }
-        else {
-            this.closeViewModal();
-        }
-    }
-*/
     showContextMenu(x, y, items) {
         this.contextMenu.innerHTML = '';
         this.contextMenu.style.left = x + 'px';
@@ -2057,11 +2079,16 @@ class MarkerApp {
                 this.currentRole = data.role;
                 console.log(map)
                 console.log(this.currentRole)
-                if (this.currentRole && (this.currentRole == 'EDITOR' || this.currentRole == 'ADMIN')) {
+                if (this.currentRole && (this.currentRole === 'EDITOR' || this.currentRole === 'ADMIN')) {
                     this.editViewModal.addEventListener('click', this.openEditMarkerView.bind(this));
+                    this.visChatBtn.addEventListener('click', this.switchMessageVisibility.bind(this));
                 }
                 else {
                     this.editViewModal.classList.add('hidden');
+                    this.visChatBtn.style.display = 'none';
+                    if (this.currentRole === 'READ_ONLY') {
+                        this.chatInputArea.classList.add('hidden');
+                    }
                 }
                 if (map.imageUrl) {
                     const url = map.imageUrl;
