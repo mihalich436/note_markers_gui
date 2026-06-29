@@ -44,6 +44,8 @@ class MarkerApp {
         this.wsClient.onMessage(this.responseMoveMarker.bind(this));
 
         this.wsClient.onMessage(this.responseSaveMessage.bind(this));
+        this.wsClient.onMessage(this.responseUpdateMessage.bind(this));
+        this.wsClient.onMessage(this.responseDeleteMessage.bind(this));
         
         this.init();
     }
@@ -111,6 +113,7 @@ class MarkerApp {
 
         // Контекстное меню
         this.createContextMenu();
+        this.createChatMessageContextMenu();
 
         // Состояние
         this.tempMarker = null;
@@ -186,6 +189,7 @@ class MarkerApp {
                 this.fileMenu.classList.add('hidden');
             }
             this.closeContextMenu();
+            this.closeChatMessageContextMenu();
         });
         
         // Закрытие справки по ESC
@@ -198,6 +202,7 @@ class MarkerApp {
                 this.closeMarkersPanel.click();
                 this.closeViewModal();
                 this.closeContextMenu();
+                this.closeChatMessageContextMenu();
                 if (this.movingMarkerId) {
                     this.movingMarkerId = null;
                     this.imageContainer.style.cursor = 'default';
@@ -300,6 +305,18 @@ class MarkerApp {
         });
     }
 
+    createChatMessageContextMenu() {
+        // Создаем контекстное меню для сообщений чата
+        this.chatMessageContextMenu = document.createElement('div');
+        this.chatMessageContextMenu.className = 'context-menu note hidden';
+        document.body.appendChild(this.chatMessageContextMenu);
+        
+        // Добавляем обработчик закрытия
+        document.addEventListener('click', () => {
+            this.closeChatMessageContextMenu();
+        });
+    }
+
     initViewModal() {
         this.viewModal = document.getElementById('viewModalContent');
 
@@ -366,6 +383,65 @@ class MarkerApp {
         
     }
 
+    responseUpdateMessage(response) {
+        if (!response || response.entityType != 'message' || response.action != 'upd') return;
+        console.log("responseUpdateMessage", response.object);
+        const updatedMessage = response.object;
+        if (updatedMessage && updatedMessage.markerId) {
+            const marker = this.markers.find(m => m.id === updatedMessage.markerId);
+            if (marker && marker.messages) {
+                const index = marker.messages.findIndex(m => m.id === updatedMessage.id);
+                if (index !== -1) {
+                    marker.messages[index] = updatedMessage;
+                    if (this.selectedMarkerId === marker.id && !this.viewModal.classList.contains('hidden')) {
+                        // this.renderChatMessages(marker);
+                        const messageElement = this.chatMessages.querySelector(`.chat-message[data-message-id="${updatedMessage.id}"]`);
+                        if (!messageElement) return;
+                        const messageDiv = messageElement.querySelector('.chat-message-div');
+                        if (!messageDiv) return;
+                        const textSpan = messageDiv.querySelector('.chat-text');
+                        if (!textSpan) return;
+                        
+                        messageDiv.classList.remove('editing');
+                        if (updatedMessage.visibility) {
+                            messageDiv.classList.remove('invisible');
+                            textSpan.classList.remove('invisible');
+                        }
+                        else {
+                            messageDiv.classList.add('invisible');
+                            textSpan.classList.add('invisible');
+                        }
+
+                        const buttonsContainer = messageElement.querySelector('.message-edit-buttons-container');
+                        if (buttonsContainer) buttonsContainer.remove();
+                        
+                        textSpan.contentEditable = 'false';
+                        textSpan.innerHTML = this.linkify(updatedMessage.text);
+                    }
+                }
+            }
+        }
+    }
+
+    responseDeleteMessage(response) {
+        if (!response || response.entityType != 'message' || response.action != 'del') return;
+        console.log("responseDeleteMessage", response.object);
+        const data = response.object;
+        if (data) {
+            const markerId = data.markerId;
+            const messageId = data.messageId;
+            if (markerId && messageId) {
+                const marker = this.markers.find(m => m.id === markerId);
+                if (marker && marker.messages) {
+                    marker.messages = marker.messages.filter(m => m.id !== messageId);
+                    if (this.selectedMarkerId === marker.id && !this.viewModal.classList.contains('hidden')) {
+                        this.renderChatMessages(marker);
+                    }
+                }
+            }
+        }
+    }
+
     async requestSaveMessage(message) {
         console.log('requestSaveMessage')
         this.messageSendPending = true;
@@ -380,10 +456,46 @@ class MarkerApp {
         }
     }
 
+    async requestUpdateMessageText(markerId, messageId, text) {
+        console.log('requestUpdateMessageText', messageId, text);
+        try {
+            if (!this.wsClient.sendMessage(`/messages/${messageId}/text`, 
+                {messageId: messageId, markerId: markerId, text: text})) {
+                this.showTooltip('Ошибка отправки сообщения', 1500);
+            }
+        } catch (error) {
+            this.showTooltip('Ошибка отправки сообщения', 1500);
+        }
+    }
+
+    async requestUpdateMessageVisibility(markerId, messageId, visibility) {
+        console.log('requestUpdateMessageVisibility');
+
+        try {
+            if (!this.wsClient.sendMessage(`/messages/${messageId}/visibility`, 
+                {messageId: messageId, markerId: markerId, visibility: visibility})) {
+                this.showTooltip('Ошибка отправки сообщения', 1500);
+            }
+        } catch (error) {
+            this.showTooltip('Ошибка отправки сообщения', 1500);
+        }
+    }
+
+    async requestDeleteMessage(markerId, messageId) {
+        console.log('requestDeleteMessage');
+        try {
+            if (!this.wsClient.sendMessage(`/messages/${messageId}/delete`, messageId)) {
+                this.showTooltip('Ошибка отправки сообщения', 1500);
+            }
+        } catch (error) {
+            this.showTooltip('Ошибка отправки сообщения', 1500);
+        }
+        
+    }
+
     sendChatMessage() {
         // const text = this.chatInput.value.trim();
         const text = this.chatInput.textContent.trim();
-        console.log(text)
         if (this.editGeneralInfo) {
             //> return when general info is ready
             // if (!text) return;
@@ -421,41 +533,208 @@ class MarkerApp {
             if (!entity.description) this.chatMessages.innerHTML = '<div class="chat-empty">Нет заметок</div>';
             return;
         }
-        entity.messages.forEach(msg => this.appendMessageToChat(msg));
+        entity.messages.forEach(msg => this.appendMessageToChat(msg, entity.id));
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     }
 
     appendDescriptionToChat(msg) {
         const div = document.createElement('div');
         div.className = 'chat-message';
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message-div';
         
         const textSpan = document.createElement('span');
         textSpan.className = 'chat-text';
         textSpan.innerHTML = this.linkify(msg.text);
-        div.appendChild(textSpan);
+        messageDiv.appendChild(textSpan);
+        div.appendChild(messageDiv);
         this.chatMessages.appendChild(div);
     }
 
-    appendMessageToChat(msg) {
+    appendMessageToChat(msg, markerId) {
         if (!msg.visibility && this.currentRole !== 'ADMIN') return;
         const div = document.createElement('div');
-        div.className = `chat-message${msg.visibility ? '' : ' invisible'}`;
+        div.className = 'chat-message';
+        div.setAttribute('data-message-id', msg.id);
+        div.setAttribute('data-marker-id', markerId);
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message-div${msg.visibility ? '' : ' invisible'}`;
+        
         if (msg.author) {
             const authorSpan = document.createElement('span');
             authorSpan.className = 'chat-author';
             authorSpan.textContent = msg.author + ': ';
-            div.appendChild(authorSpan);
+            messageDiv.appendChild(authorSpan);
         }
         
         const textSpan = document.createElement('span');
         textSpan.className = `chat-text${msg.visibility ? '' : ' invisible'}`;
         textSpan.innerHTML = this.linkify(msg.text);
-        div.appendChild(textSpan);
+        messageDiv.appendChild(textSpan);
         const timeSpan = document.createElement('div');
         timeSpan.className = 'chat-time';
         timeSpan.textContent = msg.createdAt || '';
-        div.appendChild(timeSpan);
+        messageDiv.appendChild(timeSpan);
+        
+        // Добавляем обработчик контекстного меню для сообщения
+        div.addEventListener('contextmenu', (e) => {
+            if (messageDiv && messageDiv.classList.contains('editing')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            this.showChatMessageContextMenu(e.clientX, e.clientY, msg.id, markerId);
+        });
+        
+        div.appendChild(messageDiv);
         this.chatMessages.appendChild(div);
+    }
+
+    showChatMessageContextMenu(x, y, messageId, markerId) {
+        // Проверяем права доступа (только ADMIN или автор сообщения может редактировать/удалять)
+        // Пока просто показываем меню для всех, кто может редактировать карту
+        if (this.currentRole !== 'EDITOR' && this.currentRole !== 'ADMIN') return;
+        
+        this.chatMessageContextMenu.innerHTML = '';
+        this.chatMessageContextMenu.style.left = x + 'px';
+        this.chatMessageContextMenu.style.top = y + 'px';
+        this.chatMessageContextMenu.classList.remove('hidden');
+
+        const marker = this.markers.find(m => m.id === markerId);
+        if (!marker) return;
+        const message = marker.messages.find(m => m.id === messageId);
+        if (!message) return;
+
+        const items = [
+            { 
+                icon: '✏️', 
+                text: 'Редактировать', 
+                action: () => {
+                    this.editChatMessage(messageId, markerId);
+                }
+            },
+            { 
+                icon: (message.visibility ? '🚫' : '👁️'), 
+                text: (message.visibility ? 'Скрыть от участников' : 'Сделать видимым'), 
+                action: () => {
+                    this.toggleChatMessageVisibility(messageId, markerId, !message.visibility);
+                }
+            },
+            { 
+                icon: '🗑️', 
+                text: 'Удалить', 
+                action: () => {
+                    this.deleteChatMessage(messageId, markerId);
+                }
+            }
+        ];
+
+        items.forEach(item => {
+            const menuItem = document.createElement('div');
+            menuItem.className = 'context-menu-item';
+            menuItem.innerHTML = `<span>${item.icon || ''}</span> ${item.text}`;
+            menuItem.addEventListener('click', (e) => {
+                e.stopPropagation();
+                item.action();
+                this.closeChatMessageContextMenu();
+            });
+            this.chatMessageContextMenu.appendChild(menuItem);
+        });
+
+        // Корректировка позиции, чтобы меню не выходило за пределы экрана
+        const rect = this.chatMessageContextMenu.getBoundingClientRect();
+        if (rect.right > window.innerWidth || rect.right > document.documentElement.innerWidth) {
+            this.chatMessageContextMenu.style.left = (x - rect.width) + 'px';
+        }
+        if (rect.bottom > window.innerHeight || rect.right > document.documentElement.innerHeight) {
+            this.chatMessageContextMenu.style.top = (y - rect.height) + 'px';
+        }
+    }
+
+    closeChatMessageContextMenu() {
+        if (this.chatMessageContextMenu) {
+            this.chatMessageContextMenu.classList.add('hidden');
+        }
+    }
+
+    editChatMessage(messageId, markerId) {
+        console.log('editChatMessage', { messageId, markerId });
+        const messageElement = this.chatMessages.querySelector(`.chat-message[data-message-id="${messageId}"]`);
+        if (!messageElement) return;
+        const messageDiv = messageElement.querySelector('.chat-message-div');
+        if (!messageDiv) return;
+        const marker = this.markers.find(m => m.id === markerId);
+        if (!marker) return;
+        const message = marker.messages.find(m => m.id === messageId);
+        if (!message) return;
+        const textSpan = messageDiv.querySelector('.chat-text');
+        if (!textSpan) return;
+        
+        messageDiv.classList.add('editing');
+
+        // Создаем кнопки управления
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.className = 'message-edit-buttons-container';
+        const buttonsDiv = document.createElement('div');
+        buttonsDiv.className = 'message-edit-buttons';
+        
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'message-edit-cancel';
+        cancelBtn.textContent = '✖';
+        cancelBtn.title = 'Отменить редактирование';
+        
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'message-edit-save';
+        saveBtn.textContent = '✔';
+        saveBtn.title = 'Сохранить изменения';
+        
+        textSpan.contentEditable = 'plaintext-only';
+        const prevText = textSpan.innerHTML;
+
+        // Обработчик отмены
+        cancelBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.removeEditMessageBtns(messageId, prevText);
+        });
+
+        saveBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.requestUpdateMessageText(markerId, messageId, textSpan.innerHTML);
+        });
+        
+        buttonsDiv.appendChild(cancelBtn);
+        buttonsDiv.appendChild(saveBtn);
+        
+        buttonsContainer.appendChild(buttonsDiv);
+        messageElement.appendChild(buttonsContainer);
+
+        textSpan.innerHTML = message.text;
+        textSpan.focus();
+    }
+
+    // updatedMessageText(markerId, messageId, text) {
+    //     this.requestUpdateMessageText(markerId, messageId, text);
+    // }
+
+    removeEditMessageBtns(messageId, prevText) {
+        const messageElement = this.chatMessages.querySelector(`.chat-message[data-message-id="${messageId}"]`);
+        if (!messageElement) return;
+        const messageDiv = messageElement.querySelector('.chat-message-div');
+        if (messageDiv) messageDiv.classList.remove('editing');
+        const buttonsContainer = messageElement.querySelector('.message-edit-buttons-container');
+        if (buttonsContainer) buttonsContainer.remove();
+        const textSpan = messageDiv.querySelector('.chat-text');
+        if (!textSpan) return;
+        textSpan.contentEditable = 'false';
+        textSpan.innerHTML = prevText;
+    }
+
+    toggleChatMessageVisibility(messageId, markerId, visibility) {
+        console.log('toggleChatMessageVisibility', { messageId, markerId });
+        this.requestUpdateMessageVisibility(markerId, messageId, visibility);
+    }
+
+    deleteChatMessage(messageId, markerId) {
+        console.log('deleteChatMessage', { messageId, markerId });
+        this.requestDeleteMessage(markerId, messageId);
     }
 
     linkify(text) {
@@ -1392,6 +1671,7 @@ class MarkerApp {
 
     selectMarker(markerId) {
         this.closeContextMenu();
+        this.closeChatMessageContextMenu();
         this.removeTempMarker();
         if (this.selectedMarkerId) {
             const oldMarker = this.markers.find(m => m.id === this.selectedMarkerId);

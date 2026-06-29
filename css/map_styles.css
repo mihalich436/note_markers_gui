@@ -1024,6 +1024,10 @@ body {
     border: 1px solid #e9ecef;
 }
 
+.context-menu.note {
+    z-index: 4000;
+}
+
 .context-menu.hidden {
     display: none;
 }
@@ -1234,7 +1238,12 @@ body {
 }
 
 .chat-message {
+    flex-grow: 1;
+    overflow-y: auto;
     margin-bottom: 10px;
+}
+
+.chat-message-div {
     padding: 8px 10px;
     background: #f8f9fa;
     border-radius: 8px;
@@ -1242,14 +1251,17 @@ body {
     user-select: text;
 }
 
-/*.chat-message.invisible {
-    background: #ffffff;
-    border: 2px solid #f8f9fa;
-}*/
-
-.chat-message.invisible {
+.chat-message-div.invisible {
     /*background: linear-gradient(90deg, #DDE2E7 0%, #f8f9fa 30%);*/
     background: #DDE2E7;
+}
+
+/* Стиль для сообщения в режиме редактирования */
+.chat-message-div.editing {
+    border-bottom-right-radius: 0;
+    /*box-shadow: 0 0 10px teal;*/
+    background: #F0F0FF;
+    /*border-color: #40c057;*/
 }
 
 .chat-author {
@@ -1278,6 +1290,10 @@ body {
 
 .chat-text a:hover {
     text-decoration: underline;
+}
+
+.chat-text:focus {
+    outline: none;
 }
 
 .chat-time {
@@ -1337,6 +1353,85 @@ body {
     border-color: #40c057;
 }
 
+.message-edit-buttons-container {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.message-edit-buttons {
+    width: fit-content;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 4px 8px;
+    padding-bottom: 6px;
+    background: #F0F0FF;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    /*box-shadow: 0 0 10px teal;*/
+}
+
+.message-edit-cancel {
+    width: 32px;
+    height: 32px;
+    border: 2px solid #fa5252;
+    border-radius: 50%;
+    background: white;
+    color: #fa5252;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.message-edit-cancel:hover {
+    background: #fa5252;
+    color: white;
+    transform: scale(1.05);
+}
+
+.message-edit-save {
+    width: 32px;
+    height: 32px;
+    border: 2px solid #40c057;
+    border-radius: 50%;
+    background: #40c057;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.message-edit-save:hover {
+    background: #2b8e3c;
+    border-color: #2b8e3c;
+    transform: scale(1.05);
+}
+
+/* Анимация для кнопок редактирования */
+@keyframes editButtonsAppear {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message-edit-buttons {
+    animation: editButtonsAppear 0.2s ease-out;
+}
 
 /* Окно справки */
 .help-modal {
