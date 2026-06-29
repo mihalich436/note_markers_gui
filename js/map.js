@@ -762,6 +762,7 @@ class MarkerApp {
                 // this.viewModalNoteText.value = this.generalInfo.note || '';
                 // this.viewModalDescriptionText.value = this.generalInfo.description || '';
                 this.viewModalTitle.textContent = 'Общая информация';
+                this.chatInputArea.classList.add('hidden');
                 this.renderChatMessages(this.generalInfo);
             }
         }
@@ -774,6 +775,9 @@ class MarkerApp {
             // this.viewModalNoteText.value = marker.note || '';
             // this.viewModalDescriptionText.value = marker.description || '';
             this.viewModalTitle.textContent = marker.title || 'Просмотр маркера';
+            if (this.currentRole !== 'READ_ONLY') {
+                this.chatInputArea.classList.remove('hidden');
+            }
             this.renderChatMessages(marker);
         }
 
