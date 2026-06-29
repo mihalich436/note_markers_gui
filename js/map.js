@@ -697,6 +697,7 @@ class MarkerApp {
 
         saveBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (!textSpan.innerHTML.trim()) this.removeEditMessageBtns(messageId, prevText);
             this.requestUpdateMessageText(markerId, messageId, textSpan.innerHTML);
         });
         
