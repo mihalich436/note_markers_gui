@@ -35,12 +35,30 @@ async function apiRequest(endpoint, options = {}) {
     return response;
 }
 
+async function fileUploadRequest(endpoint, options = {}) {
+    const token = getToken();
+    const response = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers: {
+            ...(token && { 'Authorization': `Bearer ${token}` }),
+            ...options.headers
+        }
+    });
+    
+    if (response.status === 401) {
+        // logout();
+        throw new Error('Неавторизован');
+    }
+    
+    return response;
+}
+
 function showMessage(message, type = 'error') {
-    const container = document.querySelector('.container');
+    const container = document.querySelector('.system-message-container');
     const messageDiv = document.createElement('div');
     messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
     messageDiv.textContent = message;
-    container.prepend(messageDiv);
+    container.appendChild(messageDiv);
     setTimeout(() => messageDiv.remove(), 3000);
 }
 

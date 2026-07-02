@@ -3,6 +3,8 @@ const urlParams = new URLSearchParams(window.location.search);
 const projectId = urlParams.get('id');
 
 let editingMapId = null;
+let uploadedFile = null; // загруженный файл
+// let uploadedImageUrl = null; // URL изображения
 
 if (!projectId) {
     window.location.href = './projects.html';
@@ -134,7 +136,8 @@ function getMapCardData(mapId) {
             title: card.getAttribute('data-map-title'),
             description: card.getAttribute('data-map-description'),
             imageUrl: card.getAttribute('data-map-imageurl'),
-            visibility: card.getAttribute('data-map-visibility') === 'true'
+            visibility: card.getAttribute('data-map-visibility') === 'true',
+            isFile: card.getAttribute('data-map-isFile') === 'true'
         };
     }
     return null;
@@ -144,7 +147,7 @@ function getMapCardData(mapId) {
 function editMapFromCard(mapId) {
     const mapData = getMapCardData(mapId);
     if (mapData) {
-        editMap(mapId, mapData.title, mapData.description, mapData.imageUrl, mapData.visibility);
+        editMap(mapId, mapData.title, mapData.description, mapData.imageUrl, mapData.visibility, mapData.isFile);
     }
     closeAllMapMenus();
 }
@@ -194,7 +197,7 @@ function displayMaps(maps) {
                     </div>`;
         
         return `
-            <div class="map-item${isVisible ? '' : ' invisible'}" data-map-id="${map.id}" data-map-title="${escapeHtml(map.title)}" data-map-description="${escapeHtml(map.description || '')}" data-map-imageurl="${escapeHtml(map.imageUrl || '')}" data-map-visibility="${isVisible}" onclick="openMap(${map.id})">
+            <div class="map-item${isVisible ? '' : ' invisible'}" data-map-id="${map.id}" data-map-title="${escapeHtml(map.title)}" data-map-description="${escapeHtml(map.description || '')}" data-map-imageurl="${escapeHtml(map.imageUrl || '')}" data-map-visibility="${isVisible}" data-map-isFile="${map.file}" onclick="openMap(${map.id})">
                 <div class="map-item-header">
                     <div class="map-title${isVisible ? '' : ' invisible'}">
                         ${isVisible ? '🗺️' : '🔒'} ${escapeHtml(map.title)}
@@ -228,11 +231,11 @@ function toggleMapDescription(mapId) {
 }
 
 // Создание карты
-async function createMap(title, description, imageUrl, visibility = true) {
+async function createMap(title, description, imageUrl, visibility = true, file) {
     try {
         const response = await apiRequest(`/projects/${projectId}/maps`, {
             method: 'POST',
-            body: JSON.stringify({ title, description, imageUrl, visibility })
+            body: JSON.stringify({ title, description, imageUrl, visibility, file })
         });
         
         if (response.ok) {
@@ -241,20 +244,22 @@ async function createMap(title, description, imageUrl, visibility = true) {
             this.project.maps.push(map);
             displayMaps(this.project.maps);
             showMessage('Карта создана успешно', 'success');
+            return map.id;
         } else {
             showMessage('Ошибка создания карты');
         }
     } catch (error) {
         showMessage('Ошибка создания карты');
     }
+    return null;
 }
 
 // Редактирование карты
-async function updateMap(id, title, description, imageUrl, visibility) {
+async function updateMap(id, title, description, imageUrl, visibility, file) {
     try {
         const response = await apiRequest(`/projects/${projectId}/maps/${id}`, {
             method: 'PUT',
-            body: JSON.stringify({ title, description, imageUrl, visibility })
+            body: JSON.stringify({ title, description, imageUrl, visibility, file })
         });
         
         if (response.ok) {
@@ -303,16 +308,46 @@ function showCreateMapModal() {
     document.getElementById('mapDescription').value = '';
     document.getElementById('mapImageUrl').value = '';
     document.getElementById('mapVisibility').checked = true;
+    
+    // Сбрасываем загрузку файлов
+    // uploadedImageUrl = null;
+    uploadedFile = null;
+    document.getElementById('mapImageFile').value = '';
+    document.getElementById('imagePreview').classList.add('hidden');
+    
+    // Устанавливаем вариант "По ссылке" по умолчанию
+    document.querySelector('input[name="imageUploadType"][value="url"]').checked = true;
+    document.getElementById('imageUrlGroup').classList.remove('hidden');
+    document.getElementById('imageFileGroup').classList.add('hidden');
+    
     document.getElementById('mapModal').classList.add('active');
 }
 
-function editMap(id, title, description, imageUrl, visibility) {
+function editMap(id, title, description, imageUrl, visibility, isFile) {
     editingMapId = id;
     document.getElementById('mapModalTitle').textContent = 'Редактировать карту';
     document.getElementById('mapTitle').value = title;
     document.getElementById('mapDescription').value = description;
     document.getElementById('mapImageUrl').value = imageUrl || '';
     document.getElementById('mapVisibility').checked = visibility !== false;
+    
+    // Сбрасываем загрузку файлов
+    // uploadedImageUrl = null;
+    uploadedFile = null;
+    document.getElementById('mapImageFile').value = '';
+    document.getElementById('imagePreview').classList.add('hidden');
+    
+    if (isFile) {
+        document.querySelector('input[name="imageUploadType"][value="file"]').checked = true;
+        document.getElementById('imageUrlGroup').classList.add('hidden');
+        document.getElementById('imageFileGroup').classList.remove('hidden');
+    }
+    else {
+        document.querySelector('input[name="imageUploadType"][value="url"]').checked = true;
+        document.getElementById('imageUrlGroup').classList.remove('hidden');
+        document.getElementById('imageFileGroup').classList.add('hidden');
+    }
+    
     document.getElementById('mapModal').classList.add('active');
 }
 
@@ -322,6 +357,92 @@ function openMap(id) {
 
 function closeMapModal() {
     document.getElementById('mapModal').classList.remove('active');
+    document.getElementById('mapImageFile').value = '';
+    document.getElementById('imagePreview').classList.add('hidden');
+}
+
+function toggleImageUploadType() {
+    const urlRadio = document.querySelector('input[name="imageUploadType"][value="url"]');
+    const fileRadio = document.querySelector('input[name="imageUploadType"][value="file"]');
+    const urlGroup = document.getElementById('imageUrlGroup');
+    const fileGroup = document.getElementById('imageFileGroup');
+    
+    if (urlRadio.checked) {
+        urlGroup.classList.remove('hidden');
+        fileGroup.classList.add('hidden');
+        // Очищаем файл
+        // uploadedImageUrl = null;
+        // uploadedFile = null;
+        // document.getElementById('mapImageFile').value = '';
+        document.getElementById('imagePreview').classList.add('hidden');
+    } else if (fileRadio.checked) {
+        urlGroup.classList.add('hidden');
+        fileGroup.classList.remove('hidden');
+    }
+}
+
+// Обработчик выбора файла
+document.getElementById('mapImageFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Проверка размера файла (10 МБ)
+    if (file.size > 30 * 1024 * 1024) {
+        showMessage('Файл слишком большой. Максимальный размер: 30 МБ');
+        this.value = '';
+        return;
+    }
+    
+    // Проверка типа файла
+    const allowedTypes = [/*'image/png', */'image/jpeg', 'image/jpg', 'image/webp'/*, 'image/gif'*/];
+    if (!allowedTypes.includes(file.type)) {
+        showMessage('Неподдерживаемый формат файла. Поддерживаются: JPG, JPEG, WEBP');
+        this.value = '';
+        return;
+    }
+    
+    // Показываем превью
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const preview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImage');
+        previewImg.src = e.target.result;
+        preview.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+    uploadedFile = file;
+});
+
+// Загрузка файла на сервер через POST
+async function uploadImageFile(mapId, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const response = await fileUploadRequest(`/maps/${mapId}/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            // const data = await response.json();
+            // uploadedImageUrl = data.url;
+            showMessage('Изображение загружено успешно', 'success');
+        } else {
+            showMessage('Ошибка загрузки изображения');
+        }
+    } catch (error) {
+        showMessage('Ошибка загрузки изображения');
+    }
+    uploadedFile = null;
+}
+
+// Удаление превью
+function removeImagePreview() {
+    document.getElementById('imagePreview').classList.add('hidden');
+    document.getElementById('mapImageFile').value = '';
+    // uploadedImageUrl = null;
+    uploadedFile = null;
 }
 
 // Обработчик формы
@@ -331,12 +452,20 @@ document.getElementById('mapForm').addEventListener('submit', async (e) => {
     const description = document.getElementById('mapDescription').value;
     const imageUrl = document.getElementById('mapImageUrl').value;
     const visibility = document.getElementById('mapVisibility').checked;
+    let mapId = editingMapId;
+    const fileRadio = document.querySelector('input[name="imageUploadType"][value="file"]');
+    const isFile = (fileRadio && fileRadio.checked);
     
     if (editingMapId) {
-        await updateMap(editingMapId, title, description, imageUrl, visibility);
+        await updateMap(editingMapId, title, description, imageUrl, visibility, isFile);
     } else {
-        await createMap(title, description, imageUrl, visibility);
+        mapId = await createMap(title, description, imageUrl, visibility, isFile);
     }
+
+    
+    if (isFile && mapId && uploadedFile) {
+        uploadImageFile(mapId, uploadedFile);
+    } 
 });
 
 // Закрытие меню при нажатии ESC

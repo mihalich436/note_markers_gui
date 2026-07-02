@@ -2375,6 +2375,9 @@ class MarkerApp {
                         this.chatInputArea.classList.add('hidden');
                     }
                 }
+                if (map.file && map.fileVersion) {
+                    map.imageUrl = URL + map.imageUrl;
+                }
                 if (map.imageUrl) {
                     const url = map.imageUrl;
                     if (!url) {

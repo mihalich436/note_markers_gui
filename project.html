@@ -42,6 +42,7 @@
                 <div style="text-align: center;">Загрузка карт...</div>
             </div>
         </div>
+        <div class="system-message-container"></div>
     </div>
     
     <!-- Модальное окно создания/редактирования заметки -->
@@ -60,10 +61,40 @@
                     <label>Описание</label>
                     <textarea id="mapDescription" rows="6"></textarea>
                 </div>
+                
+                <!-- Способ загрузки изображения -->
                 <div class="form-group">
-                    <label>Ссылка на изображение</label>
-                    <input type="text" id="mapImageUrl" title="Прямая ссылка на изображение. Вы можете отправить изображение себе во Вконтакте в виде файла, а затем скопировать прямую ссылку на этот файл сюда.">
+                    <label>Способ загрузки изображения</label>
+                    <div class="image-upload-options">
+                        <label class="radio-option">
+                            <input type="radio" name="imageUploadType" value="url" checked onchange="toggleImageUploadType()">
+                            <span>По ссылке</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="imageUploadType" value="file" onchange="toggleImageUploadType()">
+                            <span>Загрузить файл</span>
+                        </label>
+                    </div>
                 </div>
+                
+                <!-- Поле для ссылки -->
+                <div class="form-group" id="imageUrlGroup">
+                    <label>Ссылка на изображение</label>
+                    <input type="text" id="mapImageUrl" placeholder="https://example.com/image.jpg" title="Прямая ссылка на изображение. Вы можете отправить изображение себе во Вконтакте в виде файла, а затем скопировать прямую ссылку на этот файл сюда.">
+                </div>
+                
+                <!-- Поле для загрузки файла -->
+                <div class="form-group hidden" id="imageFileGroup">
+                    <label>Выберите изображение</label>
+                    <input type="file" id="mapImageFile" accept="image/*">
+                    <small class="file-hint">Поддерживаются форматы: PNG, JPG, JPEG, WEBP, GIF. Максимальный размер: 10 МБ</small>
+                    <!-- Превью -->
+                    <div id="imagePreview" class="image-preview hidden">
+                        <img id="previewImage" src="" alt="Предпросмотр">
+                        <button type="button" class="remove-preview-btn" onclick="removeImagePreview()">✕</button>
+                    </div>
+                </div>
+                
                 <div class="visibility-option">
                     <div class="visibility-label">
                         <span>Видимость карты</span>
