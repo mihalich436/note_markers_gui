@@ -386,7 +386,7 @@ document.getElementById('mapImageFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
     
-    // Проверка размера файла (10 МБ)
+    // Проверка размера файла (30 МБ)
     if (file.size > 30 * 1024 * 1024) {
         showMessage('Файл слишком большой. Максимальный размер: 30 МБ');
         this.value = '';
