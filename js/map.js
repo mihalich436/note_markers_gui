@@ -366,7 +366,7 @@ class MarkerApp {
         const message = response.object;
         if (message && message.markerId) {
             const marker = this.markers.find(m => m.id === message.markerId);
-            if ((!marker.visibility || !message.visibility) && this.currentRole !== 'ADMIN') return;
+            if ((!marker.visibility || !message.visibility) && this.currentRole !== 'ADMIN' && this.userId !== message.userId) return;
             console.log(message)
             marker.messages.push(message);
             if (this.selectedMarkerId === marker.id && !this.viewModal.classList.contains('hidden')) {
@@ -552,7 +552,7 @@ class MarkerApp {
     }
 
     appendMessageToChat(msg, markerId) {
-        if (!msg.visibility && this.currentRole !== 'ADMIN') return;
+        if (!msg.visibility && this.currentRole !== 'ADMIN' && this.userId !== msg.userId) return;
         const div = document.createElement('div');
         div.className = 'chat-message';
         div.setAttribute('data-message-id', msg.id);
@@ -560,10 +560,11 @@ class MarkerApp {
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message-div${msg.visibility ? '' : ' invisible'}`;
         
-        if (msg.author) {
+        const author = this.userIdToNick.get(msg.userId);
+        if (author) {
             const authorSpan = document.createElement('span');
             authorSpan.className = 'chat-author';
-            authorSpan.textContent = msg.author + ': ';
+            authorSpan.textContent = author + ': ';
             messageDiv.appendChild(authorSpan);
         }
         
@@ -602,6 +603,8 @@ class MarkerApp {
         if (!marker) return;
         const message = marker.messages.find(m => m.id === messageId);
         if (!message) return;
+
+        if (message.userId !== this.userId && this.currentRole !== 'ADMIN') return;
 
         const items = [
             { 
@@ -2362,6 +2365,12 @@ class MarkerApp {
                 const data = await response.json();
                 const map = data.map;
                 this.currentRole = data.role;
+                this.userId = data.userId;
+                this.userIdToNick = new Map();
+                Object.keys(data.userIdToNick).forEach(key => {
+                  this.userIdToNick.set(Number(key), data.userIdToNick[key]);
+                });
+                console.log(this.userIdToNick)
                 console.log(map)
                 console.log(this.currentRole)
                 if (this.currentRole && (this.currentRole === 'EDITOR' || this.currentRole === 'ADMIN')) {
