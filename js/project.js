@@ -161,7 +161,7 @@ async function toggleMapVisibilityFromCard(mapId) {
         const newVisibility = !mapData.visibility;
         const fileRadio = document.querySelector('input[name="imageUploadType"][value="file"]');
         const isFile = (fileRadio && fileRadio.checked);
-        await updateMap(mapId, mapData.title, mapData.description, mapData.imageUrl, newVisibility, isFile);
+        await toggleMapVisibility(mapId, newVisibility);
     }
 }
 
@@ -274,6 +274,33 @@ async function updateMap(id, title, description, imageUrl, visibility, file) {
                 displayMaps(this.project.maps);
             }
             showMessage('Карта обновлена успешно', 'success');
+        } else {
+            showMessage('Ошибка обновления карты');
+        }
+    } catch (error) {
+        showMessage('Ошибка обновления карты');
+    }
+}
+
+// Изменение видимости карты
+async function toggleMapVisibility(id, visibility) {
+    try {
+        const response = await apiRequest(`/projects/${projectId}/maps/${id}/visibility`, {
+            method: 'PUT',
+            body: JSON.stringify({ visibility })
+        });
+        
+        if (response.ok) {
+            const map = await response.json();
+            closeMapModal();
+            // Обновляем карту в локальном массиве
+            const mapIndex = this.project.maps.findIndex(m => m.id === map.id);
+            if (mapIndex !== -1) {
+                this.project.maps[mapIndex] = map;
+                displayMaps(this.project.maps);
+            }
+            if (map.visibility) showMessage('Карта видна всем', 'success');
+            else showMessage('Карта скрыта', 'success');
         } else {
             showMessage('Ошибка обновления карты');
         }
