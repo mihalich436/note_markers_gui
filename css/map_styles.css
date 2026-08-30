@@ -246,6 +246,12 @@ body {
     box-shadow: 0 0 0 3px rgba(64, 192, 87, 0.1);
 }
 
+.edit-panel-title-row {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+}
+
 /* Панель списка маркеров */
 .markers-panel {
     position: absolute;
@@ -387,6 +393,10 @@ body {
     font-family: inherit;
     background: white;
     transition: border-color 0.2s;
+}
+
+.marker-title-input.number {
+    width: 50px;
 }
 
 .marker-title-input:focus {

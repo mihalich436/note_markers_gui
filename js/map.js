@@ -58,6 +58,7 @@ class MarkerApp {
         this.imageContainer = document.getElementById('imageContainer');
         this.markersLayer = document.getElementById('markersLayer');
         this.tooltip = document.getElementById('tooltip');
+        this.markerNumber = document.getElementById('markerNumber');
         this.markerTitle = document.getElementById('markerTitle');
         this.noteText = document.getElementById('noteText');
         this.descriptionText = document.getElementById('descriptionText');
@@ -847,6 +848,7 @@ class MarkerApp {
         const marker = this.markers.find(m => m.id === markerId);
         if (marker) {
             marker.isUpdated = true;
+            this.markerNumber.value = marker.number || '';
             this.markerTitle.value = marker.title || '';
             this.noteText.value = marker.note || '';
             this.descriptionText.value = marker.description || '';
@@ -993,6 +995,7 @@ class MarkerApp {
             this.selectedMarkerId = this.tempMarker.id;
             this.isAddingNote = true;
             
+            this.markerNumber.value = '';
             this.markerTitle.value = '';
             this.noteText.value = '';
             this.descriptionText.value = '';
@@ -1505,6 +1508,7 @@ class MarkerApp {
         this.isAddingNote = false;
         this.selectedMarkerId = null;
         
+        this.markerNumber.value = '';
         this.markerTitle.value = '';
         this.noteText.value = '';
         this.descriptionText.value = '';
@@ -1533,6 +1537,7 @@ class MarkerApp {
         return {
             x: marker.x,
             y: marker.y,
+            number: marker.number,
             title: marker.title,
             note: marker.note,
             description: marker.description,
@@ -1555,6 +1560,7 @@ class MarkerApp {
                 this.deleteMarkerImpl(markerRes.id);
             }
             marker.isUpdated = true;
+            marker.number = markerRes.number;
             marker.title = markerRes.title;
             marker.note = markerRes.note;
             marker.description = markerRes.description;
@@ -1574,6 +1580,7 @@ class MarkerApp {
         this.selectedMarkerId = null;
         this.isAddingNote = false;
         
+        this.markerNumber.value = '';
         this.markerTitle.value = '';
         this.noteText.value = '';
         this.descriptionText.value = '';
@@ -1615,6 +1622,7 @@ class MarkerApp {
             const note = this.noteText.value.trim();
             const description = this.descriptionText.value.trim();
             
+            this.tempMarker.number = this.markerNumber.value.trim().slice(0, 3);
             this.tempMarker.title = title;
             this.tempMarker.note = note;
             this.tempMarker.description = description;
@@ -1634,6 +1642,7 @@ class MarkerApp {
                 const markerDto = this.getMarkerDTO({
                     x: marker.x,
                     y: marker.y,
+                    number: this.markerNumber.value.trim().slice(0, 3),
                     title: this.markerTitle.value.trim() || marker.title,
                     note: this.noteText.value.trim(),
                     description: this.descriptionText.value.trim(),
@@ -1659,6 +1668,7 @@ class MarkerApp {
                 this.drawMarker(marker, false, true);
             }
         }
+        this.markerNumber.value = '';
         this.markerTitle.value = '';
         this.noteText.value = '';
         this.descriptionText.value = '';
@@ -1691,6 +1701,7 @@ class MarkerApp {
         const marker = this.markers.find(m => m.id === markerId);
         if (marker) {
             marker.isUpdated = true;
+            this.markerNumber.value = marker.number || '';
             this.markerTitle.value = marker.title || '';
             this.noteText.value = marker.note || '';
             this.descriptionText.value = marker.description || '';
@@ -1747,6 +1758,7 @@ class MarkerApp {
         if (this.selectedMarkerId === markerId) {
             this.selectedMarkerId = null;
             this.isAddingNote = false;
+            this.markerNumber.value = '';
             this.markerTitle.value = '';
             this.noteText.value = '';
             this.descriptionText.value = '';
@@ -1879,7 +1891,7 @@ class MarkerApp {
                 const firstChar = marker.title ? marker.title.charAt(0).toUpperCase() : '#';
                 // markerDiv.textContent = firstChar;
                 const p = document.createElement('p');
-                p.textContent = firstChar;
+                p.textContent = marker.number || firstChar;
                 markerDiv.appendChild(p);
             }
             
@@ -1888,6 +1900,7 @@ class MarkerApp {
 
             // Добавляем атрибуты для хранения информации о маркере
             markerDiv.dataset.markerId = marker.id;
+            markerDiv.dataset.markerNumber = marker.number || '';
             markerDiv.dataset.markerTitle = marker.title || '';
             markerDiv.dataset.markerNote = marker.note || '';
             markerDiv.dataset.markerColor = color;
@@ -1936,7 +1949,7 @@ class MarkerApp {
                     const firstChar = marker.title ? marker.title.charAt(0).toUpperCase() : '#';
                     // markerDiv.textContent = firstChar;
                     const p = document.createElement('p');
-                    p.textContent = firstChar;
+                    p.textContent = marker.number || firstChar;
                     markerDiv.appendChild(p);
                 }
             }
@@ -2082,6 +2095,7 @@ class MarkerApp {
         this.tempMarker = null;
         this.selectedMarkerId = null;
         this.isAddingNote = false;
+        this.markerNumber.value = '';
         this.markerTitle.value = '';
         this.noteText.value = '';
         this.descriptionText.value = '';
