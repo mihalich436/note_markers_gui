@@ -159,7 +159,9 @@ async function toggleMapVisibilityFromCard(mapId) {
     const mapData = getMapCardData(mapId);
     if (mapData) {
         const newVisibility = !mapData.visibility;
-        await updateMap(mapId, mapData.title, mapData.description, mapData.imageUrl, newVisibility);
+        const fileRadio = document.querySelector('input[name="imageUploadType"][value="file"]');
+        const isFile = (fileRadio && fileRadio.checked);
+        await updateMap(mapId, mapData.title, mapData.description, mapData.imageUrl, newVisibility, isFile);
     }
 }
 
