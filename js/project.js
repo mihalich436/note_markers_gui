@@ -547,7 +547,7 @@ function compressToWebP(file) {
                     // Оптимальные размеры (по ширине/высоте)
                     let width = img.width;
                     let height = img.height;
-                    const maxDimension = 10200;
+                    const maxDimension = 8192;
                     
                     if (width > maxDimension || height > maxDimension) {
                         const ratio = Math.min(maxDimension / width, maxDimension / height);
@@ -604,7 +604,7 @@ function compressToJPG(file) {
                     // Оптимальные размеры (по ширине/высоте)
                     let width = img.width;
                     let height = img.height;
-                    const maxDimension = 10200;
+                    const maxDimension = 8192;
                     
                     if (width > maxDimension || height > maxDimension) {
                         const ratio = Math.min(maxDimension / width, maxDimension / height);
