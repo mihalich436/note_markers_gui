@@ -411,7 +411,7 @@ function toggleImageUploadType() {
 }
 
 // Обработчик выбора файла
-document.getElementById('mapImageFile').addEventListener('change', function(e) {
+document.getElementById('mapImageFile').addEventListener('change', async function(e) {
     const file = e.target.files[0];
     if (!file) return;
     
@@ -422,24 +422,47 @@ document.getElementById('mapImageFile').addEventListener('change', function(e) {
         return;
     }
     
-    // Проверка типа файла
-    const allowedTypes = [/*'image/png', */'image/jpeg', 'image/jpg', 'image/webp'/*, 'image/gif'*/];
-    if (!allowedTypes.includes(file.type)) {
-        showMessage('Неподдерживаемый формат файла. Поддерживаются: JPG, JPEG, WEBP');
+    // Проверка типа файла - обновленные поддерживаемые форматы
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/avif'];
+    const fileName = file.name.toLowerCase();
+    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.avif'];
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!allowedTypes.includes(file.type) && !hasValidExtension) {
+        showMessage('Неподдерживаемый формат файла. Поддерживаются: PNG, JPG, JPEG, WEBP, AVIF');
         this.value = '';
         return;
     }
     
-    // Показываем превью
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const preview = document.getElementById('imagePreview');
-        const previewImg = document.getElementById('previewImage');
-        previewImg.src = e.target.result;
-        preview.classList.remove('hidden');
-    };
-    reader.readAsDataURL(file);
-    uploadedFile = file;
+    // Применяем сжатие к загруженному файлу
+    try {
+        const compressedFile = await compressImage(file);
+        uploadedFile = compressedFile;
+        
+        // Показываем превью сжатого изображения
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('imagePreview');
+            const previewImg = document.getElementById('previewImage');
+            previewImg.src = e.target.result;
+            preview.classList.remove('hidden');
+            
+            // Показываем информацию о сжатии
+            if (compressedFile !== file) {
+                const sizeReduction = ((file.size - compressedFile.size) / file.size * 100).toFixed(1);
+                const originalSize = (file.size / (1024 * 1024)).toFixed(2);
+                const compressedSize = (compressedFile.size / (1024 * 1024)).toFixed(2);
+                showMessage(`Изображение сжато: ${originalSize}MB → ${compressedSize}MB (${sizeReduction}% меньше)`, 'info');
+            }
+        };
+        reader.readAsDataURL(compressedFile);
+        
+    } catch (error) {
+        console.error('Ошибка при обработке файла:', error);
+        showMessage('Не удалось сжать файл. Попробуйте самостоятельно конвертировать файл в один из форматов: JPG, WEBP, AVIF');
+        this.value = '';
+        return;
+    }
 });
 
 // Загрузка файла на сервер через POST
@@ -472,6 +495,157 @@ function removeImagePreview() {
     document.getElementById('mapImageFile').value = '';
     // uploadedImageUrl = null;
     uploadedFile = null;
+}
+
+async function compressImage(file) {
+    // Проверяем, нужно ли сжимать
+    const fileType = file.type;
+    const fileName = file.name.toLowerCase();
+    
+    // Если это webp или avif - сжатие не нужно
+    if (fileType === 'image/webp' || fileType === 'image/avif' || 
+        fileName.endsWith('.webp') || fileName.endsWith('.avif')) {
+        return file;
+    }
+    
+    try {
+        // Пытаемся сжать в webp
+        const webpFile = await compressToWebP(file);
+        if (webpFile) {
+            return webpFile;
+        }
+        
+        // Если webp не получился, пытаемся сжать в jpg (только если не jpg)
+        if (fileType !== 'image/jpeg' && fileType !== 'image/jpg' && 
+            !fileName.endsWith('.jpg') && !fileName.endsWith('.jpeg')) {
+            const jpgFile = await compressToJPG(file);
+            if (jpgFile) {
+                return jpgFile;
+            }
+        }
+        
+        // Если ничего не получилось, возвращаем исходный файл
+        return file;
+    } catch (error) {
+        console.error('Ошибка при сжатии изображения:', error);
+        return file;
+    }
+}
+
+function compressToWebP(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                try {
+                    // Создаем canvas для сжатия
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Оптимальные размеры (по ширине/высоте)
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDimension = 6144;
+                    
+                    if (width > maxDimension || height > maxDimension) {
+                        const ratio = Math.min(maxDimension / width, maxDimension / height);
+                        width = Math.round(width * ratio);
+                        height = Math.round(height * ratio);
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // Рисуем изображение
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Пытаемся сохранить в WebP с качеством 80%
+                    const webpDataUrl = canvas.toDataURL('image/webp', 0.8);
+                    
+                    // Конвертируем DataURL в File
+                    fetch(webpDataUrl)
+                        .then(res => res.blob())
+                        .then(blob => {
+                            const webpFile = new File([blob], 
+                                file.name.replace(/\.[^.]+$/, '.webp'), 
+                                { type: 'image/webp' }
+                            );
+                            resolve(webpFile);
+                        })
+                        .catch(() => reject(new Error('Failed to convert WebP to File')));
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            img.onerror = function() {
+                reject(new Error('Failed to load image'));
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = function() {
+            reject(new Error('Failed to read file'));
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function compressToJPG(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Оптимальные размеры (по ширине/высоте)
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDimension = 6144;
+                    
+                    if (width > maxDimension || height > maxDimension) {
+                        const ratio = Math.min(maxDimension / width, maxDimension / height);
+                        width = Math.round(width * ratio);
+                        height = Math.round(height * ratio);
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // Рисуем изображение на белом фоне (для JPG)
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Пытаемся сохранить в JPG с качеством 85%
+                    const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    
+                    fetch(jpgDataUrl)
+                        .then(res => res.blob())
+                        .then(blob => {
+                            const jpgFile = new File([blob], 
+                                file.name.replace(/\.[^.]+$/, '.jpg'), 
+                                { type: 'image/jpeg' }
+                            );
+                            resolve(jpgFile);
+                        })
+                        .catch(() => reject(new Error('Failed to convert JPG to File')));
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            img.onerror = function() {
+                reject(new Error('Failed to load image'));
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = function() {
+            reject(new Error('Failed to read file'));
+        };
+        reader.readAsDataURL(file);
+    });
 }
 
 // Обработчик формы
