@@ -435,6 +435,7 @@ document.getElementById('mapImageFile').addEventListener('change', async functio
     }
     
     // Применяем сжатие к загруженному файлу
+    showMessage('Обработка изображения...', 'info');
     try {
         const compressedFile = await compressImage(file);
         uploadedFile = compressedFile;
@@ -546,7 +547,7 @@ function compressToWebP(file) {
                     // Оптимальные размеры (по ширине/высоте)
                     let width = img.width;
                     let height = img.height;
-                    const maxDimension = 6144;
+                    const maxDimension = 10200;
                     
                     if (width > maxDimension || height > maxDimension) {
                         const ratio = Math.min(maxDimension / width, maxDimension / height);
@@ -603,7 +604,7 @@ function compressToJPG(file) {
                     // Оптимальные размеры (по ширине/высоте)
                     let width = img.width;
                     let height = img.height;
-                    const maxDimension = 6144;
+                    const maxDimension = 10200;
                     
                     if (width > maxDimension || height > maxDimension) {
                         const ratio = Math.min(maxDimension / width, maxDimension / height);
