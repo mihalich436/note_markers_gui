@@ -20,6 +20,7 @@ class MarkerApp {
         
         // Режим перемещения маркера
         this.movingMarkerId = null;
+        this.copyMarker = false;
         
         // Настройки маркеров
         this.markerSettings = {
@@ -206,6 +207,7 @@ class MarkerApp {
                 this.closeChatMessageContextMenu();
                 if (this.movingMarkerId) {
                     this.movingMarkerId = null;
+                    this.copyMarker = false;
                     this.imageContainer.style.cursor = 'default';
                     this.showTooltip('Перемещение отменено', 1000);
                 }
@@ -913,6 +915,16 @@ class MarkerApp {
                         }
                     },
                     { 
+                        icon: '➕', 
+                        text: 'Копировать', 
+                        action: () => {
+                            this.movingMarkerId = markerId;
+                            this.copyMarker = true;
+                            this.imageContainer.style.cursor = 'crosshair';
+                            this.showTooltip('Кликните на новое место для маркера', 2000);
+                        }
+                    },
+                    { 
                         icon: '🗑️', 
                         text: 'Удалить', 
                         action: () => {
@@ -1468,6 +1480,16 @@ class MarkerApp {
         }
     }
 
+    async requestCopyMarker(marker, x, y) {
+        try {
+            if (!this.wsClient.sendMessage(`/markers/${marker.id}/copy`, {x: x, y: y})) {
+                this.showTooltip('Ошибка обновления маркера', 1500);
+            }
+        } catch (error) {
+            this.showTooltip('Ошибка обновления маркера', 1500);
+        }
+    }
+
     handleContainerClick(e) {
         // Проверяем режим перемещения маркера
         if (this.movingMarkerId) {
@@ -1479,7 +1501,9 @@ class MarkerApp {
                 
                 if (mousePos.x >= 0 && mousePos.x <= 100 && 
                     mousePos.y >= 0 && mousePos.y <= 100) {
-                    this.requestMoveMarker(marker, mousePos.x, mousePos.y);
+                    if (this.copyMarker) this.requestCopyMarker(marker, mousePos.x, mousePos.y);
+                    else this.requestMoveMarker(marker, mousePos.x, mousePos.y);
+                    this.copyMarker = false;
                 }
             }
             return;
