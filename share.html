@@ -27,7 +27,7 @@
             </div>
             <!-- <div id="projectInfo" style="margin-bottom: 20px;"></div> -->
             
-            <!-- Блок приглашения пользователя //> ДОБАВИТЬ КНОПКУ ДЛЯ СОХРАНЕНИЯ, ДОБАВИТЬ ПОЛЕ ДЛЯ НИКА -->
+            <!-- Блок приглашения пользователя -->
             <div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
                 <h3 style="margin-bottom: 15px;">Пригласить пользователя</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -39,7 +39,18 @@
                         <option value="EDITOR">✏️ Редактирование</option>
                         <option value="ADMIN">✨ Мастер</option>
                     </select>
-                    <button onclick="addUser()" style="width: auto; background: #28a745;">+ Пригласить</button>
+                    <button onclick="addUser()" style="width: auto; background: #28a745;">Пригласить</button>
+                </div>
+                <div id="inviteMessage" style="margin-top: 10px; font-size: 14px; color: #666;"></div>
+            </div>
+
+            <!-- Блок ссылки-приглашения -->
+            <div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                <h3 style="margin-bottom: 15px;">Доступ по ссылке</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <input type="email" id="shareLink" placeholder="Создайте ссылку для быстрого доступа игроков к проекту" style="flex: 1; min-width: 200px; user-select: all;" readonly>
+                    <button id="createShareLinkBtn" onclick="createShareLink()" style="width: auto; background: #28a745;">Создать</button>
+                    <button id="revokeShareLinkBtn" onclick="revokeShareLink()" style="width: auto; background: #D64022; display: none;">Удалить</button>
                 </div>
                 <div id="inviteMessage" style="margin-top: 10px; font-size: 14px; color: #666;"></div>
             </div>

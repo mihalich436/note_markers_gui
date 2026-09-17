@@ -1,6 +1,7 @@
 // Получаем ID проекта из URL
 const urlParams = new URLSearchParams(window.location.search);
 const projectId = urlParams.get('id');
+const shareToken = urlParams.get('share');
 
 let editingMapId = null;
 let uploadedFile = null; // загруженный файл
@@ -10,10 +11,10 @@ if (!projectId) {
     window.location.href = './projects.html';
 }
 
-// Загрузка информации о проекте (только метаданные, без заметок)
+// Загрузка информации о проекте
 async function loadProject() {
     try {
-        const response = await apiRequest(`/projects/${projectId}`);
+        const response = await apiRequest(`/projects/${projectId}${shareToken ? `?share=${shareToken}` : ''}`);
         
         if (response.ok) {
             const projectData = await response.json();
@@ -381,7 +382,7 @@ function editMap(id, title, description, imageUrl, visibility, isFile) {
 }
 
 function openMap(id) {
-    window.location.href = `./map.html?mapId=${id}`;
+    window.location.href = `./map.html?mapId=${id}${shareToken ? `&share=${shareToken}` : ''}`;
 }
 
 function closeMapModal() {
@@ -680,6 +681,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Инициализация
-checkAuth();
+// checkAuth();
 loadUserInfo();
 loadProject();

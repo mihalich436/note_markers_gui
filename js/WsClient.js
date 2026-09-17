@@ -2,8 +2,9 @@ const WS_REQ_PREFIX = '/app';
 const WS_URL = URL + '/ws';
 
 class WsClient {
-    constructor(token, mapId) {
+    constructor(token, shareToken, mapId) {
         this.token = token;
+        this.shareToken = shareToken;
         this.mapId = mapId;
         this.stompClient = null;
         this.messageHandlers = [];
@@ -21,11 +22,24 @@ class WsClient {
         // Отключаем отладочный вывод (опционально)
         this.stompClient.debug = () => {};
         
-        this.stompClient.connect(
-            {'Authorization': `Bearer ${this.token}`},  // headers
-            this.onConnected.bind(this),
-            this.onError.bind(this)
-        );
+        if (this.token) {
+            this.stompClient.connect(
+                {
+                    'Authorization': `Bearer ${this.token}`
+                },  // headers
+                this.onConnected.bind(this),
+                this.onError.bind(this)
+            );
+        }
+        else if (this.shareToken) {
+            this.stompClient.connect(
+                {
+                    'X-Share-Token': this.shareToken
+                },  // headers
+                this.onConnected.bind(this),
+                this.onError.bind(this)
+            );
+        }
     }
     
     // Обработка успешного подключения

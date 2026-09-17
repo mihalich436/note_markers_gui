@@ -37,8 +37,9 @@ class MarkerApp {
 
         const urlParams = new URLSearchParams(window.location.search);
         this.mapId = urlParams.get('mapId');
+        this.shareToken = urlParams.get('share');
 
-        this.wsClient = new WsClient(getToken(), this.mapId);
+        this.wsClient = new WsClient(getToken(), this.shareToken, this.mapId);
         this.wsClient.onMessage(this.responseSaveMarker.bind(this));
         this.wsClient.onMessage(this.responseUpdateMarker.bind(this));
         this.wsClient.onMessage(this.responseDeleteMarker.bind(this));
@@ -2396,7 +2397,7 @@ class MarkerApp {
 
     async loadMap() {
         try {
-            const response = await apiRequest(`/maps/${this.mapId}`);
+            const response = await apiRequest(`/maps/${this.mapId}${this.shareToken ? `?share=${this.shareToken}` : ''}`);
             console.log(response)
             
             if (response.ok) {

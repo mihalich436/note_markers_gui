@@ -104,6 +104,10 @@ function updateUserAvatar(username) {
     const avatarElement = document.getElementById('userAvatar');
     const avatarLetterElement = document.getElementById('avatarLetter');
     const userNameSpan = document.getElementById('userNameSpan');
+
+    if (!isAuthenticated()) { //> add registrayion btn
+        return;
+    }
     
     if (avatarLetterElement && username) {
         avatarLetterElement.textContent = username.charAt(0).toUpperCase();
@@ -116,6 +120,7 @@ function updateUserAvatar(username) {
 
 // Переключение выпадающего меню пользователя
 function toggleUserMenu() {
+    if (!isAuthenticated()) return;
     const menu = document.getElementById('userDropdownMenu');
     if (menu) {
         menu.classList.toggle('active');

@@ -7,6 +7,8 @@ if (!projectId) {
     window.location.href = './projects.html';
 }
 
+let shareToken = null;
+
 // Загрузка информации о проекте
 async function loadProjectInfo() {
     try {
@@ -27,6 +29,46 @@ async function loadProjectInfo() {
         }
     } catch (error) {
         showMessage('Ошибка соединения с сервером');
+    }
+}
+
+// Получение ссылки для быстрого доступа
+async function getShareLink() {
+    try {
+        const response = await apiRequest(`/projects/${projectId}/share-link`);
+        
+        if (response.ok) {
+            shareToken = await response.text();
+            displayShareLink();
+        } else {
+            showMessage('Ошибка загрузки ссылки быстрого доступа');
+        }
+    } catch (error) {
+        showMessage('Ошибка загрузки ссылки быстрого доступа');
+    }
+}
+
+function displayShareLink() {
+    console.log('share link: ' + shareToken)
+    if (shareToken) {
+        const shareLinkInput = document.getElementById('shareLink');
+        if (shareLinkInput) shareLinkInput.value = `${URL}/project.html?id=${projectId}&share=${shareToken}`;
+        const revokeShareLinkBtn = document.getElementById('revokeShareLinkBtn');
+        const createShareLinkBtn = document.getElementById('createShareLinkBtn');
+        if (revokeShareLinkBtn && createShareLinkBtn) {
+            createShareLinkBtn.style.display = 'none';
+            revokeShareLinkBtn.style.display = 'inline-block';
+        }
+    }
+    else {
+        const shareLinkInput = document.getElementById('shareLink');
+        if (shareLinkInput) shareLinkInput.value = '';
+        const revokeShareLinkBtn = document.getElementById('revokeShareLinkBtn');
+        const createShareLinkBtn = document.getElementById('createShareLinkBtn');
+        if (revokeShareLinkBtn && createShareLinkBtn) {
+            revokeShareLinkBtn.style.display = 'none';
+            createShareLinkBtn.style.display = 'inline-block';
+        }
     }
 }
 
@@ -168,9 +210,7 @@ function onSaveUser(userId) {
 
 async function saveRoleAndNickname(userId) {
     const newRole = document.getElementById(`role-${userId}`);
-    console.log(newRole.value)
     const newNick = document.getElementById(`nickname-${userId}`);
-    console.log(newNick.value)
     try {
         const response = await apiRequest(`/projects/${projectId}/access/${userId}`, {
             method: 'PUT',
@@ -180,7 +220,6 @@ async function saveRoleAndNickname(userId) {
         if (response.ok) {
             const message = await response.text();
             showMessage(message, 'success');
-            // loadAccessUsers();
             onSaveUser(userId);
         } else {
             const error = await response.text();
@@ -213,10 +252,54 @@ async function removeUser(userId) {
     }
 }
 
+async function createShareLink() {
+    try {
+        const response = await apiRequest(`/projects/${projectId}/share-link`, {
+            method: 'POST',
+            body: ""
+        });
+        
+        if (response.ok) {
+            shareToken = await response.text();
+            displayShareLink();
+            
+            showMessage('Ссылка создана', 'success');
+        } else {
+            const error = await response.text();
+            showMessage(error);
+        }
+    } catch (error) {
+        showMessage('Не удалось создать ссылку для быстрого доступа');
+    }
+}
+
+async function revokeShareLink() {
+    if (confirm('Вы уверены, что хотите закрыть доступ к проекту по ссылке?')) {
+        try {
+            const response = await apiRequest(`/projects/${projectId}/share-link`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                const message = await response.text();
+                showMessage(message, 'success');
+                shareToken = null;
+                displayShareLink();
+            } else {
+                const error = await response.text();
+                showMessage(error);
+            }
+        } catch (error) {
+            showMessage('Ошибка удаления ссылки доступа');
+        }
+    }
+}
+
 // Инициализация страницы
 checkAuth();
 loadUserInfo();
 loadProjectInfo();
+getShareLink();
 
 // Делаем функции глобальными для доступа из onclick
 window.addUser = addUser;
