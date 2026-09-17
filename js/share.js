@@ -49,10 +49,9 @@ async function getShareLink() {
 }
 
 function displayShareLink() {
-    console.log('share link: ' + shareToken)
     if (shareToken) {
         const shareLinkInput = document.getElementById('shareLink');
-        if (shareLinkInput) shareLinkInput.value = `${URL}/project.html?id=${projectId}&share=${shareToken}`;
+        if (shareLinkInput) shareLinkInput.value = `app.lazydmnotes.ru/project.html?id=${projectId}&share=${shareToken}`;
         const revokeShareLinkBtn = document.getElementById('revokeShareLinkBtn');
         const createShareLinkBtn = document.getElementById('createShareLinkBtn');
         if (revokeShareLinkBtn && createShareLinkBtn) {
