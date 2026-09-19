@@ -1274,13 +1274,6 @@ body {
     /*border-color: #40c057;*/
 }
 
-.chat-author {
-    font-weight: bold;
-    color: #40c057;
-    margin-right: 5px;
-    user-select: text;
-}
-
 .chat-text {
     color: #212529;
     user-select: text;
@@ -1306,11 +1299,28 @@ body {
     outline: none;
 }
 
+.chat-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chat-author {
+    font-size: 10px;
+    color: #adb5bd;
+    margin-top: 4px;
+}
+
+.chat-author-me {
+    font-size: 10px;
+    color: #8FB3FA;
+    margin-top: 4px;
+}
+
 .chat-time {
     font-size: 10px;
     color: #adb5bd;
     margin-top: 4px;
-    text-align: right;
 }
 
 .chat-empty {

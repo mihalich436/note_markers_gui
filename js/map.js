@@ -564,22 +564,25 @@ class MarkerApp {
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message-div${msg.visibility ? '' : ' invisible'}`;
         
-        const author = this.userIdToNick.get(msg.userId);
-        if (author) {
-            const authorSpan = document.createElement('span');
-            authorSpan.className = 'chat-author';
-            authorSpan.textContent = author + ': ';
-            messageDiv.appendChild(authorSpan);
-        }
-        
         const textSpan = document.createElement('span');
         textSpan.className = `chat-text${msg.visibility ? '' : ' invisible'}`;
         textSpan.innerHTML = this.linkify(msg.text);
         messageDiv.appendChild(textSpan);
+
+        const bottomData = document.createElement('div');
+        bottomData.className = 'chat-bottom';
+
+        const author = this.userIdToNick.get(msg.userId);
+        const authorSpan = document.createElement('span');
+        authorSpan.className = `chat-author${msg.userId === this.userId ? '-me' : ''}`;
+        authorSpan.textContent = author || '';
+        bottomData.appendChild(authorSpan);
+
         const timeSpan = document.createElement('div');
         timeSpan.className = 'chat-time';
         timeSpan.textContent = msg.createdAt || '';
-        messageDiv.appendChild(timeSpan);
+        bottomData.appendChild(timeSpan);
+        messageDiv.appendChild(bottomData);
         
         // Добавляем обработчик контекстного меню для сообщения
         div.addEventListener('contextmenu', (e) => {
