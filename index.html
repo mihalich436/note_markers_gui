@@ -3,20 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Lazy DM's Notes</title>
+    <title>The Lazy DM's Notes — заметки на картах для D&D</title>
+    <meta name="description" content="Ведите заметки прямо на картах подземелий и регионов. Идеально для мастеров D&D, которые ценят своё время.">
+    <link rel="stylesheet" href="./css/landing.css">
+    <link rel="icon" href="./icons/yellow_dragon_sleep.ico" type="image/x-icon">
     <script>
-        const token = localStorage.getItem('token');
-        if (token) {
+        // Авторизованных сразу отправляем в проекты
+        if (localStorage.getItem('token')) {
             window.location.href = './projects.html';
-        } else {
-            window.location.href = './login.html';
         }
     </script>
-    <link rel="icon" href="./icons/yellow_dragon_sleep.ico" type="image/x-icon">
 </head>
 <body>
-    <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
-        <div>Загрузка...</div>
+    <div class="landing">
+        <!-- Логотип -->
+        <header class="landing-header">
+            <div class="logo">
+                <img src="./icons/logo.png" alt="" class="logo-img">
+                <span>The Lazy DM's Notes</span>
+            </div>
+        </header>
+
+        <!-- Hero -->
+        <main class="hero">
+            <div class="hero-text">
+                <h1>Заметки прямо на карте</h1>
+                <ul class="hero-steps">
+                    <li>
+                        <span class="step-icon">📥</span>
+                        <span class="step-text">
+                            <strong>Загрузите</strong> карту подземелья, города, региона или целого мира
+                        </span>
+                    </li>
+                    <li>
+                        <span class="step-icon">📍</span>
+                        <span class="step-text">
+                            <strong>Отмечайте</strong> ключевые места маркерами
+                        </span>
+                    </li>
+                    <li>
+                        <span class="step-icon">✍️</span>
+                        <span class="step-text">
+                            <strong>Ведите заметки</strong> под любым маркером
+                        </span>
+                    </li>
+                </ul>
+
+                <p class="hero-tagline">
+                    Без блокнотов, без таблиц, без хаоса — только вы и ваша история.
+                </p>
+
+                <div class="auth-block">
+                    <a href="./login.html" class="btn btn-primary">Войти</a>
+                    <span class="divider">или</span>
+                    <a href="./register.html" class="btn btn-secondary">Зарегистрироваться</a>
+                </div>
+
+                <p class="auth-hint">
+                    Аккаунт нужен, чтобы создавать свои проекты, загружать карты
+                    и сохранять заметки — они будут доступны с любого устройства.
+                </p>
+
+                <a href="./project.html?id=26&share=kpfu7ovqhjhpCNQpkMEA01MhO54c3gxL" class="btn btn-demo">
+                    ▶ Посмотреть демо-проект
+                </a>
+            </div>
+
+            <div class="hero-image">
+                <img src="./icons/map_example.png"
+                     alt="Пример интерфейса: карта подземелья с заметками"
+                     onerror="this.classList.add('img-missing'); this.alt='Здесь будет пример интерфейса';">
+            </div>
+        </main>
+
+        <!-- Короткие преимущества -->
+        <section class="features">
+            <div class="feature">
+                <div class="feature-icon">🗺️</div>
+                <div class="feature-body">
+                    <h3>Карта — центр всего</h3>
+                    <p>Заметки привязаны к местам на карте, а не к абстрактным спискам.</p>
+                </div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-body">
+                    <h3>Быстрый ввод</h3>
+                    <p>Добавить заметку к локации — пара кликов, прямо во время игры.</p>
+                </div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🤝</div>
+                <div class="feature-body">
+                    <h3>Совместный доступ</h3>
+                    <p>Делитесь проектом с игроками — по ссылке или приглашению.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="landing-footer">
+            <span>© The Lazy DM's Notes</span>
+        </footer>
     </div>
 </body>
 </html>
