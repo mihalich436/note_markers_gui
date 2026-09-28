@@ -1,1 +1,1 @@
-const URL = 'https://api.lazydmnotes.ru';
+const URL = 'https://api.lazydmnotes.app';
