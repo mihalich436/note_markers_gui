@@ -1,5 +1,6 @@
 // Конфигурация
 const API_URL = URL + '/api';
+const shareToken = new URLSearchParams(window.location.search).get('share');
 
 // Общие функции
 function getToken() {
@@ -86,7 +87,6 @@ async function loadUserInfo() {
     if (username) {
         updateUserAvatar(username);
     } else {
-        // Можно загрузить из JWT или отдельного запроса
         try {
             const token = getToken();
             if (token) {
@@ -94,33 +94,59 @@ async function loadUserInfo() {
                 const usernameFromToken = payload.sub;
                 localStorage.setItem('username', usernameFromToken);
                 updateUserAvatar(usernameFromToken);
+                return;
             }
         } catch (e) {}
+        updateUserAvatar(null); // гость
     }
 }
 
-// Обновление аватарки пользователя
+// Обновление аватарки и выпадающего меню
 function updateUserAvatar(username) {
-    const avatarElement = document.getElementById('userAvatar');
     const avatarLetterElement = document.getElementById('avatarLetter');
     const userNameSpan = document.getElementById('userNameSpan');
+    const userNameItem = userNameSpan ? userNameSpan.parentElement : null;
+    const actionsContainer = document.getElementById('userDropdownActions');
 
-    if (!isAuthenticated()) { //> add registrayion btn
-        return;
+    const isGuest = !isAuthenticated() || !username;
+
+    if (avatarLetterElement) {
+        avatarLetterElement.textContent = isGuest ? '?' : username.charAt(0).toUpperCase();
     }
-    
-    if (avatarLetterElement && username) {
-        avatarLetterElement.textContent = username.charAt(0).toUpperCase();
+
+    if (userNameItem) {
+        userNameItem.style.display = isGuest ? 'none' : 'block';
     }
-    
-    if (userNameSpan && username) {
+    if (userNameSpan && !isGuest) {
         userNameSpan.textContent = username;
+    }
+
+    if (actionsContainer) {
+        if (isGuest) {
+            const shareParam = shareToken ? `?share=${encodeURIComponent(shareToken)}` : '';
+            actionsContainer.innerHTML = `
+                <div class="user-dropdown-login"
+                     onclick="window.location.href='./login.html${shareParam}'; event.stopPropagation();">
+                    Войти
+                </div>
+                <div class="user-dropdown-register"
+                     onclick="window.location.href='./register.html${shareParam}'; event.stopPropagation();">
+                    Зарегистрироваться
+                </div>
+            `;
+        } else {
+            actionsContainer.innerHTML = `
+                <div class="user-dropdown-logout"
+                     onclick="logout(); event.stopPropagation();">
+                    Выйти
+                </div>
+            `;
+        }
     }
 }
 
-// Переключение выпадающего меню пользователя
+// Переключение выпадающего меню (работает и для гостя)
 function toggleUserMenu() {
-    if (!isAuthenticated()) return;
     const menu = document.getElementById('userDropdownMenu');
     if (menu) {
         menu.classList.toggle('active');

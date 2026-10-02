@@ -7,7 +7,7 @@ if (!projectId) {
     window.location.href = './projects.html';
 }
 
-let shareToken = null;
+let shareTokenGenerated = null;
 
 // Загрузка информации о проекте
 async function loadProjectInfo() {
@@ -38,7 +38,7 @@ async function getShareLink() {
         const response = await apiRequest(`/projects/${projectId}/share-link`);
         
         if (response.ok) {
-            shareToken = await response.text();
+            shareTokenGenerated = await response.text();
             displayShareLink();
         } else {
             showMessage('Ошибка загрузки ссылки быстрого доступа');
@@ -49,9 +49,9 @@ async function getShareLink() {
 }
 
 function displayShareLink() {
-    if (shareToken) {
+    if (shareTokenGenerated) {
         const shareLinkInput = document.getElementById('shareLink');
-        if (shareLinkInput) shareLinkInput.value = `lazydmnotes.app/project.html?id=${projectId}&share=${shareToken}`;
+        if (shareLinkInput) shareLinkInput.value = `lazydmnotes.app/project.html?id=${projectId}&share=${shareTokenGenerated}`;
         const revokeShareLinkBtn = document.getElementById('revokeShareLinkBtn');
         const createShareLinkBtn = document.getElementById('createShareLinkBtn');
         if (revokeShareLinkBtn && createShareLinkBtn) {
@@ -259,7 +259,7 @@ async function createShareLink() {
         });
         
         if (response.ok) {
-            shareToken = await response.text();
+            shareTokenGenerated = await response.text();
             displayShareLink();
             
             showMessage('Ссылка создана', 'success');
@@ -282,7 +282,7 @@ async function revokeShareLink() {
             if (response.ok) {
                 const message = await response.text();
                 showMessage(message, 'success');
-                shareToken = null;
+                shareTokenGenerated = null;
                 displayShareLink();
             } else {
                 const error = await response.text();

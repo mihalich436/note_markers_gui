@@ -1,7 +1,6 @@
 // Получаем ID проекта из URL
 const urlParams = new URLSearchParams(window.location.search);
 const projectId = urlParams.get('id');
-const shareToken = urlParams.get('share');
 
 let editingMapId = null;
 let uploadedFile = null; // загруженный файл

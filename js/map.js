@@ -598,11 +598,8 @@ class MarkerApp {
             range.insertNode(img);
             // Вставляем картинку + перенос строки после неё
             insertRange.insertNode(img);
-            const br = document.createElement('br');
-            img.after(br);
-
-            // Ставим курсор после <br>
-            insertRange.setStartAfter(br);
+            
+            insertRange.setStartAfter(img);
             insertRange.collapse(true);
             sel.removeAllRanges();
             sel.addRange(insertRange);

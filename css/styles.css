@@ -147,6 +147,33 @@ button.danger {
     width: auto;
 }
 
+.user-dropdown-login {
+    padding: 12px 16px;
+    cursor: pointer;
+    color: #734666;
+    font-weight: 600;
+    transition: background 0.2s;
+    border-radius: 12px 12px 0 0;
+}
+
+.user-dropdown-login:hover {
+    background: #f5f0f7;
+}
+
+.user-dropdown-register {
+    padding: 12px 16px;
+    cursor: pointer;
+    color: #333;
+    font-weight: 400;
+    transition: background 0.2s;
+    border-top: 1px solid #eee;
+    border-radius: 0 0 12px 12px;
+}
+
+.user-dropdown-register:hover {
+    background: #f0f0f0;
+}
+
 /* Проекты */
 .projects-grid {
     display: grid;
