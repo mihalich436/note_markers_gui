@@ -87,8 +87,8 @@ body {
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
-    width: 320px;
-    max-width: 100%;
+    max-width: 320px;
+    width: 100%;
     margin: 28px auto 0;
 }
 
@@ -181,8 +181,8 @@ body {
     border-left: 3px solid #948069;
     padding: 10px 14px;
     border-radius: 6px;
-    width: 420px;
-    max-width: 100%;
+    max-width: 420px;
+    width: 100%;
     margin: 20px auto 0;
     text-align: center; 
 }

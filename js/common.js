@@ -111,7 +111,7 @@ function updateUserAvatar(username) {
     const isGuest = !isAuthenticated() || !username;
 
     if (avatarLetterElement) {
-        avatarLetterElement.textContent = isGuest ? '?' : username.charAt(0).toUpperCase();
+        avatarLetterElement.textContent = isGuest ? '👤' : username.charAt(0).toUpperCase();
     }
 
     if (userNameItem) {
