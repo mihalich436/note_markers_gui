@@ -757,6 +757,7 @@ class MarkerApp {
             this.chatInput.innerHTML = '';
         }
         else {
+            this.hideFormatToolbar();
             if (!text || !this.selectedMarkerId) return;
             const marker = this.markers.find(m => m.id === this.selectedMarkerId);
             if (!marker) return;
@@ -776,6 +777,7 @@ class MarkerApp {
     //> do not redraw all messages?
     renderChatMessages(entity) {
         if (!this.chatMessages) return;
+        this.hideFormatToolbar();
         this.chatMessages.innerHTML = '';
         if (entity.description) this.appendDescriptionToChat({text: entity.description});
         if (!entity.messages || entity.messages.length === 0) {
@@ -947,11 +949,13 @@ class MarkerApp {
         // Обработчик отмены
         cancelBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            this.hideFormatToolbar();
             this.removeEditMessageBtns(messageId, prevText);
         });
 
         saveBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            this.hideFormatToolbar();
             const newHtml = this.sanitizeHtml(textSpan.innerHTML).trim();
             if (!newHtml) {
                 this.removeEditMessageBtns(messageId, prevText);
