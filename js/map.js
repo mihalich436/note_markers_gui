@@ -213,6 +213,19 @@ class MarkerApp {
                     this.showTooltip('Перемещение отменено', 1000);
                 }
             }
+            // Хоткеи форматирования (работают, когда фокус в редактируемом поле)
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+                const active = document.activeElement;
+                const isEditable = active && (
+                    active.id === 'chatInput' ||
+                    active.classList.contains('chat-text')
+                );
+                if (isEditable) {
+                    if (e.key === 'b' || e.key === 'B') { e.preventDefault(); document.execCommand('bold'); }
+                    if (e.key === 'i' || e.key === 'I') { e.preventDefault(); document.execCommand('italic'); }
+                    if (e.key === 'u' || e.key === 'U') { e.preventDefault(); document.execCommand('underline'); }
+                }
+            }
         });
 
         // Закрытие панелей
@@ -352,6 +365,54 @@ class MarkerApp {
 
         // Видимость нового сообщения
         this.newMessageVisibility = true;
+
+        // Тулбар форматирования
+        this.formatToolbar = document.getElementById('formatToolbar');
+        this.linkDialog = document.getElementById('linkDialog');
+        this.linkDialogTitle = document.getElementById('linkDialogTitle');
+        this.linkDialogUrl = document.getElementById('linkDialogUrl');
+        this.linkDialogText = document.getElementById('linkDialogText');
+        this.linkDialogOk = document.getElementById('linkDialogOk');
+        this.linkDialogCancel = document.getElementById('linkDialogCancel');
+
+        // Следим за выделением текста в чате
+        document.addEventListener('selectionchange', () => this.handleSelectionChange());
+
+        // Кнопки тулбара
+        this.formatToolbar.querySelectorAll('.format-btn').forEach(btn => {
+            btn.addEventListener('mousedown', (e) => {
+                // mousedown чтобы не терять выделение
+                e.preventDefault();
+            });
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.applyFormat(btn.dataset.format);
+            });
+        });
+
+        // Диалог ссылки/картинки
+        this.linkDialogCancel.addEventListener('click', () => this.closeLinkDialog());
+        this.linkDialogOk.addEventListener('click', () => this.confirmLinkDialog());
+        this.linkDialogUrl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.confirmLinkDialog();
+            if (e.key === 'Escape') this.closeLinkDialog();
+        });
+
+        const handlePaste = (e) => {
+            e.preventDefault();
+            const html = e.clipboardData.getData('text/html');
+            const text = e.clipboardData.getData('text/plain');
+            if (html) {
+                document.execCommand('insertHTML', false, this.sanitizeHtml(html));
+            } else {
+                // Вставляем как plain text, но с автолинковкой
+                document.execCommand('insertHTML', false, this.linkify(text));
+            }
+        };
+
+        this.chatInput.addEventListener('paste', handlePaste);
+        this.chatMessages.addEventListener('paste', handlePaste); // для режима редактирования
     }
 
     initImageUpload() {
@@ -362,6 +423,186 @@ class MarkerApp {
 
         this.imageUploadCloseBtn.addEventListener('click', this.closeImageUploadPanel.bind(this));
         this.imageUploadInput.addEventListener('click', this.uploadImageFromUrl.bind(this));
+    }
+
+    handleSelectionChange() {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+            this.hideFormatToolbar();
+            return;
+        }
+
+        const range = sel.getRangeAt(0);
+        const container = range.commonAncestorContainer;
+        const element = container.nodeType === 3 ? container.parentElement : container;
+
+        // Показываем тулбар только если выделение внутри chat-text (в режиме редактирования) или chat-input-resizable
+        const editingText = element.closest('.chat-text[contenteditable="true"]');
+        const editingInput = element.closest('#chatInput');
+
+        if (!editingText && !editingInput) {
+            this.hideFormatToolbar();
+            return;
+        }
+
+        this.formatToolbarTarget = editingText || editingInput;
+
+        // Позиционируем тулбар над выделением
+        const rect = range.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) {
+            this.hideFormatToolbar();
+            return;
+        }
+
+        this.formatToolbar.classList.remove('hidden');
+
+        const tbRect = this.formatToolbar.getBoundingClientRect();
+        let left = rect.left + rect.width / 2 - tbRect.width / 2;
+        let top = rect.top - tbRect.height - 8;
+
+        // Не выходим за пределы экрана
+        left = Math.max(8, Math.min(left, window.innerWidth - tbRect.width - 8));
+        if (top < 8) top = rect.bottom + 8;
+
+        this.formatToolbar.style.left = left + 'px';
+        this.formatToolbar.style.top = top + 'px';
+    }
+
+    hideFormatToolbar() {
+        if (this.formatToolbar) {
+            this.formatToolbar.classList.add('hidden');
+        }
+    }
+
+    applyFormat(format) {
+        const target = this.formatToolbarTarget;
+        if (!target) return;
+
+        // Возвращаем фокус и выделение
+        target.focus();
+
+        switch (format) {
+            case 'bold':
+                document.execCommand('bold', false, null);
+                break;
+            case 'italic':
+                document.execCommand('italic', false, null);
+                break;
+            case 'underline':
+                document.execCommand('underline', false, null);
+                break;
+            case 'link':
+                this.openLinkDialog('link');
+                return;
+            case 'image':
+                this.openLinkDialog('image');
+                return;
+            case 'copy':
+                document.execCommand('copy');
+                this.hideFormatToolbar();
+                return;
+            case 'cut':
+                document.execCommand('cut');
+                this.hideFormatToolbar();
+                return;
+            case 'paste':
+                // Пытаемся прочитать из буфера обмена
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    navigator.clipboard.readText().then(text => {
+                        document.execCommand('insertText', false, text);
+                    }).catch(() => {
+                        this.showTooltip('Нет доступа к буферу обмена', 1500);
+                    });
+                } else {
+                    this.showTooltip('Вставьте через Ctrl+V', 1500);
+                }
+                return;
+            case 'clear':
+                document.execCommand('removeFormat');
+                break;
+        }
+        this.hideFormatToolbar();
+    }
+
+    openLinkDialog(mode) {
+        // Сохраняем текущее выделение, если оно есть
+        const sel = window.getSelection();
+        let selectedText = '';
+        if (sel && sel.rangeCount > 0) {
+            this.savedRange = sel.getRangeAt(0).cloneRange();
+            selectedText = sel.toString().trim();
+        } else {
+            this.savedRange = null;
+        }
+
+        this.linkDialogMode = mode;
+        this.linkDialogTitle.textContent = mode === 'link' ? 'Вставить ссылку' : 'Вставить картинку';
+        this.linkDialogUrl.value = '';
+        this.linkDialogText.value = selectedText;
+        this.linkDialogText.style.display = mode === 'link' ? 'block' : 'none';
+        this.linkDialog.classList.remove('hidden');
+        this.hideFormatToolbar();
+        setTimeout(() => this.linkDialogUrl.focus(), 50);
+    }
+
+    closeLinkDialog() {
+        this.linkDialog.classList.add('hidden');
+        this.linkDialogMode = null;
+        this.savedRange = null;
+    }
+
+    confirmLinkDialog() {
+        const url = this.linkDialogUrl.value.trim();
+        if (!url) return;
+
+        // Используем ранее сохраненный range
+        const range = this.savedRange;
+        if (!range) {
+            this.closeLinkDialog();
+            return;
+        }
+
+        // Восстанавливаем выделение в DOM для корректной вставки
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        if (this.linkDialogMode === 'link') {
+            const text = this.linkDialogText.value.trim() || url;
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.textContent = text;
+            range.deleteContents();
+            range.insertNode(a);
+            // Ставим курсор после ссылки
+            range.setStartAfter(a);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+        } else if (this.linkDialogMode === 'image') {
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = '';
+            img.loading = 'lazy';
+            
+            const insertRange = range.cloneRange();
+            insertRange.collapse(false);
+            range.insertNode(img);
+            // Вставляем картинку + перенос строки после неё
+            insertRange.insertNode(img);
+            const br = document.createElement('br');
+            img.after(br);
+
+            // Ставим курсор после <br>
+            insertRange.setStartAfter(br);
+            insertRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(insertRange);
+        }
+
+        this.closeLinkDialog();
     }
 
     responseSaveMessage(response) {
@@ -499,7 +740,11 @@ class MarkerApp {
 
     sendChatMessage() {
         // const text = this.chatInput.value.trim();
-        const text = this.chatInput.textContent.trim();
+        const raw = this.chatInput.innerHTML.trim();
+        if (!raw) return;
+        const text = this.sanitizeHtml(raw);
+        // проверка на «пустой» html типа <br>
+        if (!text.replace(/<br\s*\/?>/gi, '').replace(/&nbsp;/g, '').trim()) return;
         if (this.editGeneralInfo) {
             //> return when general info is ready
             // if (!text) return;
@@ -509,7 +754,7 @@ class MarkerApp {
             // });
             // this.renderChatMessages(this.generalInfo);
             // this.chatInput.value = '';
-            this.chatInput.textContent = '';
+            this.chatInput.innerHTML = '';
         }
         else {
             if (!text || !this.selectedMarkerId) return;
@@ -696,7 +941,7 @@ class MarkerApp {
         saveBtn.textContent = '✔';
         saveBtn.title = 'Сохранить изменения';
         
-        textSpan.contentEditable = 'plaintext-only';
+        textSpan.contentEditable = 'true';
         const prevText = textSpan.innerHTML;
 
         // Обработчик отмены
@@ -707,8 +952,12 @@ class MarkerApp {
 
         saveBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (!textSpan.innerHTML.trim()) this.removeEditMessageBtns(messageId, prevText);
-            this.requestUpdateMessageText(markerId, messageId, textSpan.innerHTML);
+            const newHtml = this.sanitizeHtml(textSpan.innerHTML).trim();
+            if (!newHtml) {
+                this.removeEditMessageBtns(messageId, prevText);
+                return;
+            }
+            this.requestUpdateMessageText(markerId, messageId, newHtml);
         });
         
         buttonsDiv.appendChild(cancelBtn);
@@ -748,11 +997,140 @@ class MarkerApp {
         this.requestDeleteMessage(markerId, messageId);
     }
 
+    sanitizeHtml(html) {
+        const allowed = {
+            'B': [], 'STRONG': [], 'I': [], 'EM': [], 'U': [], 'BR': [],
+            'A': ['href', 'target', 'rel'],
+            'IMG': ['src', 'alt']
+        };
+
+        // Блочные теги, которые могут появиться от contenteditable (Enter)
+        const blockTags = new Set(['DIV', 'P']);
+
+        const doc = new DOMParser().parseFromString('<div>' + html + '</div>', 'text/html');
+        const root = doc.body.firstChild;
+
+        // Рекурсивно обрабатываем; возвращаем true, если был вставлен <br>
+        // перед этим узлом (чтобы не задваивать переносы)
+        const walk = (node) => {
+            const children = Array.from(node.childNodes);
+            for (const child of children) {
+                if (child.nodeType === 3) {
+                    // Текстовый узел — не трогаем
+                    continue;
+                }
+                if (child.nodeType !== 1) {
+                    child.remove();
+                    continue;
+                }
+
+                const tag = child.tagName;
+
+                // Блочный тег: превращаем в его содержимое + <br> перед ним
+                // (кроме самого первого в корне — иначе будет пустая строка сверху)
+                if (blockTags.has(tag)) {
+                    const isFirst = (child === node.firstChild) && (node === root);
+                    // Сначала рекурсивно обрабатываем содержимое
+                    walk(child);
+
+                    const frag = doc.createDocumentFragment();
+                    if (!isFirst) {
+                        frag.appendChild(doc.createElement('br'));
+                    }
+                    while (child.firstChild) {
+                        frag.appendChild(child.firstChild);
+                    }
+                    child.replaceWith(frag);
+                    continue;
+                }
+
+                // Неразрешённый тег — заменяем на текстовое содержимое
+                if (!allowed[tag]) {
+                    const text = doc.createTextNode(child.textContent);
+                    child.replaceWith(text);
+                    continue;
+                }
+
+                // Чистим атрибуты
+                for (const attr of Array.from(child.attributes)) {
+                    if (!allowed[tag].includes(attr.name.toLowerCase())) {
+                        child.removeAttribute(attr.name);
+                    }
+                }
+
+                // Ссылки — только http(s), форсируем target/rel
+                if (tag === 'A') {
+                    const href = child.getAttribute('href') || '';
+                    if (!/^https?:\/\//i.test(href)) {
+                        child.removeAttribute('href');
+                    } else {
+                        child.setAttribute('target', '_blank');
+                        child.setAttribute('rel', 'noopener noreferrer');
+                    }
+                }
+
+                // Картинки — только http(s)
+                if (tag === 'IMG') {
+                    const src = child.getAttribute('src') || '';
+                    if (!/^https?:\/\//i.test(src)) {
+                        child.remove();
+                        continue;
+                    }
+                }
+
+                walk(child);
+            }
+        };
+
+        walk(root);
+
+        // Схлопываем подряд идущие <br>, чтобы не было двойных переносов
+        let prevBr = false;
+        const cleanup = (node) => {
+            const children = Array.from(node.childNodes);
+            for (const child of children) {
+                if (child.nodeType === 1 && child.tagName === 'BR') {
+                    if (prevBr) child.remove();
+                    else prevBr = true;
+                } else if (child.nodeType === 1) {
+                    prevBr = false;
+                    cleanup(child);
+                    prevBr = false;
+                } else if (child.nodeType === 3) {
+                    // Текст, состоящий только из \n или пробелов, не сбрасывает флаг br
+                    if (child.textContent.replace(/[\s\n\r]+/g, '').length > 0) {
+                        prevBr = false;
+                    }
+                }
+            }
+        };
+        cleanup(root);
+
+        return root.innerHTML;
+    }
+
     linkify(text) {
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        const urlText = text.replace(urlRegex, (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
-        const newLineRegex = /(\r?\n)/g;
-        return urlText.replace(newLineRegex, (newLine) => '<br>');
+        const hasHtml = /<(b|strong|i|em|u|a|br|img)\b/i.test(text);
+
+        let result;
+        if (hasHtml) {
+            result = text;
+        } else {
+            // Экранируем спецсимволы
+            const escaped = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            // URL → ссылки
+            const urlRegex = /(https?:\/\/[^\s<]+)/g;
+            result = escaped.replace(urlRegex, (url) =>
+                `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+            );
+            // Переносы строк
+            result = result.replace(/\r?\n/g, '<br>');
+        }
+
+        return this.sanitizeHtml(result);
     }
 
     toggleViewModalSize() {

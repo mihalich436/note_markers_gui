@@ -95,7 +95,7 @@
                         <div id="chatMessages" class="chat-messages"></div>
                         <div id="chatInputArea" class="chat-input-area">
                             <!-- <textarea id="chatInput" placeholder="Введите заметку..." class="chat-input" rows="1"></textarea> -->
-                            <div id="chatInput" class="chat-input-resizable" contenteditable="plaintext-only"></div>
+                            <div id="chatInput" class="chat-input-resizable" contenteditable="true"></div>
                             <button id="visChatBtn" class="visible-message-btn" title="Заметка будет видна всем"></button>
                             <button id="sendChatBtn" class="send-message-btn"></button>
                         </div>
@@ -311,6 +311,34 @@
                     <textarea id="imageSourceInput" placeholder="Вставьте ссылку на изображение..." class="chat-input" rows="1"></textarea>
                     <button id="imageSourceSaveBtn" class="view-modal-btn primary">Загрузить</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Плавающий тулбар форматирования -->
+    <div id="formatToolbar" class="format-toolbar hidden">
+        <button class="format-btn" data-format="bold" title="Жирный (Ctrl+B)"><b>B</b></button>
+        <button class="format-btn" data-format="italic" title="Курсив (Ctrl+I)"><i>I</i></button>
+        <button class="format-btn" data-format="underline" title="Подчёркнутый (Ctrl+U)"><u>U</u></button>
+        <span class="format-sep"></span>
+        <button class="format-btn" data-format="link" title="Ссылка">🔗</button>
+        <button class="format-btn" data-format="image" title="Картинка по ссылке">🖼️</button>
+        <span class="format-sep"></span>
+        <button class="format-btn" data-format="copy" title="Копировать">📋</button>
+        <button class="format-btn" data-format="cut" title="Вырезать">✂️</button>
+        <button class="format-btn" data-format="paste" title="Вставить">📥</button>
+        <button class="format-btn" data-format="clear" title="Очистить форматирование">⌫</button>
+    </div>
+
+    <!-- Мини-модалка для вставки ссылки/картинки -->
+    <div id="linkDialog" class="link-dialog hidden">
+        <div class="link-dialog-content">
+            <h4 id="linkDialogTitle">Вставить ссылку</h4>
+            <input type="text" id="linkDialogUrl" placeholder="https://..." />
+            <input type="text" id="linkDialogText" placeholder="Текст ссылки (необязательно)" />
+            <div class="link-dialog-buttons">
+                <button id="linkDialogCancel">Отмена</button>
+                <button id="linkDialogOk" class="primary">Вставить</button>
             </div>
         </div>
     </div>

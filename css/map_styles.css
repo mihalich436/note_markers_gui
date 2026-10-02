@@ -1281,7 +1281,6 @@ body {
 
 .chat-text.invisible {
     color: #49525B;
-    font-style: italic;
     user-select: text;
 }
 
@@ -1553,4 +1552,150 @@ body {
 .image-upload-content p {
     margin: 10px 0;
     font-size: 15px;
+}
+
+/* Плавающий тулбар форматирования */
+.format-toolbar {
+    position: fixed;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: #212529;
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    z-index: 5000;
+    pointer-events: all;
+    user-select: none;
+    animation: toolbarAppear 0.15s ease-out;
+}
+
+.format-toolbar.hidden {
+    display: none;
+}
+
+@keyframes toolbarAppear {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.format-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: #f8f9fa;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.format-btn:hover {
+    background: #495057;
+}
+
+.format-btn:active {
+    background: #343a40;
+}
+
+.format-sep {
+    width: 1px;
+    height: 20px;
+    background: #495057;
+    margin: 0 3px;
+}
+
+/* Диалог вставки ссылки/картинки */
+.link-dialog {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 6000;
+}
+
+.link-dialog.hidden {
+    display: none;
+}
+
+.link-dialog-content {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    width: 360px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.link-dialog-content h4 {
+    margin: 0 0 5px 0;
+    font-size: 15px;
+    color: #212529;
+}
+
+.link-dialog-content input {
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    user-select: text;
+}
+
+.link-dialog-content input:focus {
+    border-color: #40c057;
+}
+
+.link-dialog-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 5px;
+}
+
+.link-dialog-buttons button {
+    padding: 8px 14px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+}
+
+.link-dialog-buttons button:hover {
+    background: #f8f9fa;
+}
+
+.link-dialog-buttons button.primary {
+    background: #40c057;
+    border-color: #2b8e3c;
+    color: white;
+}
+
+.link-dialog-buttons button.primary:hover {
+    background: #2f9e44;
+}
+
+/* Картинка в сообщении */
+.chat-text img {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 6px;
+    margin: 4px 0;
+    display: block;
+    cursor: pointer;
+}
+
+/* Подсветка ссылок/картинок при наведении в режиме редактирования */
+.chat-text[contenteditable="plaintext-only"]:focus {
+    outline: none;
 }
