@@ -413,6 +413,12 @@ class MarkerApp {
 
         this.chatInput.addEventListener('paste', handlePaste);
         this.chatMessages.addEventListener('paste', handlePaste); // для режима редактирования
+
+        this.chatMessages.addEventListener('click', (e) => {
+            if (e.target.tagName === 'IMG') {
+                window.open(e.target.src, '_blank', 'noopener');
+            }
+        });
     }
 
     initImageUpload() {
