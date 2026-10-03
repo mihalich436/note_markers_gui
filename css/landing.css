@@ -194,16 +194,17 @@ body {
     align-items: center;
 }
 
-.hero-image img {
+.hero-image video {
     width: 100%;
     max-width: 520px;
     border-radius: 12px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
     display: block;
+    background: #f2ede4;
 }
 
 /* Плейсхолдер, пока картинки нет */
-.hero-image img.img-missing {
+.hero-image img.video-missing {
     min-height: 320px;
     background:
         repeating-linear-gradient(45deg, #f2ede4, #f2ede4 12px, #e8e1d2 12px, #e8e1d2 24px);
