@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>The Lazy DM's Notes</title>
+    <link rel="stylesheet" href="./css/chat-view.css">
     <link rel="stylesheet" href="./css/map_styles.css">
     <link rel="icon" href="./icons/yellow_dragon_sleep.ico" type="image/x-icon">
 </head>
@@ -13,10 +14,7 @@
         <div class="top-toolbar">
             <div class="toolbar-group">
                 <button id="fileMenuBtn" class="toolbar-btn" title="Файл">☰<span class="toolbar-btn-text"> Меню</span></button>
-                <!-- <button id="markerSettingsBtn" class="toolbar-btn" title="Настройки маркеров">⚙️<span class="toolbar-btn-text"> Настройки</span></button> -->
-                <!-- <button id="showMarkersListBtn" class="toolbar-btn" title="Список маркеров">📋<span class="toolbar-btn-text"> Список</span></button> -->
                 <button id="generalInfoBtn" class="toolbar-btn" title="Общая информация">📖<span class="toolbar-btn-text"> Общее</span></button>
-                <!-- <button id="helpBtn" class="toolbar-btn" title="Как пользоваться сайтом">❓<span class="toolbar-btn-text"> Справка</span></button> -->
             </div>
             <div class="toolbar-group">
                 <input type="file" id="imageUpload" accept="image/*" class="file-input">
@@ -45,26 +43,6 @@
                 <span>❓ Справка</span>
                 <small>Показать подсказку о сайте</small>
             </div>
-            <!-- <div class="file-menu-item" id="saveToFileBtn">
-                <span>💾 Сохранить в файл</span>
-                <small>Сохранить все маркеры и изображение</small>
-            </div>
-            <div class="file-menu-item" id="loadFromFileBtn">
-                <span>📂 Загрузить из файла</span>
-                <small>Загрузить ранее сохраненный проект</small>
-            </div>
-            <div class="file-menu-item" id="exportMarkersBtn">
-                <span>📝 Экспорт маркеров</span>
-                <small>Сохранить только маркеры (JSON)</small>
-            </div>
-            <div class="file-menu-item" id="importMarkersBtn">
-                <span>📥 Импорт маркеров</span>
-                <small>Загрузить маркеры из JSON</small>
-            </div>
-            <div class="file-menu-item" id="clearLocalStorageBtn">
-                <span>🗑️ Очистить localStorage</span>
-                <small>Удалить сохраненные данные</small>
-            </div> -->
         </div>
 
         <!-- Основной контент -->
@@ -94,7 +72,6 @@
                     <div class="view-modal-body">
                         <div id="chatMessages" class="chat-messages"></div>
                         <div id="chatInputArea" class="chat-input-area">
-                            <!-- <textarea id="chatInput" placeholder="Введите заметку..." class="chat-input" rows="1"></textarea> -->
                             <div id="chatInput" class="chat-input-resizable" contenteditable="true"></div>
                             <button id="visChatBtn" class="visible-message-btn" title="Заметка будет видна всем"></button>
                             <button id="sendChatBtn" class="send-message-btn"></button>
@@ -115,14 +92,13 @@
                         </div>
                         <input type="text" id="noteText" placeholder="Краткая заметка (видна на маркере)..." class="marker-title-input">
                         <textarea id="descriptionText" placeholder="Подробное описание (скрытое)..." rows="4"></textarea>
-                        
+
                         <!-- Настройки для текущего маркера -->
                         <div class="marker-current-settings">
                             <h4>Внешний вид</h4>
                             <div class="current-color-shape">
                                 <div class="visibility-picker-mini">
                                     <button id="changeMarkerVisibility" disabled title="Маркер будет виден всем">👁️</button>
-                                    <!-- 🚫 -->
                                 </div>
                                 <div class="color-picker-mini">
                                     <label>Цвет:</label>
@@ -254,7 +230,6 @@
                     </small>
                 </div>
                 <div class="settings-actions">
-                    <!-- <button id="applyMarkerSettings" class="settings-btn">Применить ко всем</button> -->
                     <button id="saveDefaultSettings" class="settings-btn primary">Сохранить</button>
                     <button id="resetMarkerSettings" class="settings-btn">Сбросить</button>
                 </div>
@@ -352,6 +327,7 @@
     <script src="./js/config.js"></script>
     <script src="./js/common.js"></script>
     <script src="./js/WsClient.js"></script>
+    <script src="./js/chat-view.js"></script>
     <script src="./js/map.js"></script>
 </body>
 </html>

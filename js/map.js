@@ -12,16 +12,16 @@ class MarkerApp {
         this.clickStarted = false;
 
         // Свойства для touch
-        this.touchStartDistance = 0; // Расстояние между пальцами при начале жеста
-        this.touchStartZoom = 1; // Масштаб в начале жеста
-        this.lastTouchDistance = 0; // Последнее расстояние между пальцами
-        this.isPinching = false; // Флаг для определения pinch-жеста
-        this.touchStartPositions = []; // Позиции пальцев
-        
+        this.touchStartDistance = 0;
+        this.touchStartZoom = 1;
+        this.lastTouchDistance = 0;
+        this.isPinching = false;
+        this.touchStartPositions = [];
+
         // Режим перемещения маркера
         this.movingMarkerId = null;
         this.copyMarker = false;
-        
+
         // Настройки маркеров
         this.markerSettings = {
             defaultShape: 'circle',
@@ -29,9 +29,9 @@ class MarkerApp {
             defaultSize: 36,
             showNotes: true,
             defaultVisibility: false,
-            minZoomForLabels: 1 // Минимальный масштаб для отображения всех подписей
+            minZoomForLabels: 1
         };
-        
+
         // Хранилище для копии изображения
         this.imageData = null;
 
@@ -39,7 +39,10 @@ class MarkerApp {
         this.mapId = urlParams.get('mapId');
         this.shareToken = urlParams.get('share');
 
-        this.wsClient = new WsClient(getToken(), this.shareToken, this.mapId);
+        // ChatView создаётся позже — после получения userId/currentRole/userIdToNick
+        this.chatView = null;
+
+        this.wsClient = new WsClient(getToken(), this.shareToken, 'map', this.mapId);
         this.wsClient.onMessage(this.responseSaveMarker.bind(this));
         this.wsClient.onMessage(this.responseUpdateMarker.bind(this));
         this.wsClient.onMessage(this.responseDeleteMarker.bind(this));
@@ -48,13 +51,12 @@ class MarkerApp {
         this.wsClient.onMessage(this.responseSaveMessage.bind(this));
         this.wsClient.onMessage(this.responseUpdateMessage.bind(this));
         this.wsClient.onMessage(this.responseDeleteMessage.bind(this));
-        
+
         this.init();
     }
 
     init() {
         // DOM элементы - основные
-        // this.imageUpload = document.getElementById('imageUpload');
         this.mainImage = document.getElementById('mainImage');
         this.transformContainer = document.getElementById('transform-container');
         this.imageContainer = document.getElementById('imageContainer');
@@ -70,7 +72,6 @@ class MarkerApp {
         this.zoomInBtn = document.getElementById('zoomIn');
         this.zoomOutBtn = document.getElementById('zoomOut');
         this.resetZoomBtn = document.getElementById('resetZoom');
-        this.modeIndicator = document.getElementById('modeIndicator');
 
         // Элементы для работы с файлами
         this.fileMenuBtn = document.getElementById('fileMenuBtn');
@@ -81,14 +82,9 @@ class MarkerApp {
         this.helpModal = document.getElementById('helpModal');
         this.closeHelpBtn = document.getElementById('close-help');
         this.fileLoader = document.getElementById('fileLoader');
-        
+
         // Кнопки действий с файлами
         this.loadImageBtn = document.getElementById('loadImageBtn');
-        // this.saveToFileBtn = document.getElementById('saveToFileBtn'); //> return when ready
-        // this.loadFromFileBtn = document.getElementById('loadFromFileBtn');
-        // this.exportMarkersBtn = document.getElementById('exportMarkersBtn');
-        // this.importMarkersBtn = document.getElementById('importMarkersBtn');
-        // this.clearLocalStorageBtn = document.getElementById('clearLocalStorageBtn');
 
         // Элементы настроек маркеров
         this.markerSettingsBtn = document.getElementById('markerSettingsBtn');
@@ -104,7 +100,6 @@ class MarkerApp {
         this.showNotes = document.getElementById('showNotes');
         this.defaultVisibility = document.getElementById('defaultVisibility');
         this.customColor = document.getElementById('customColor');
-        // this.applyMarkerSettings = document.getElementById('applyMarkerSettings');
         this.saveDefaultSettings = document.getElementById('saveDefaultSettings');
         this.resetMarkerSettings = document.getElementById('resetMarkerSettings');
 
@@ -114,9 +109,12 @@ class MarkerApp {
         this.closeEditPanel = document.getElementById('closeEditPanel');
         this.closeMarkersPanel = document.getElementById('closeMarkersPanel');
 
-        // Контекстное меню
+        // Кнопка "редактировать маркер" в шапке viewModal
+        this.editViewModal = document.getElementById('editViewModal');
+        this.editViewModal.addEventListener('click', this.openEditMarkerView.bind(this));
+
+        // Контекстное меню (для маркеров и карты)
         this.createContextMenu();
-        this.createChatMessageContextMenu();
 
         // Состояние
         this.tempMarker = null;
@@ -126,26 +124,25 @@ class MarkerApp {
         this.loadMarkerSettings();
 
         // События
-        const ro = new ResizeObserver(entries => {
+        const ro = new ResizeObserver(() => {
             this.countZoomLimits();
         });
         ro.observe(this.imageContainer);
-        // this.imageUpload.addEventListener('change', this.handleImageUpload.bind(this));
+
         this.changeMarkerVisibility.addEventListener('click', this.toggleMarkerVisibility.bind(this));
         this.saveNoteBtn.addEventListener('click', this.saveNote.bind(this));
         this.cancelNoteBtn.addEventListener('click', this.cancelNote.bind(this));
         this.zoomInBtn.addEventListener('click', this.zoomIn.bind(this));
         this.zoomOutBtn.addEventListener('click', this.zoomOut.bind(this));
         this.resetZoomBtn.addEventListener('click', this.resetZoom.bind(this));
-        
+
         this.customColor.addEventListener('click', this.customColorChanged.bind(this));
         this.markerSizeDefault.addEventListener('click', this.markerSizeChanged.bind(this));
         const shapeRadios = document.querySelectorAll('input[name="markerShape"]');
         shapeRadios.forEach(radio => {
             radio.addEventListener('click', this.shapeChanged.bind(this));
         });
-        
-        // Подсветка выбранного цвета
+
         document.querySelectorAll('.color-preset').forEach(btn => {
             btn.addEventListener('click', this.customColorChanged.bind(this));
         });
@@ -159,7 +156,7 @@ class MarkerApp {
         this.imageContainer.addEventListener('click', this.handleContainerClick.bind(this));
         this.imageContainer.addEventListener('contextmenu', this.handleContextMenu.bind(this));
 
-        // События для touch (мобильные устройства)
+        // События для touch
         this.imageContainer.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
         this.imageContainer.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
         this.imageContainer.addEventListener('touchend', this.handleTouchEnd.bind(this));
@@ -171,31 +168,19 @@ class MarkerApp {
         this.showMarkersListBtn.addEventListener('click', this.toggleMarkersPanel.bind(this));
         this.generalInfoBtn.addEventListener('click', this.toggleGeneralInfoPanel.bind(this));
         this.closeHelpBtn.addEventListener('click', this.closeHelp.bind(this));
-        
-        // this.loadImageBtn.addEventListener('click', () => this.imageUpload.click());
+
         this.loadImageBtn.addEventListener('click', () => this.showImageUploadForm());
-        // this.saveToFileBtn.addEventListener('click', this.saveToFile.bind(this)); //> (return when fixed)
-        // this.loadFromFileBtn.addEventListener('click', () => this.fileLoader.click());
-        // this.exportMarkersBtn.addEventListener('click', this.exportMarkers.bind(this));
-        // this.importMarkersBtn.addEventListener('click', () => {
-        //     this.fileLoader.accept = '.json';
-        //     this.fileLoader.click();
-        // });
-        // this.clearLocalStorageBtn.addEventListener('click', this.clearLocalStorage.bind(this));
-        
-        // Событие загрузки файла
         this.fileLoader.addEventListener('change', this.handleFileLoad.bind(this));
-        
+
         // Закрытие меню при клике вне
         document.addEventListener('click', (e) => {
             if (this.fileMenu && !this.fileMenu.contains(e.target) && !this.fileMenuBtn.contains(e.target)) {
                 this.fileMenu.classList.add('hidden');
             }
             this.closeContextMenu();
-            this.closeChatMessageContextMenu();
         });
-        
-        // Закрытие справки по ESC
+
+        // Закрытие панелей/модалок по ESC
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.closeHelp();
@@ -205,25 +190,11 @@ class MarkerApp {
                 this.closeMarkersPanel.click();
                 this.closeViewModal();
                 this.closeContextMenu();
-                this.closeChatMessageContextMenu();
                 if (this.movingMarkerId) {
                     this.movingMarkerId = null;
                     this.copyMarker = false;
                     this.imageContainer.style.cursor = 'default';
                     this.showTooltip('Перемещение отменено', 1000);
-                }
-            }
-            // Хоткеи форматирования (работают, когда фокус в редактируемом поле)
-            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
-                const active = document.activeElement;
-                const isEditable = active && (
-                    active.id === 'chatInput' ||
-                    active.classList.contains('chat-text')
-                );
-                if (isEditable) {
-                    if (e.key === 'b' || e.key === 'B') { e.preventDefault(); document.execCommand('bold'); }
-                    if (e.key === 'i' || e.key === 'I') { e.preventDefault(); document.execCommand('italic'); }
-                    if (e.key === 'u' || e.key === 'U') { e.preventDefault(); document.execCommand('underline'); }
                 }
             }
         });
@@ -233,8 +204,7 @@ class MarkerApp {
             this.editPanel.classList.add('hidden');
             if (this.tempMarker) {
                 this.cancelNote();
-            }
-            else {
+            } else {
                 const marker = this.markers.find(m => m.id === this.selectedMarkerId);
                 this.selectedMarkerId = null;
                 if (marker) {
@@ -258,7 +228,6 @@ class MarkerApp {
             this.markerSettingsModal.style.display = 'none';
         });
 
-        // Обновление значения размера
         this.markerSizeDefault.addEventListener('input', (e) => {
             this.sizeValueDefault.textContent = e.target.value + 'px';
         });
@@ -267,7 +236,6 @@ class MarkerApp {
             this.sizeValue.textContent = e.target.value + 'px';
         });
 
-        // Выбор цвета из пресетов
         document.querySelectorAll('.color-preset').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const color = e.target.dataset.color;
@@ -277,11 +245,6 @@ class MarkerApp {
             });
         });
 
-        // Применить настройки
-        // this.applyMarkerSettings.addEventListener('click', () => {
-        //     this.applyMarkerSettingsToAll();
-        // });
-
         this.saveDefaultSettings.addEventListener('click', () => {
             this.saveMarkerSettingsAsDefault();
         });
@@ -290,16 +253,12 @@ class MarkerApp {
             this.resetMarkerSettingsToDefault();
         });
 
-        // Создаем модальное окно просмотра
-        this.initViewModal();
-
-        //Инициализация окна загрузки изображения
+        // Окно загрузки изображения
         this.initImageUpload();
 
-        // Загрузка из localStorage
-        // this.loadFromStorage();
+        // Загрузка карты (внутри создастся ChatView)
         this.loadMap();
-        
+
         // Убеждаемся, что панели скрыты при загрузке
         this.editPanel.classList.add('hidden');
         this.markersPanel.classList.add('hidden');
@@ -310,886 +269,80 @@ class MarkerApp {
         this.wsClient.connect();
     }
 
+    /* ================= ChatView ================= */
+
+    initChatView() {
+        this.chatView = new ChatView(document.getElementById('viewModalContent'), {
+            currentUserId: this.userId,
+            currentRole: this.currentRole,
+            userIdToNick: this.userIdToNick,
+            onSendMessage: (text, visibility) => {
+                if (!this.selectedMarkerId) return;
+                this.wsClient.sendMessage(
+                    `/map/${this.mapId}/markers/${this.selectedMarkerId}/messages`,
+                    { text, visibility }
+                );
+            },
+            onUpdateText: (messageId, text) => {
+                if (!this.selectedMarkerId) return;
+                this.wsClient.sendMessage(
+                    `/map/${this.mapId}/markers/${this.selectedMarkerId}/messages/${messageId}/text`,
+                    { text }
+                );
+            },
+            onUpdateVisibility: (messageId, visibility) => {
+                if (!this.selectedMarkerId) return;
+                this.wsClient.sendMessage(
+                    `/map/${this.mapId}/markers/${this.selectedMarkerId}/messages/${messageId}/visibility`,
+                    { visibility }
+                );
+            },
+            onDeleteMessage: (messageId) => {
+                if (!this.selectedMarkerId) return;
+                this.wsClient.sendMessage(
+                    `/map/${this.mapId}/markers/${this.selectedMarkerId}/messages/${messageId}/delete`,
+                    {}
+                );
+            },
+        });
+
+        // Закрытие панели чата
+        this.chatView.onClose = () => {
+            document.getElementById('viewModalContent').classList.add('hidden');
+            this.editGeneralInfo = false;
+            if (!this.editPanel.classList.contains('hidden')) return;
+            const marker = this.markers.find(m => m.id === this.selectedMarkerId);
+            this.selectedMarkerId = null;
+            if (marker) {
+                marker.isUpdated = true;
+                this.drawMarker(marker, false, true);
+            }
+        };
+
+        // Видимость кнопки "редактировать"
+        if (this.currentRole && (this.currentRole === 'EDITOR' || this.currentRole === 'ADMIN')) {
+            this.editViewModal.classList.remove('hidden');
+        } else {
+            this.editViewModal.classList.add('hidden');
+        }
+
+        if (this.currentRole === 'READ_ONLY') {
+            this.chatView.setReadOnly(true);
+        } else {
+            this.chatView.setReadOnly(false);
+        }
+    }
+
+    /* ================= Контекстное меню карты/маркеров ================= */
+
     createContextMenu() {
-        // Создаем контекстное меню
         this.contextMenu = document.createElement('div');
         this.contextMenu.className = 'context-menu hidden';
         document.body.appendChild(this.contextMenu);
 
-        // Добавляем обработчик закрытия при клике вне меню
         document.addEventListener('click', () => {
             this.closeContextMenu();
         });
-    }
-
-    createChatMessageContextMenu() {
-        // Создаем контекстное меню для сообщений чата
-        this.chatMessageContextMenu = document.createElement('div');
-        this.chatMessageContextMenu.className = 'context-menu note hidden';
-        document.body.appendChild(this.chatMessageContextMenu);
-        
-        // Добавляем обработчик закрытия
-        document.addEventListener('click', () => {
-            this.closeChatMessageContextMenu();
-        });
-    }
-
-    initViewModal() {
-        this.viewModal = document.getElementById('viewModalContent');
-
-        // Элементы модального окна
-        this.viewModal = document.getElementById('viewModalContent');
-        this.chatMessages = document.getElementById('chatMessages');
-        this.chatInput = document.getElementById('chatInput');
-        this.chatInputArea = document.getElementById('chatInputArea');
-        this.sendChatBtn = document.getElementById('sendChatBtn');
-        this.visChatBtn = document.getElementById('visChatBtn');
-        this.viewModalTitle = document.getElementById('viewModalTitle');
-        this.editViewModal = document.getElementById('editViewModal');
-        this.expandViewModal = document.getElementById('expandViewModal');
-        this.closeViewModalBtn = document.getElementById('closeViewModal');
-
-        // События модального окна
-        this.sendChatBtn.addEventListener('click', this.sendChatMessage.bind(this));
-        // this.viewModalSaveBtn.addEventListener('click', this.saveViewModalChanges.bind(this));
-        // this.viewModalCancelBtn.addEventListener('click', this.closeViewModal.bind(this));
-
-        this.expandViewModal.addEventListener('click', this.toggleViewModalSize.bind(this));
-        this.closeViewModalBtn.addEventListener('click', this.closeViewModal.bind(this));
-
-        // Режим редактирования общей информации
-        this.editGeneralInfo = false;
-
-        // Для блокировки ввода до подтверждения отправки заметки
-        this.messageSendPending = false;
-
-        // Видимость нового сообщения
-        this.newMessageVisibility = true;
-
-        // Тулбар форматирования
-        this.formatToolbar = document.getElementById('formatToolbar');
-        this.linkDialog = document.getElementById('linkDialog');
-        this.linkDialogTitle = document.getElementById('linkDialogTitle');
-        this.linkDialogUrl = document.getElementById('linkDialogUrl');
-        this.linkDialogText = document.getElementById('linkDialogText');
-        this.linkDialogOk = document.getElementById('linkDialogOk');
-        this.linkDialogCancel = document.getElementById('linkDialogCancel');
-
-        // Следим за выделением текста в чате
-        document.addEventListener('selectionchange', () => this.handleSelectionChange());
-
-        // Кнопки тулбара
-        this.formatToolbar.querySelectorAll('.format-btn').forEach(btn => {
-            btn.addEventListener('mousedown', (e) => {
-                // mousedown чтобы не терять выделение
-                e.preventDefault();
-            });
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.applyFormat(btn.dataset.format);
-            });
-        });
-
-        // Диалог ссылки/картинки
-        this.linkDialogCancel.addEventListener('click', () => this.closeLinkDialog());
-        this.linkDialogOk.addEventListener('click', () => this.confirmLinkDialog());
-        this.linkDialogUrl.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') this.confirmLinkDialog();
-            if (e.key === 'Escape') this.closeLinkDialog();
-        });
-
-        const handlePaste = (e) => {
-            e.preventDefault();
-            const html = e.clipboardData.getData('text/html');
-            const text = e.clipboardData.getData('text/plain');
-            if (html) {
-                document.execCommand('insertHTML', false, this.sanitizeHtml(html));
-            } else {
-                // Вставляем как plain text, но с автолинковкой
-                document.execCommand('insertHTML', false, this.linkify(text));
-            }
-        };
-
-        this.chatInput.addEventListener('paste', handlePaste);
-        this.chatMessages.addEventListener('paste', handlePaste); // для режима редактирования
-
-        this.chatMessages.addEventListener('click', (e) => {
-            if (e.target.tagName === 'IMG') {
-                window.open(e.target.src, '_blank', 'noopener');
-            }
-        });
-    }
-
-    initImageUpload() {
-        this.imageUploadPanel = document.getElementById('imageUploadModal');
-        this.imageUploadInput = document.getElementById('imageSourceInput');
-        this.imageUploadSaveBtn = document.getElementById('imageSourceSaveBtn');
-        this.imageUploadCloseBtn = document.getElementById('closeImageSource');
-
-        this.imageUploadCloseBtn.addEventListener('click', this.closeImageUploadPanel.bind(this));
-        this.imageUploadInput.addEventListener('click', this.uploadImageFromUrl.bind(this));
-    }
-
-    handleSelectionChange() {
-        const sel = window.getSelection();
-        if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
-            this.hideFormatToolbar();
-            return;
-        }
-
-        const range = sel.getRangeAt(0);
-        const container = range.commonAncestorContainer;
-        const element = container.nodeType === 3 ? container.parentElement : container;
-
-        // Показываем тулбар только если выделение внутри chat-text (в режиме редактирования) или chat-input-resizable
-        const editingText = element.closest('.chat-text[contenteditable="true"]');
-        const editingInput = element.closest('#chatInput');
-
-        if (!editingText && !editingInput) {
-            this.hideFormatToolbar();
-            return;
-        }
-
-        this.formatToolbarTarget = editingText || editingInput;
-
-        // Позиционируем тулбар над выделением
-        const rect = range.getBoundingClientRect();
-        if (rect.width === 0 && rect.height === 0) {
-            this.hideFormatToolbar();
-            return;
-        }
-
-        this.formatToolbar.classList.remove('hidden');
-
-        const tbRect = this.formatToolbar.getBoundingClientRect();
-        let left = rect.left + rect.width / 2 - tbRect.width / 2;
-        let top = rect.top - tbRect.height - 8;
-
-        // Не выходим за пределы экрана
-        left = Math.max(8, Math.min(left, window.innerWidth - tbRect.width - 8));
-        if (top < 8) top = rect.bottom + 8;
-
-        this.formatToolbar.style.left = left + 'px';
-        this.formatToolbar.style.top = top + 'px';
-    }
-
-    hideFormatToolbar() {
-        if (this.formatToolbar) {
-            this.formatToolbar.classList.add('hidden');
-        }
-    }
-
-    applyFormat(format) {
-        const target = this.formatToolbarTarget;
-        if (!target) return;
-
-        // Возвращаем фокус и выделение
-        target.focus();
-
-        switch (format) {
-            case 'bold':
-                document.execCommand('bold', false, null);
-                break;
-            case 'italic':
-                document.execCommand('italic', false, null);
-                break;
-            case 'underline':
-                document.execCommand('underline', false, null);
-                break;
-            case 'link':
-                this.openLinkDialog('link');
-                return;
-            case 'image':
-                this.openLinkDialog('image');
-                return;
-            case 'copy':
-                document.execCommand('copy');
-                this.hideFormatToolbar();
-                return;
-            case 'cut':
-                document.execCommand('cut');
-                this.hideFormatToolbar();
-                return;
-            case 'paste':
-                // Пытаемся прочитать из буфера обмена
-                if (navigator.clipboard && navigator.clipboard.readText) {
-                    navigator.clipboard.readText().then(text => {
-                        document.execCommand('insertText', false, text);
-                    }).catch(() => {
-                        this.showTooltip('Нет доступа к буферу обмена', 1500);
-                    });
-                } else {
-                    this.showTooltip('Вставьте через Ctrl+V', 1500);
-                }
-                return;
-            case 'clear':
-                document.execCommand('removeFormat');
-                break;
-        }
-        this.hideFormatToolbar();
-    }
-
-    openLinkDialog(mode) {
-        // Сохраняем текущее выделение, если оно есть
-        const sel = window.getSelection();
-        let selectedText = '';
-        if (sel && sel.rangeCount > 0) {
-            this.savedRange = sel.getRangeAt(0).cloneRange();
-            selectedText = sel.toString().trim();
-        } else {
-            this.savedRange = null;
-        }
-
-        this.linkDialogMode = mode;
-        this.linkDialogTitle.textContent = mode === 'link' ? 'Вставить ссылку' : 'Вставить картинку';
-        this.linkDialogUrl.value = '';
-        this.linkDialogText.value = selectedText;
-        this.linkDialogText.style.display = mode === 'link' ? 'block' : 'none';
-        this.linkDialog.classList.remove('hidden');
-        this.hideFormatToolbar();
-        setTimeout(() => this.linkDialogUrl.focus(), 50);
-    }
-
-    closeLinkDialog() {
-        this.linkDialog.classList.add('hidden');
-        this.linkDialogMode = null;
-        this.savedRange = null;
-    }
-
-    confirmLinkDialog() {
-        const url = this.linkDialogUrl.value.trim();
-        if (!url) return;
-
-        // Используем ранее сохраненный range
-        const range = this.savedRange;
-        if (!range) {
-            this.closeLinkDialog();
-            return;
-        }
-
-        // Восстанавливаем выделение в DOM для корректной вставки
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-
-        if (this.linkDialogMode === 'link') {
-            const text = this.linkDialogText.value.trim() || url;
-            const a = document.createElement('a');
-            a.href = url;
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
-            a.textContent = text;
-            range.deleteContents();
-            range.insertNode(a);
-            // Ставим курсор после ссылки
-            range.setStartAfter(a);
-            range.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(range);
-        } else if (this.linkDialogMode === 'image') {
-            const img = document.createElement('img');
-            img.src = url;
-            img.alt = '';
-            img.loading = 'lazy';
-            
-            const insertRange = range.cloneRange();
-            insertRange.collapse(false);
-            range.insertNode(img);
-            // Вставляем картинку + перенос строки после неё
-            insertRange.insertNode(img);
-            
-            insertRange.setStartAfter(img);
-            insertRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(insertRange);
-        }
-
-        this.closeLinkDialog();
-    }
-
-    responseSaveMessage(response) {
-        if (!response || response.entityType != 'message' || response.action != 'add') return;
-        console.log("responseSaveMessage")
-        const message = response.object;
-        if (message && message.markerId) {
-            const marker = this.markers.find(m => m.id === message.markerId);
-            if ((!marker.visibility || !message.visibility) && this.currentRole !== 'ADMIN' && this.userId !== message.userId) return;
-            console.log(message)
-            marker.messages.push(message);
-            if (this.selectedMarkerId === marker.id && !this.viewModal.classList.contains('hidden')) {
-                if (this.messageSendPending) {
-                    this.messageSendPending = false;
-                    // this.chatInput.value = '';
-                    chatInput.textContent = '';
-                }
-                marker.isUpdated = true;
-                this.renderChatMessages(marker);
-            }
-            
-        }
-        
-    }
-
-    responseUpdateMessage(response) {
-        if (!response || response.entityType != 'message' || response.action != 'upd') return;
-        console.log("responseUpdateMessage", response.object);
-        const updatedMessage = response.object;
-        if (updatedMessage && updatedMessage.markerId) {
-            const marker = this.markers.find(m => m.id === updatedMessage.markerId);
-            if (marker && marker.messages) {
-                const index = marker.messages.findIndex(m => m.id === updatedMessage.id);
-                if (index !== -1) {
-                    marker.messages[index] = updatedMessage;
-                    if (this.selectedMarkerId === marker.id && !this.viewModal.classList.contains('hidden')) {
-                        // this.renderChatMessages(marker);
-                        const messageElement = this.chatMessages.querySelector(`.chat-message[data-message-id="${updatedMessage.id}"]`);
-                        if (!messageElement) return;
-                        const messageDiv = messageElement.querySelector('.chat-message-div');
-                        if (!messageDiv) return;
-                        const textSpan = messageDiv.querySelector('.chat-text');
-                        if (!textSpan) return;
-                        
-                        messageDiv.classList.remove('editing');
-                        if (updatedMessage.visibility) {
-                            messageDiv.classList.remove('invisible');
-                            textSpan.classList.remove('invisible');
-                        }
-                        else {
-                            messageDiv.classList.add('invisible');
-                            textSpan.classList.add('invisible');
-                        }
-
-                        const buttonsContainer = messageElement.querySelector('.message-edit-buttons-container');
-                        if (buttonsContainer) buttonsContainer.remove();
-                        
-                        textSpan.contentEditable = 'false';
-                        textSpan.innerHTML = this.linkify(updatedMessage.text);
-                    }
-                }
-            }
-        }
-    }
-
-    responseDeleteMessage(response) {
-        if (!response || response.entityType != 'message' || response.action != 'del') return;
-        console.log("responseDeleteMessage", response.object);
-        const data = response.object;
-        if (data) {
-            const markerId = data.markerId;
-            const messageId = data.messageId;
-            if (markerId && messageId) {
-                const marker = this.markers.find(m => m.id === markerId);
-                if (marker && marker.messages) {
-                    marker.messages = marker.messages.filter(m => m.id !== messageId);
-                    if (this.selectedMarkerId === marker.id && !this.viewModal.classList.contains('hidden')) {
-                        this.renderChatMessages(marker);
-                    }
-                }
-            }
-        }
-    }
-
-    async requestSaveMessage(message) {
-        console.log('requestSaveMessage')
-        this.messageSendPending = true;
-        try {
-            if (!this.wsClient.sendMessage(`/messages`, message)) {
-                this.showTooltip('Ошибка отправки сообщения', 1500);
-                this.messageSendPending = false;
-            }
-        } catch (error) {
-            this.showTooltip('Ошибка отправки сообщения', 1500);
-            this.messageSendPending = false;
-        }
-    }
-
-    async requestUpdateMessageText(markerId, messageId, text) {
-        console.log('requestUpdateMessageText', messageId, text);
-        try {
-            if (!this.wsClient.sendMessage(`/messages/${messageId}/text`, 
-                {messageId: messageId, markerId: markerId, text: text})) {
-                this.showTooltip('Ошибка отправки сообщения', 1500);
-            }
-        } catch (error) {
-            this.showTooltip('Ошибка отправки сообщения', 1500);
-        }
-    }
-
-    async requestUpdateMessageVisibility(markerId, messageId, visibility) {
-        console.log('requestUpdateMessageVisibility');
-
-        try {
-            if (!this.wsClient.sendMessage(`/messages/${messageId}/visibility`, 
-                {messageId: messageId, markerId: markerId, visibility: visibility})) {
-                this.showTooltip('Ошибка отправки сообщения', 1500);
-            }
-        } catch (error) {
-            this.showTooltip('Ошибка отправки сообщения', 1500);
-        }
-    }
-
-    async requestDeleteMessage(markerId, messageId) {
-        console.log('requestDeleteMessage');
-        try {
-            if (!this.wsClient.sendMessage(`/messages/${messageId}/delete`, messageId)) {
-                this.showTooltip('Ошибка отправки сообщения', 1500);
-            }
-        } catch (error) {
-            this.showTooltip('Ошибка отправки сообщения', 1500);
-        }
-        
-    }
-
-    sendChatMessage() {
-        // const text = this.chatInput.value.trim();
-        const raw = this.chatInput.innerHTML.trim();
-        if (!raw) return;
-        const text = this.sanitizeHtml(raw);
-        // проверка на «пустой» html типа <br>
-        if (!text.replace(/<br\s*\/?>/gi, '').replace(/&nbsp;/g, '').trim()) return;
-        if (this.editGeneralInfo) {
-            //> return when general info is ready
-            // if (!text) return;
-            // if (!this.generalInfo.messages) this.generalInfo.messages = [];
-            // this.generalInfo.messages.push({
-            //     text: text
-            // });
-            // this.renderChatMessages(this.generalInfo);
-            // this.chatInput.value = '';
-            this.chatInput.innerHTML = '';
-        }
-        else {
-            this.hideFormatToolbar();
-            if (!text || !this.selectedMarkerId) return;
-            const marker = this.markers.find(m => m.id === this.selectedMarkerId);
-            if (!marker) return;
-            if (!marker.messages) marker.messages = [];
-            const message = {text: text, visibility: this.newMessageVisibility, markerId: marker.id};
-            this.requestSaveMessage(message);
-        }
-        
-    }
-
-    switchMessageVisibility() {
-        this.visChatBtn.className = this.newMessageVisibility ? 'invisible-message-btn' : 'visible-message-btn';
-        this.visChatBtn.title = this.newMessageVisibility ? 'Только вы будете видеть заметку' : 'Заметка будет видна всем';
-        this.newMessageVisibility = !this.newMessageVisibility;
-    }
-
-    //> do not redraw all messages?
-    renderChatMessages(entity) {
-        if (!this.chatMessages) return;
-        this.hideFormatToolbar();
-        this.chatMessages.innerHTML = '';
-        if (entity.description) this.appendDescriptionToChat({text: entity.description});
-        if (!entity.messages || entity.messages.length === 0) {
-            if (!entity.description) this.chatMessages.innerHTML = '<div class="chat-empty">Нет заметок</div>';
-            return;
-        }
-        entity.messages.forEach(msg => this.appendMessageToChat(msg, entity.id));
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-    }
-
-    appendDescriptionToChat(msg) {
-        const div = document.createElement('div');
-        div.className = 'chat-message';
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'chat-message-div';
-        
-        const textSpan = document.createElement('span');
-        textSpan.className = 'chat-text';
-        textSpan.innerHTML = this.linkify(msg.text);
-        messageDiv.appendChild(textSpan);
-        div.appendChild(messageDiv);
-        this.chatMessages.appendChild(div);
-    }
-
-    appendMessageToChat(msg, markerId) {
-        if (!msg.visibility && this.currentRole !== 'ADMIN' && this.userId !== msg.userId) return;
-        const div = document.createElement('div');
-        div.className = 'chat-message';
-        div.setAttribute('data-message-id', msg.id);
-        div.setAttribute('data-marker-id', markerId);
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `chat-message-div${msg.visibility ? '' : ' invisible'}`;
-        
-        const textSpan = document.createElement('span');
-        textSpan.className = `chat-text${msg.visibility ? '' : ' invisible'}`;
-        textSpan.innerHTML = this.linkify(msg.text);
-        messageDiv.appendChild(textSpan);
-
-        const bottomData = document.createElement('div');
-        bottomData.className = 'chat-bottom';
-
-        const author = this.userIdToNick.get(msg.userId);
-        const authorSpan = document.createElement('span');
-        authorSpan.className = `chat-author${msg.userId === this.userId ? '-me' : ''}`;
-        authorSpan.textContent = author || '';
-        bottomData.appendChild(authorSpan);
-
-        const timeSpan = document.createElement('div');
-        timeSpan.className = 'chat-time';
-        timeSpan.textContent = msg.createdAt || '';
-        bottomData.appendChild(timeSpan);
-        messageDiv.appendChild(bottomData);
-        
-        // Добавляем обработчик контекстного меню для сообщения
-        div.addEventListener('contextmenu', (e) => {
-            if (messageDiv && messageDiv.classList.contains('editing')) return;
-            e.preventDefault();
-            e.stopPropagation();
-            this.showChatMessageContextMenu(e.clientX, e.clientY, msg.id, markerId);
-        });
-        
-        div.appendChild(messageDiv);
-        this.chatMessages.appendChild(div);
-    }
-
-    showChatMessageContextMenu(x, y, messageId, markerId) {
-        // Проверяем права доступа (только ADMIN или автор сообщения может редактировать/удалять)
-        // Пока просто показываем меню для всех, кто может редактировать карту
-        if (this.currentRole !== 'EDITOR' && this.currentRole !== 'ADMIN') return;
-        
-        this.chatMessageContextMenu.innerHTML = '';
-        this.chatMessageContextMenu.style.left = x + 'px';
-        this.chatMessageContextMenu.style.top = y + 'px';
-        this.chatMessageContextMenu.classList.remove('hidden');
-
-        const marker = this.markers.find(m => m.id === markerId);
-        if (!marker) return;
-        const message = marker.messages.find(m => m.id === messageId);
-        if (!message) return;
-
-        if (message.userId !== this.userId && this.currentRole !== 'ADMIN') return;
-
-        const items = [
-            { 
-                icon: '✏️', 
-                text: 'Редактировать', 
-                action: () => {
-                    this.editChatMessage(messageId, markerId);
-                }
-            },
-            { 
-                icon: (message.visibility ? '🚫' : '👁️'), 
-                text: (message.visibility ? 'Скрыть от участников' : 'Сделать видимым'), 
-                action: () => {
-                    this.toggleChatMessageVisibility(messageId, markerId, !message.visibility);
-                }
-            },
-            { 
-                icon: '🗑️', 
-                text: 'Удалить', 
-                action: () => {
-                    this.deleteChatMessage(messageId, markerId);
-                }
-            }
-        ];
-
-        items.forEach(item => {
-            const menuItem = document.createElement('div');
-            menuItem.className = 'context-menu-item';
-            menuItem.innerHTML = `<span>${item.icon || ''}</span> ${item.text}`;
-            menuItem.addEventListener('click', (e) => {
-                e.stopPropagation();
-                item.action();
-                this.closeChatMessageContextMenu();
-            });
-            this.chatMessageContextMenu.appendChild(menuItem);
-        });
-
-        // Корректировка позиции, чтобы меню не выходило за пределы экрана
-        const rect = this.chatMessageContextMenu.getBoundingClientRect();
-        if (rect.right > window.innerWidth || rect.right > document.documentElement.innerWidth) {
-            this.chatMessageContextMenu.style.left = (x - rect.width) + 'px';
-        }
-        if (rect.bottom > window.innerHeight || rect.right > document.documentElement.innerHeight) {
-            this.chatMessageContextMenu.style.top = (y - rect.height) + 'px';
-        }
-    }
-
-    closeChatMessageContextMenu() {
-        if (this.chatMessageContextMenu) {
-            this.chatMessageContextMenu.classList.add('hidden');
-        }
-    }
-
-    editChatMessage(messageId, markerId) {
-        console.log('editChatMessage', { messageId, markerId });
-        const messageElement = this.chatMessages.querySelector(`.chat-message[data-message-id="${messageId}"]`);
-        if (!messageElement) return;
-        const messageDiv = messageElement.querySelector('.chat-message-div');
-        if (!messageDiv) return;
-        const marker = this.markers.find(m => m.id === markerId);
-        if (!marker) return;
-        const message = marker.messages.find(m => m.id === messageId);
-        if (!message) return;
-        const textSpan = messageDiv.querySelector('.chat-text');
-        if (!textSpan) return;
-        
-        messageDiv.classList.add('editing');
-
-        // Создаем кнопки управления
-        const buttonsContainer = document.createElement('div');
-        buttonsContainer.className = 'message-edit-buttons-container';
-        const buttonsDiv = document.createElement('div');
-        buttonsDiv.className = 'message-edit-buttons';
-        
-        const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'message-edit-cancel';
-        cancelBtn.textContent = '✖';
-        cancelBtn.title = 'Отменить редактирование';
-        
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'message-edit-save';
-        saveBtn.textContent = '✔';
-        saveBtn.title = 'Сохранить изменения';
-        
-        textSpan.contentEditable = 'true';
-        const prevText = textSpan.innerHTML;
-
-        // Обработчик отмены
-        cancelBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.hideFormatToolbar();
-            this.removeEditMessageBtns(messageId, prevText);
-        });
-
-        saveBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.hideFormatToolbar();
-            const newHtml = this.sanitizeHtml(textSpan.innerHTML).trim();
-            if (!newHtml) {
-                this.removeEditMessageBtns(messageId, prevText);
-                return;
-            }
-            this.requestUpdateMessageText(markerId, messageId, newHtml);
-        });
-        
-        buttonsDiv.appendChild(cancelBtn);
-        buttonsDiv.appendChild(saveBtn);
-        
-        buttonsContainer.appendChild(buttonsDiv);
-        messageElement.appendChild(buttonsContainer);
-
-        textSpan.innerHTML = message.text;
-        textSpan.focus();
-    }
-
-    // updatedMessageText(markerId, messageId, text) {
-    //     this.requestUpdateMessageText(markerId, messageId, text);
-    // }
-
-    removeEditMessageBtns(messageId, prevText) {
-        const messageElement = this.chatMessages.querySelector(`.chat-message[data-message-id="${messageId}"]`);
-        if (!messageElement) return;
-        const messageDiv = messageElement.querySelector('.chat-message-div');
-        if (messageDiv) messageDiv.classList.remove('editing');
-        const buttonsContainer = messageElement.querySelector('.message-edit-buttons-container');
-        if (buttonsContainer) buttonsContainer.remove();
-        const textSpan = messageDiv.querySelector('.chat-text');
-        if (!textSpan) return;
-        textSpan.contentEditable = 'false';
-        textSpan.innerHTML = prevText;
-    }
-
-    toggleChatMessageVisibility(messageId, markerId, visibility) {
-        console.log('toggleChatMessageVisibility', { messageId, markerId });
-        this.requestUpdateMessageVisibility(markerId, messageId, visibility);
-    }
-
-    deleteChatMessage(messageId, markerId) {
-        console.log('deleteChatMessage', { messageId, markerId });
-        this.requestDeleteMessage(markerId, messageId);
-    }
-
-    sanitizeHtml(html) {
-        const allowed = {
-            'B': [], 'STRONG': [], 'I': [], 'EM': [], 'U': [], 'BR': [],
-            'A': ['href', 'target', 'rel'],
-            'IMG': ['src', 'alt']
-        };
-
-        // Блочные теги, которые могут появиться от contenteditable (Enter)
-        const blockTags = new Set(['DIV', 'P']);
-
-        const doc = new DOMParser().parseFromString('<div>' + html + '</div>', 'text/html');
-        const root = doc.body.firstChild;
-
-        // Рекурсивно обрабатываем; возвращаем true, если был вставлен <br>
-        // перед этим узлом (чтобы не задваивать переносы)
-        const walk = (node) => {
-            const children = Array.from(node.childNodes);
-            for (const child of children) {
-                if (child.nodeType === 3) {
-                    // Текстовый узел — не трогаем
-                    continue;
-                }
-                if (child.nodeType !== 1) {
-                    child.remove();
-                    continue;
-                }
-
-                const tag = child.tagName;
-
-                // Блочный тег: превращаем в его содержимое + <br> перед ним
-                // (кроме самого первого в корне — иначе будет пустая строка сверху)
-                if (blockTags.has(tag)) {
-                    const isFirst = (child === node.firstChild) && (node === root);
-                    // Сначала рекурсивно обрабатываем содержимое
-                    walk(child);
-
-                    const frag = doc.createDocumentFragment();
-                    if (!isFirst) {
-                        frag.appendChild(doc.createElement('br'));
-                    }
-                    while (child.firstChild) {
-                        frag.appendChild(child.firstChild);
-                    }
-                    child.replaceWith(frag);
-                    continue;
-                }
-
-                // Неразрешённый тег — заменяем на текстовое содержимое
-                if (!allowed[tag]) {
-                    const text = doc.createTextNode(child.textContent);
-                    child.replaceWith(text);
-                    continue;
-                }
-
-                // Чистим атрибуты
-                for (const attr of Array.from(child.attributes)) {
-                    if (!allowed[tag].includes(attr.name.toLowerCase())) {
-                        child.removeAttribute(attr.name);
-                    }
-                }
-
-                // Ссылки — только http(s), форсируем target/rel
-                if (tag === 'A') {
-                    const href = child.getAttribute('href') || '';
-                    if (!/^https?:\/\//i.test(href)) {
-                        child.removeAttribute('href');
-                    } else {
-                        child.setAttribute('target', '_blank');
-                        child.setAttribute('rel', 'noopener noreferrer');
-                    }
-                }
-
-                // Картинки — только http(s)
-                if (tag === 'IMG') {
-                    const src = child.getAttribute('src') || '';
-                    if (!/^https?:\/\//i.test(src)) {
-                        child.remove();
-                        continue;
-                    }
-                }
-
-                walk(child);
-            }
-        };
-
-        walk(root);
-
-        // Схлопываем подряд идущие <br>, чтобы не было двойных переносов
-        let prevBr = false;
-        const cleanup = (node) => {
-            const children = Array.from(node.childNodes);
-            for (const child of children) {
-                if (child.nodeType === 1 && child.tagName === 'BR') {
-                    if (prevBr) child.remove();
-                    else prevBr = true;
-                } else if (child.nodeType === 1) {
-                    prevBr = false;
-                    cleanup(child);
-                    prevBr = false;
-                } else if (child.nodeType === 3) {
-                    // Текст, состоящий только из \n или пробелов, не сбрасывает флаг br
-                    if (child.textContent.replace(/[\s\n\r]+/g, '').length > 0) {
-                        prevBr = false;
-                    }
-                }
-            }
-        };
-        cleanup(root);
-
-        return root.innerHTML;
-    }
-
-    linkify(text) {
-        const hasHtml = /<(b|strong|i|em|u|a|br|img)\b/i.test(text);
-
-        let result;
-        if (hasHtml) {
-            result = text;
-        } else {
-            // Экранируем спецсимволы
-            const escaped = text
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
-            // URL → ссылки
-            const urlRegex = /(https?:\/\/[^\s<]+)/g;
-            result = escaped.replace(urlRegex, (url) =>
-                `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
-            );
-            // Переносы строк
-            result = result.replace(/\r?\n/g, '<br>');
-        }
-
-        return this.sanitizeHtml(result);
-    }
-
-    toggleViewModalSize() {
-        this.viewModal.classList.toggle('expanded');
-        this.expandViewModal.textContent = this.viewModal.classList.contains('expanded') ? '-' : '⤢';
-    }
-
-    openViewModal(markerId) {
-        if (markerId === null) {
-            if (this.editGeneralInfo) {
-                const marker = this.markers.find(m => m.id === this.selectedMarkerId);
-                this.selectedMarkerId = null;
-                if (marker) {
-                    marker.isUpdated = true;
-                    this.drawMarker(marker, false, true);
-                }
-                // this.viewModalMarkerTitle.value = this.generalInfo.title || '';
-                // this.viewModalNoteText.value = this.generalInfo.note || '';
-                // this.viewModalDescriptionText.value = this.generalInfo.description || '';
-                this.viewModalTitle.textContent = 'Общая информация';
-                this.chatInputArea.classList.add('hidden');
-                this.renderChatMessages(this.generalInfo);
-            }
-        }
-        else {
-            this.editGeneralInfo = false;
-            const marker = this.markers.find(m => m.id === markerId);
-            if (!marker) return;
-
-            // this.viewModalMarkerTitle.value = marker.title || '';
-            // this.viewModalNoteText.value = marker.note || '';
-            // this.viewModalDescriptionText.value = marker.description || '';
-            this.viewModalTitle.textContent = marker.title || 'Просмотр маркера';
-            if (this.currentRole !== 'READ_ONLY') {
-                this.chatInputArea.classList.remove('hidden');
-            }
-            this.renderChatMessages(marker);
-        }
-
-        this.viewModal.classList.remove('hidden');
-    }
-
-    closeViewModal() {
-        this.viewModal.classList.add('hidden');
-        this.editGeneralInfo = false;
-        if (!this.editPanel.classList.contains('hidden')) return;
-        const marker = this.markers.find(m => m.id === this.selectedMarkerId);
-        this.selectedMarkerId = null;
-        if (marker) {
-            marker.isUpdated = true;
-            this.drawMarker(marker, false, true);
-        }
     }
 
     showContextMenu(x, y, items) {
@@ -1211,17 +364,156 @@ class MarkerApp {
         });
 
         const rect = this.contextMenu.getBoundingClientRect();
-        if (rect.right > window.innerWidth || rect.right > document.documentElement.innerWidth) {
+        if (rect.right > window.innerWidth) {
             this.contextMenu.style.left = (x - rect.width) + 'px';
         }
-        if (rect.bottom > window.innerHeight || rect.right > document.documentElement.innerHeight) {
+        if (rect.bottom > window.innerHeight) {
             this.contextMenu.style.top = (y - rect.height) + 'px';
         }
     }
 
     closeContextMenu() {
-        this.contextMenu.classList.add('hidden');
+        if (this.contextMenu) this.contextMenu.classList.add('hidden');
     }
+
+    /* ================= Сообщения (WS-обработчики) ================= */
+
+    responseSaveMessage(response) {
+        if (!response || response.entityType !== 'message' || response.action !== 'add') return;
+        const message = response.object;
+        if (!message || !message.markerId) return;
+
+        const marker = this.markers.find(m => m.id === message.markerId);
+        if (!marker) return;
+        if (!marker.messages) marker.messages = [];
+        if (message.id && marker.messages.some(m => m.id === message.id)) return;
+        marker.messages.push(message);
+
+        if (this.selectedMarkerId === marker.id &&
+            this.chatView &&
+            !document.getElementById('viewModalContent').classList.contains('hidden')) {
+            if (this._canShowMessage(message)) {
+                this.chatView.appendMessage(message);
+            }
+        }
+    }
+
+    _canShowMessage(msg) {
+        if (msg.visibility) return true;
+        if (this.currentRole === 'ADMIN') return true;
+        return msg.userId === this.userId;
+    }
+
+    responseUpdateMessage(response) {
+        if (!response || response.entityType !== 'message' || response.action !== 'upd') return;
+        const updated = response.object;
+        if (!updated || !updated.markerId) return;
+
+        const marker = this.markers.find(m => m.id === updated.markerId);
+        if (!marker || !marker.messages) return;
+
+        const idx = marker.messages.findIndex(m => m.id === updated.id);
+        if (idx !== -1) marker.messages[idx] = updated;
+
+        if (this.selectedMarkerId !== marker.id || !this.chatView) return;
+
+        const updatedInDom = this.chatView.updateMessage(updated);
+        if (!updatedInDom && this._canShowMessage(updated)) {
+            this.chatView.appendMessage(updated);
+        }
+    }
+
+    responseDeleteMessage(response) {
+        if (!response || response.entityType !== 'message' || response.action !== 'del') return;
+        const data = response.object || {};
+        const parentId  = data.parentId;
+        const messageId = data.messageId;
+        if (!parentId || !messageId) return;
+
+        const marker = this.markers.find(m => m.id === parentId);
+        if (!marker || !marker.messages) return;
+        marker.messages = marker.messages.filter(m => m.id !== messageId);
+
+        if (this.selectedMarkerId === parentId && this.chatView) {
+            this.chatView.removeMessage(messageId);
+        }
+    }
+
+    /* ================= Открытие/закрытие viewModal ================= */
+
+    openViewModal(markerId) {
+        if (!this.chatView) return;
+
+        if (markerId === null) {
+            if (this.editGeneralInfo) {
+                const marker = this.markers.find(m => m.id === this.selectedMarkerId);
+                this.selectedMarkerId = null;
+                if (marker) {
+                    marker.isUpdated = true;
+                    this.drawMarker(marker, false, true);
+                }
+                this.chatView.open(this.generalInfo);
+                this.chatView.setTitle('Общая информация');
+                this.chatView.setShowInputArea(false);
+                document.getElementById('viewModalContent').classList.remove('hidden');
+            }
+        } else {
+            this.editGeneralInfo = false;
+            const marker = this.markers.find(m => m.id === markerId);
+            if (!marker) return;
+
+            const visibleMessages = (marker.messages || []).filter(m => this._canShowMessage(m));
+            const viewModel = {
+                id: marker.id,
+                title: marker.title,
+                description: marker.description,
+                messages: visibleMessages,
+            };
+
+            this.chatView.open(viewModel);
+
+            this.chatView.setTitle(marker.title || 'Просмотр маркера');
+            this.chatView.setReadOnly(this.currentRole === 'READ_ONLY');
+            this.chatView.setShowInputArea(this.currentRole !== 'READ_ONLY');
+            document.getElementById('viewModalContent').classList.remove('hidden');
+        }
+    }
+
+    closeViewModal() {
+        if (this.chatView) this.chatView.close();
+        else document.getElementById('viewModalContent').classList.add('hidden');
+    }
+
+    /* ================= Показ подсказок и уведомлений ================= */
+
+    showTooltip(text, duration = 1500) {
+        this.tooltip.textContent = text;
+        this.tooltip.classList.remove('hidden');
+
+        const rect = this.imageContainer.getBoundingClientRect();
+        this.tooltip.style.left = rect.left + rect.width / 2 + 'px';
+        this.tooltip.style.top = rect.top + 50 + 'px';
+
+        setTimeout(() => {
+            this.tooltip.classList.add('hidden');
+        }, duration);
+    }
+
+    showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.classList.add('fade-out');
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    }
+
+    /* ================= Редактирование маркера ================= */
 
     openEditMarkerView() {
         this.openEditMarkerViewImpl(this.selectedMarkerId);
@@ -1231,9 +523,7 @@ class MarkerApp {
         this.removeTempMarker();
         if (this.selectedMarkerId) {
             const oldMarker = this.markers.find(m => m.id === this.selectedMarkerId);
-            if (oldMarker) {
-                oldMarker.isUpdated = true;
-            }
+            if (oldMarker) oldMarker.isUpdated = true;
         }
         this.selectedMarkerId = markerId;
         const marker = this.markers.find(m => m.id === markerId);
@@ -1244,13 +534,11 @@ class MarkerApp {
             this.noteText.value = marker.note || '';
             this.descriptionText.value = marker.description || '';
             this.isAddingNote = true;
-            
-            // Устанавливаем цвет и форму текущего маркера
+
             if (marker.visibility || this.currentRole !== 'ADMIN') {
                 this.changeMarkerVisibility.textContent = '👁️';
                 this.changeMarkerVisibility.title = 'Маркер будет виден всем';
-            }
-            else {
+            } else {
                 this.changeMarkerVisibility.textContent = '🚫';
                 this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
             }
@@ -1260,11 +548,10 @@ class MarkerApp {
                 this.markerSize.value = marker.size;
                 this.sizeValue.textContent = marker.size + 'px';
             }
-            
+
             this.centerOnMarker(marker);
             this.showEditPanel();
             this.closeViewModal();
-            
         }
         this.updateButtonsState();
         this.renderMarkers();
@@ -1277,35 +564,33 @@ class MarkerApp {
         if (this.movingMarkerId !== null) return;
         if (!this.mainImage.src || this.mainImage.src === '#') return;
 
-        // Проверяем, кликнули ли на маркер
         const markerElement = e.target.closest('.marker');
-        
+
         if (markerElement) {
-            // Контекстное меню для маркера
             const markerId = parseInt(markerElement.id.replace('marker-', ''));
             const marker = this.markers.find(m => m.id === markerId);
-            
+
             if (marker) {
                 this.showContextMenu(e.clientX, e.clientY, [
-                    { 
-                        icon: '✏️', 
-                        text: 'Редактировать', 
+                    {
+                        icon: '✏️',
+                        text: 'Редактировать',
                         action: () => {
                             this.openEditMarkerViewImpl(markerId);
                         }
                     },
-                    { 
-                        icon: '🖱️', 
-                        text: 'Двигать', 
+                    {
+                        icon: '🖱️',
+                        text: 'Двигать',
                         action: () => {
                             this.movingMarkerId = markerId;
                             this.imageContainer.style.cursor = 'crosshair';
                             this.showTooltip('Кликните на новое место для маркера', 2000);
                         }
                     },
-                    { 
-                        icon: '➕', 
-                        text: 'Копировать', 
+                    {
+                        icon: '➕',
+                        text: 'Копировать',
                         action: () => {
                             this.movingMarkerId = markerId;
                             this.copyMarker = true;
@@ -1313,9 +598,9 @@ class MarkerApp {
                             this.showTooltip('Кликните на новое место для маркера', 2000);
                         }
                     },
-                    { 
-                        icon: '🗑️', 
-                        text: 'Удалить', 
+                    {
+                        icon: '🗑️',
+                        text: 'Удалить',
                         action: () => {
                             this.deleteMarker(markerId, e);
                         }
@@ -1324,45 +609,51 @@ class MarkerApp {
             }
         } else if (e.target === this.imageContainer || e.target === this.mainImage) {
             if (this.mainImage.complete && this.mainImage.naturalWidth > 0) {
-                // Контекстное меню для добавления маркера
                 this.showContextMenu(e.clientX, e.clientY, [
-                    { 
-                        icon: '➕', 
-                        text: 'Добавить', 
+                    {
+                        icon: '➕',
+                        text: 'Добавить',
                         action: () => {
                             this.addMarkerAtPosition(e);
                         }
                     }
                 ]);
-            }
-            else {
-                // Контекстное меню для загрузки изображения
+            } else {
                 this.showContextMenu(e.clientX, e.clientY, [
-                    { 
-                        icon: '📤', 
-                        text: 'Загрузить изображение', 
+                    {
+                        icon: '📤',
+                        text: 'Загрузить изображение',
                         action: () => {
-                            // this.imageUpload.click();
-                             this.showImageUploadForm();
+                            this.showImageUploadForm();
                         }
                     },
-                    { 
-                        icon: '📂', 
-                        text: 'Загрузить из файла', 
+                    {
+                        icon: '📂',
+                        text: 'Загрузить из файла',
                         action: () => {
                             this.fileLoader.click();
                         }
                     }
                 ]);
             }
-            
         }
+    }
+
+    /* ================= Загрузка изображения ================= */
+
+    initImageUpload() {
+        this.imageUploadPanel = document.getElementById('imageUploadModal');
+        this.imageUploadInput = document.getElementById('imageSourceInput');
+        this.imageUploadSaveBtn = document.getElementById('imageSourceSaveBtn');
+        this.imageUploadCloseBtn = document.getElementById('closeImageSource');
+
+        this.imageUploadCloseBtn.addEventListener('click', this.closeImageUploadPanel.bind(this));
+        this.imageUploadInput.addEventListener('click', this.uploadImageFromUrl.bind(this));
     }
 
     showImageUploadForm() {
         this.imageUploadPanel.classList.remove('hidden');
         this.imageUploadInput.value = this.imageUrl || '';
-
     }
 
     closeImageUploadPanel() {
@@ -1374,292 +665,6 @@ class MarkerApp {
         //> if success, send request to change map's imageUrl
     }
 
-    addMarkerAtPosition(e) {
-        if (!this.mainImage.src || this.mainImage.src === '#') return;
-
-        const containerRect = this.imageContainer.getBoundingClientRect();
-        const mousePos = this.getRelativeMousePosition(e);
-        
-        if (mousePos.x >= 0 && mousePos.x <= 100 && 
-            mousePos.y >= 0 && mousePos.y <= 100) {
-            
-            this.tempMarker = {
-                x: mousePos.x,
-                y: mousePos.y,
-                title: '',
-                note: '',
-                description: '',
-                createdAt: new Date().toLocaleString()
-            };
-
-            this.closeViewModal();
-            this.selectedMarkerId = this.tempMarker.id;
-            this.isAddingNote = true;
-            
-            this.markerNumber.value = '';
-            this.markerTitle.value = '';
-            this.noteText.value = '';
-            this.descriptionText.value = '';
-            
-            // Устанавливаем цвет и форму по умолчанию
-            if (this.markerSettings.defaultVisibility || this.currentRole !== 'ADMIN') {
-                this.changeMarkerVisibility.textContent = '👁️';
-                this.changeMarkerVisibility.title = 'Маркер будет виден всем';
-            }
-            else {
-                this.changeMarkerVisibility.textContent = '🚫';
-                this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
-            }
-            
-            this.currentMarkerColor.value = this.markerSettings.defaultColor;
-            this.currentMarkerShape.value = this.markerSettings.defaultShape;
-            this.markerSize.value = this.markerSettings.defaultSize;
-            this.sizeValue.textContent = this.markerSettings.defaultSize + 'px';
-            
-            this.showEditPanel();
-            this.markerTitle.focus();
-            
-            this.updateButtonsState();
-            this.renderMarkers();
-            
-            this.showTooltip('Новый маркер', 1000);
-        }
-    }
-
-    handleTouchStart(e) {
-        // e.preventDefault();
-        
-        if (!this.mainImage.src || this.mainImage.src === '#') return;
-        
-        const touches = e.touches;
-        this.touchStartPositions = [];
-        
-        for (let i = 0; i < touches.length; i++) {
-            const rect = this.imageContainer.getBoundingClientRect();
-            this.touchStartPositions.push({
-                x: touches[i].clientX,
-                y: touches[i].clientY
-            });
-        }
-        
-        if (touches.length === 1) {
-            // Один палец - начало перемещения
-            this.isDragging = true;
-            this.clickStarted = true;
-            this.dragStart.x = touches[0].clientX - this.imagePosition.x;
-            this.dragStart.y = touches[0].clientY - this.imagePosition.y;
-            this.imageContainer.style.cursor = 'grabbing';
-        } else if (touches.length === 2) {
-            // Два пальца - начало масштабирования
-            this.isPinching = true;
-            this.isDragging = false;
-            
-            // Вычисляем начальное расстояние между пальцами
-            const dx = touches[0].clientX - touches[1].clientX;
-            const dy = touches[0].clientY - touches[1].clientY;
-            this.touchStartDistance = Math.sqrt(dx * dx + dy * dy);
-            this.touchStartZoom = this.currentZoom;
-            
-            // Сохраняем центр касания для масштабирования относительно него
-            const centerX = (touches[0].clientX + touches[1].clientX) / 2;
-            const centerY = (touches[0].clientY + touches[1].clientY) / 2;
-            
-            const containerRect = this.imageContainer.getBoundingClientRect();
-            this.pinchCenter = {
-                x: centerX - containerRect.left,
-                y: centerY - containerRect.top
-            };
-        }
-    }
-
-    handleTouchMove(e) {
-        e.preventDefault();
-        
-        if (!this.mainImage.src || this.mainImage.src === '#') return;
-        
-        const touches = e.touches;
-        
-        if (touches.length === 1 && this.isDragging && !this.isPinching) {
-            // Перемещение одним пальцем
-            const touch = touches[0];
-            this.imagePosition.x = touch.clientX - this.dragStart.x;
-            this.imagePosition.y = touch.clientY - this.dragStart.y;
-            
-            this.constrainImagePosition();
-            this.updateImageTransform();
-            this.renderMarkers();
-            
-        } else if (touches.length === 2 && this.isPinching) {
-            // Масштабирование двумя пальцами
-            const dx = touches[0].clientX - touches[1].clientX;
-            const dy = touches[0].clientY - touches[1].clientY;
-            const currentDistance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (this.touchStartDistance > 0) {
-                // Вычисляем новый масштаб
-                const scale = currentDistance / this.touchStartDistance;
-                const newZoom = Math.min(
-                    Math.max(this.touchStartZoom * scale, this.minZoom), 
-                    this.maxZoom
-                );
-                
-                if (Math.abs(newZoom - this.currentZoom) > 0.01) {
-                    // Масштабируем относительно центра касания
-                    const containerRect = this.imageContainer.getBoundingClientRect();
-                    const centerX = (touches[0].clientX + touches[1].clientX) / 2 - containerRect.left;
-                    const centerY = (touches[0].clientY + touches[1].clientY) / 2 - containerRect.top;
-                    
-                    const zoomStep = newZoom / this.currentZoom;
-                    
-                    // Корректируем позицию для масштабирования относительно центра
-                    this.imagePosition.x = this.imagePosition.x + (centerX - containerRect.width/2) * (1 - zoomStep);
-                    this.imagePosition.y = this.imagePosition.y + (centerY - containerRect.height/2) * (1 - zoomStep);
-                    
-                    this.currentZoom = newZoom;
-                    
-                    this.constrainImagePosition();
-                    this.updateImageTransform();
-                    
-                    // Обновляем отображение подписей в зависимости от масштаба
-                    const showLabelsOld = this.showLabels;
-                    this.showLabels = this.getShowLabels();
-                    const updateShowLabels = (this.showLabels != showLabelsOld);
-                    
-                    this.renderMarkers(updateShowLabels);
-                    
-                    // Показываем подсказку при первом скрытии подписей
-                    if (!this.showLabels && updateShowLabels) {
-                        this.showTooltip('Подписи скрыты, коснитесь маркера для просмотра', 1000);
-                    }
-                }
-            }
-            
-            // Также позволяем перемещать изображение двумя пальцами
-            if (this.touchStartPositions.length === 2) {
-                const currentCenter = {
-                    x: (touches[0].clientX + touches[1].clientX) / 2,
-                    y: (touches[0].clientY + touches[1].clientY) / 2
-                };
-                
-                const startCenter = {
-                    x: (this.touchStartPositions[0].x + this.touchStartPositions[1].x) / 2,
-                    y: (this.touchStartPositions[0].y + this.touchStartPositions[1].y) / 2
-                };
-                
-                // Перемещаем изображение пропорционально смещению центра
-                if (this.lastTouchCenter) {
-                    const dx = currentCenter.x - this.lastTouchCenter.x;
-                    const dy = currentCenter.y - this.lastTouchCenter.y;
-                    
-                    this.imagePosition.x += dx;
-                    this.imagePosition.y += dy;
-                    
-                    this.constrainImagePosition();
-                    this.updateImageTransform();
-                    this.renderMarkers();
-                }
-                
-                this.lastTouchCenter = currentCenter;
-            }
-        }
-    }
-
-    handleTouchEnd(e) {
-        // e.preventDefault();
-        
-        // Сбрасываем состояния
-        this.isDragging = false;
-        this.isPinching = false;
-        this.imageContainer.style.cursor = 'default';
-        this.lastTouchCenter = null;
-        this.touchStartDistance = 0;
-        /*
-        // Проверяем, был ли это клик (тап) по маркеру
-        if (this.clickStarted && e.touches.length === 0) {
-            // Эмулируем клик для выбора маркера
-            const touch = e.changedTouches[0];
-            if (touch) {
-                const element = document.elementFromPoint(touch.clientX, touch.clientY);
-                if (element && element.classList.contains('marker')) {
-                    const markerId = parseInt(element.id.replace('marker-', ''));
-                    this.selectMarker(markerId);
-                }
-            }
-            this.clickStarted = false;
-        }
-        */
-        // Сбрасываем позиции для следующего жеста
-        this.touchStartPositions = [];
-    }
-
-    getShowLabels() {
-        return (this.currentZoom > this.minZoom * this.markerSettings.minZoomForLabels) && this.markerSettings.showNotes;
-    }
-
-    customColorChanged() {
-        this.customColorIsChanged = true;
-    }
-    
-    markerSizeChanged() {
-        this.markerSizeIsChanged = true;
-    }
-    
-    shapeChanged() {
-        this.shapeIsChanged = true;
-    }
-
-    toggleMarkersPanel() {
-        this.fileMenu.classList.add('hidden');
-        this.markersPanel.classList.toggle('hidden');
-        if (!this.markersPanel.classList.contains('hidden')) {
-            this.editPanel.classList.add('hidden');
-            if (this.tempMarker) {
-                this.cancelNote();
-            }
-            this.renderMarkersList();
-        }
-    }
-
-    toggleGeneralInfoPanel() {
-        this.editGeneralInfo = true;
-        this.openViewModal(null);
-    }
-
-    showEditPanel() {
-        this.editPanel.classList.remove('hidden');
-        this.markersPanel.classList.add('hidden');
-    }
-
-    // Вспомогательный метод для показа подсказок
-    showTooltip(text, duration = 1500) {
-        this.tooltip.textContent = text;
-        this.tooltip.classList.remove('hidden');
-        
-        // Позиционируем подсказку в центре
-        const rect = this.imageContainer.getBoundingClientRect();
-        this.tooltip.style.left = rect.left + rect.width / 2 + 'px';
-        this.tooltip.style.top = rect.top + 50 + 'px';
-        
-        setTimeout(() => {
-            this.tooltip.classList.add('hidden');
-        }, duration);
-    }
-
-    showNotification(message, type = 'success') {
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.classList.add('fade-out');
-            setTimeout(() => {
-                document.body.removeChild(notification);
-            }, 300);
-        }, 3000);
-    }
-
-    // Загрузка изображения по ссылке
     async loadImageByUrl() {
         const url = this.imageUrlInput.value.trim();
         if (!url) {
@@ -1667,43 +672,13 @@ class MarkerApp {
             return;
         }
         const img = new Image();
-            
         img.onload = function() {
-            // Изображение успешно загружено
             document.getElementById('mainImage').src = url;
         };
-        
         img.onerror = function() {
             this.showNotification('Не удалось загрузить изображение. Проверьте ссылку.', 'error');
         };
-        
         img.src = url;
-        // try {
-        //     const response = await fetch(url);
-        //     if (!response.ok) throw new Error('Ошибка загрузки');
-        //     const blob = await response.blob();
-        //     const reader = new FileReader();
-        //     reader.onload = (e) => {
-        //         this.imageData = e.target.result;
-        //         this.imageUrl = url;
-        //         this.mainImage.src = this.imageData;
-        //         this.mainImage.style.display = 'block';
-        //         this.mainImage.onload = () => {
-        //             this.countZoomLimits();
-        //             this.resetZoom();
-        //             this.imagePosition = { x: 0, y: 0 };
-        //             this.updateImageTransform();
-        //             this.showTooltip('Изображение загружено по ссылке', 1500);
-        //         };
-        //         if (this.markers && this.markers.length) {
-        //             if (!confirm('Сохранить маркеры?')) this.clearMarkers();
-        //         }
-        //     };
-        //     reader.readAsDataURL(blob);
-        // } catch (err) {
-        //     this.showNotification('Не удалось загрузить изображение', 'error');
-        //     console.error(err);
-        // }
     }
 
     handleImageUpload(e) {
@@ -1711,7 +686,6 @@ class MarkerApp {
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                // Сохраняем копию изображения
                 this.imageData = e.target.result;
                 this.mainImage.src = this.imageData;
                 this.mainImage.style.display = 'block';
@@ -1720,7 +694,6 @@ class MarkerApp {
                     this.resetZoom();
                     this.imagePosition = { x: 0, y: 0 };
                     this.updateImageTransform();
-                    
                     this.showTooltip('Изображение загружено', 1500);
                 };
                 if (this.markers && this.markers.length) {
@@ -1733,299 +706,54 @@ class MarkerApp {
         }
     }
 
-    handleWheel(e) {
-        e.preventDefault();
-        
+    /* ================= Маркеры: добавление/сохранение ================= */
+
+    addMarkerAtPosition(e) {
         if (!this.mainImage.src || this.mainImage.src === '#') return;
 
-        const rect = this.transformContainer.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
+        const mousePos = this.getRelativeMousePosition(e);
 
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        const newZoom = Math.min(Math.max(this.currentZoom + delta, this.minZoom), this.maxZoom);
+        if (mousePos.x >= 0 && mousePos.x <= 100 &&
+            mousePos.y >= 0 && mousePos.y <= 100) {
 
-        if (newZoom !== this.currentZoom) {
-            const zoomStep = newZoom / this.currentZoom;
-            
-            const showLabelsOld = this.showLabels;
+            this.tempMarker = {
+                x: mousePos.x,
+                y: mousePos.y,
+                title: '',
+                note: '',
+                description: '',
+                createdAt: new Date().toLocaleString()
+            };
 
-            this.currentZoom = newZoom;
+            this.closeViewModal();
+            this.selectedMarkerId = this.tempMarker.id;
+            this.isAddingNote = true;
 
-            this.imagePosition.x = this.imagePosition.x + (mouseX - rect.width/2) * (1 - zoomStep);
-            this.imagePosition.y = this.imagePosition.y + (mouseY - rect.height/2) * (1 - zoomStep);
+            this.markerNumber.value = '';
+            this.markerTitle.value = '';
+            this.noteText.value = '';
+            this.descriptionText.value = '';
 
-            this.constrainImagePosition(zoomStep);
-            
-            this.updateImageTransform();
-            
-            this.showLabels = this.getShowLabels();
-            const updateShowLabels = (this.showLabels != showLabelsOld);
-            
-            this.renderMarkers(updateShowLabels);
-            
-            // Показываем подсказку о текущем режиме отображения
-            if (!this.showLabels && updateShowLabels) {
-                this.showTooltip('Подписи скрыты, наведите на маркер для просмотра', 1000);
+            if (this.markerSettings.defaultVisibility || this.currentRole !== 'ADMIN') {
+                this.changeMarkerVisibility.textContent = '👁️';
+                this.changeMarkerVisibility.title = 'Маркер будет виден всем';
+            } else {
+                this.changeMarkerVisibility.textContent = '🚫';
+                this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
             }
-        }
-    }
 
-    startDrag(e) {
-        if (e.button !== 0 || this.movingMarkerId !== null) return;
-        
-        if (e.target === this.mainImage || e.target === this.markersLayer || e.target === this.imageContainer) {
-            this.isDragging = true;
-            this.clickStarted = true;
-            this.dragStart.x = e.clientX - this.imagePosition.x;
-            this.dragStart.y = e.clientY - this.imagePosition.y;
-            this.imageContainer.style.cursor = 'grabbing';
-            e.preventDefault();
-        }
-    }
+            this.currentMarkerColor.value = this.markerSettings.defaultColor;
+            this.currentMarkerShape.value = this.markerSettings.defaultShape;
+            this.markerSize.value = this.markerSettings.defaultSize;
+            this.sizeValue.textContent = this.markerSettings.defaultSize + 'px';
 
-    drag(e) {
-        if (!this.isDragging) return;
-        
-        e.preventDefault();
-        
-        this.imagePosition.x = e.clientX - this.dragStart.x;
-        this.imagePosition.y = e.clientY - this.dragStart.y;
+            this.showEditPanel();
+            this.markerTitle.focus();
 
-        this.constrainImagePosition();
-        
-        this.updateImageTransform();
-        this.renderMarkers();
-    }
-
-    stopDrag(e) {
-        if (this.isDragging) {
-            this.isDragging = false;
-            this.imageContainer.style.cursor = 'default';
-            
-            if (this.clickStarted) {
-                const mouseMoveThreshold = 5;
-                const movedX = Math.abs(e.clientX - this.dragStart.x - this.imagePosition.x);
-                const movedY = Math.abs(e.clientY - this.dragStart.y - this.imagePosition.y);
-                
-                if (movedX > mouseMoveThreshold || movedY > mouseMoveThreshold) {
-                    this.clickStarted = false;
-                }
-            }
-        }
-    }
-
-    constrainImagePosition(zoomStep = 1) {
-        if (!this.mainImage.src || this.mainImage.src === '#') return;
-
-        const containerRect = this.imageContainer.getBoundingClientRect();
-        const transformRect = this.transformContainer.getBoundingClientRect();
-        const leftDist = (transformRect.width * zoomStep - containerRect.width) / 2;
-        const rightDist = (containerRect.width - transformRect.width * zoomStep) / 2;
-        const upDist = (transformRect.height * zoomStep - containerRect.height) / 2;
-        const downDist = (containerRect.height - transformRect.height * zoomStep) / 2;
-
-        const minX = Math.min (leftDist, rightDist);
-        const maxX = Math.max (leftDist, rightDist);
-        const minY = Math.min (upDist, downDist);
-        const maxY = Math.max (upDist, downDist);
-
-        this.imagePosition.x = Math.min(Math.max(this.imagePosition.x, minX), maxX);
-        this.imagePosition.y = Math.min(Math.max(this.imagePosition.y, minY), maxY);
-    }
-
-    updateImageTransform() {
-        this.transformContainer.style.transform = `translate(${this.imagePosition.x}px, ${this.imagePosition.y}px) scale(${this.currentZoom})`;
-    }
-
-    getRelativeMousePosition(e) {
-        const rect = this.markersLayer.getBoundingClientRect();
-        return {
-            x: (e.clientX - rect.left) / rect.width * 100,
-            y: (e.clientY - rect.top) / rect.height * 100
-        };
-    }
-
-    responseMoveMarker(response) {
-        if (!response || response.entityType != 'marker' || response.action != 'move') return;
-        console.log('response move marker')
-        const markerRes = response.object;
-        const marker = this.markers.find(m => m.id === markerRes.id);
-        marker.x = markerRes.x;
-        marker.y = markerRes.y;
-        marker.isUpdated = true;
-        
-        this.renderMarkers();
-        this.showTooltip('Маркер перемещен', 1500);
-    }
-
-    async requestMoveMarker(marker, x, y) {
-        try {
-            if (!this.wsClient.sendMessage(`/markers/${marker.id}/move`, {x: x, y: y})) {
-                this.showTooltip('Ошибка обновления маркера', 1500);
-            }
-        } catch (error) {
-            this.showTooltip('Ошибка обновления маркера', 1500);
-        }
-    }
-
-    async requestCopyMarker(marker, x, y) {
-        try {
-            if (!this.wsClient.sendMessage(`/markers/${marker.id}/copy`, {x: x, y: y})) {
-                this.showTooltip('Ошибка обновления маркера', 1500);
-            }
-        } catch (error) {
-            this.showTooltip('Ошибка обновления маркера', 1500);
-        }
-    }
-
-    handleContainerClick(e) {
-        // Проверяем режим перемещения маркера
-        if (this.movingMarkerId) {
-            const marker = this.markers.find(m => m.id === this.movingMarkerId);
-            this.imageContainer.style.cursor = 'default';
-            this.movingMarkerId = null;
-            if (marker) {
-                const mousePos = this.getRelativeMousePosition(e);
-                
-                if (mousePos.x >= 0 && mousePos.x <= 100 && 
-                    mousePos.y >= 0 && mousePos.y <= 100) {
-                    if (this.copyMarker) this.requestCopyMarker(marker, mousePos.x, mousePos.y);
-                    else this.requestMoveMarker(marker, mousePos.x, mousePos.y);
-                    this.copyMarker = false;
-                }
-            }
-            return;
-        }
-        
-        if (!this.editPanel.classList.contains('hidden') || !this.viewModal.classList.contains('hidden')) return;
-
-        const marker = this.markers.find(m => m.id === this.selectedMarkerId);
-        this.selectedMarkerId = null;
-        if (marker) {
-            this.drawMarker(marker, false, true);
-        }
-        
-        this.clickStarted = false;
-    }
-
-    responseSaveMarker(response) {
-        if (!response || response.entityType != 'marker' || response.action != 'add') return;
-        const marker = response.object;
-        if (!marker.visibility && this.currentRole !== 'ADMIN') return;
-        console.log('response save marker')
-        console.log(marker)
-        if (marker) this.markers.push(marker);
-
-        this.removeTempMarker();
-        this.isAddingNote = false;
-        this.selectedMarkerId = null;
-        
-        this.markerNumber.value = '';
-        this.markerTitle.value = '';
-        this.noteText.value = '';
-        this.descriptionText.value = '';
-        
-        this.updateButtonsState();
-        
-        this.editPanel.classList.add('hidden');
-        
-        this.renderMarkers();
-        
-        this.showTooltip('Добавлен маркер', 1500);
-    }
-
-    async requestSaveMarker(marker) {
-        console.log('requestSaveMarker')
-        try {
-            if (!this.wsClient.sendMessage(`/map/${this.mapId}/markers`, this.getMarkerDTO(marker))) {
-                this.showTooltip('Ошибка обновления маркера', 1500);
-            }
-        } catch (error) {
-            this.showTooltip('Ошибка сохранения маркера', 1500);
-        }
-    }
-
-    getMarkerDTO(marker) {
-        return {
-            x: marker.x,
-            y: marker.y,
-            number: marker.number,
-            title: marker.title,
-            note: marker.note,
-            description: marker.description,
-            color: marker.color,
-            shape: marker.shape,
-            size: marker.size,
-            visibility: marker.visibility
-        };
-    }
-
-    responseUpdateMarker(response) {
-        if (!response || response.entityType != 'marker' || response.action != 'upd') return;
-        console.log('response update marker')
-        const markerRes = response.object;
-        console.log(markerRes)
-        if (!markerRes) return;
-        const marker = this.markers.find(m => m.id === markerRes.id);
-        if (marker) {
-            if (!markerRes.visibility && this.currentRole !== 'ADMIN') {
-                this.deleteMarkerImpl(markerRes.id);
-            }
-            marker.isUpdated = true;
-            marker.number = markerRes.number;
-            marker.title = markerRes.title;
-            marker.note = markerRes.note;
-            marker.description = markerRes.description;
-            marker.updatedAt = markerRes.updatedAt;
-            marker.visibility = markerRes.visibility;
-            marker.color = markerRes.color;
-            marker.shape = markerRes.shape;
-            marker.size = markerRes.size;
-        }
-        else {
-            markerRes.isUpdated = true;
-            this.markers.push(markerRes);
+            this.updateButtonsState();
             this.renderMarkers();
-            this.showTooltip('Появился маркер', 1500);
-        }
 
-        this.selectedMarkerId = null;
-        this.isAddingNote = false;
-        
-        this.markerNumber.value = '';
-        this.markerTitle.value = '';
-        this.noteText.value = '';
-        this.descriptionText.value = '';
-        
-        this.updateButtonsState();
-        
-        this.editPanel.classList.add('hidden');
-        
-        this.renderMarkers();
-        
-        this.showTooltip('Маркер обновлен', 1500);
-    }
-
-    async requestUpdateMarker(markerId, markerDto) {
-        try {
-            if (!this.wsClient.sendMessage(`/markers/${markerId}`, markerDto)) {
-                this.showTooltip('Ошибка обновления маркера', 1500);
-            }
-        } catch (error) {
-            this.showTooltip('Ошибка обновления маркера', 1500);
-        }
-    }
-
-    toggleMarkerVisibility() {
-        if (this.currentRole !== 'ADMIN') return;
-        if (this.changeMarkerVisibility.textContent === '🚫') {
-            this.changeMarkerVisibility.textContent = '👁️';
-            this.changeMarkerVisibility.title = 'Маркер будет виден всем';
-        }
-        else {
-            this.changeMarkerVisibility.textContent = '🚫';
-            this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
+            this.showTooltip('Новый маркер', 1000);
         }
     }
 
@@ -2034,14 +762,13 @@ class MarkerApp {
             const title = this.markerTitle.value.trim() || `Маркер #${this.tempMarker.id.toString().slice(-4)}`;
             const note = this.noteText.value.trim();
             const description = this.descriptionText.value.trim();
-            
+
             this.tempMarker.number = this.markerNumber.value.trim().slice(0, 3);
             this.tempMarker.title = title;
             this.tempMarker.note = note;
             this.tempMarker.description = description;
             this.tempMarker.updatedAt = new Date().toLocaleString();
-            
-            // Добавляем цвет и форму для нового маркера
+
             this.tempMarker.visibility = this.changeMarkerVisibility.textContent === '👁️';
             this.tempMarker.color = this.currentMarkerColor.value || this.markerSettings.defaultColor;
             this.tempMarker.shape = this.currentMarkerShape.value || this.markerSettings.defaultShape;
@@ -2086,10 +813,10 @@ class MarkerApp {
         this.noteText.value = '';
         this.descriptionText.value = '';
         this.updateButtonsState();
-        
+
         this.editPanel.classList.add('hidden');
     }
-    
+
     removeTempMarker() {
         if (this.tempMarker) {
             const tempMarkerDiv = document.getElementById(`marker-${this.tempMarker.id}`);
@@ -2102,63 +829,35 @@ class MarkerApp {
 
     selectMarker(markerId) {
         this.closeContextMenu();
-        this.closeChatMessageContextMenu();
         this.removeTempMarker();
         if (this.selectedMarkerId) {
             const oldMarker = this.markers.find(m => m.id === this.selectedMarkerId);
-            if (oldMarker) {
-                oldMarker.isUpdated = true;
-            }
+            if (oldMarker) oldMarker.isUpdated = true;
         }
         this.selectedMarkerId = markerId;
         const marker = this.markers.find(m => m.id === markerId);
         if (marker) {
             marker.isUpdated = true;
-            this.markerNumber.value = marker.number || '';
-            this.markerTitle.value = marker.title || '';
-            this.noteText.value = marker.note || '';
-            this.descriptionText.value = marker.description || '';
-            this.isAddingNote = true;
-            
-            // Устанавливаем цвет и форму текущего маркера
-            if (marker.visibility || this.currentRole !== 'ADMIN') {
-                this.changeMarkerVisibility.textContent = '👁️';
-                this.changeMarkerVisibility.title = 'Маркер будет виден всем';
-            }
-            else {
-                this.changeMarkerVisibility.textContent = '🚫';
-                this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
-            }
-            if (marker.color) this.currentMarkerColor.value = marker.color;
-            if (marker.shape) this.currentMarkerShape.value = marker.shape;
-            if (marker.size) {
-                this.markerSize.value = marker.size;
-                this.sizeValue.textContent = marker.size + 'px';
-            }
-            
-            this.centerOnMarker(marker);
-            // this.showEditPanel();
+
             if (this.editPanel.classList.contains('hidden')) {
                 this.editGeneralInfo = false;
                 this.openViewModal(markerId);
             }
         }
-        // this.updateButtonsState();
         this.renderMarkers();
     }
 
     centerOnMarker(marker) {
         const containerRect = this.markersLayer.getBoundingClientRect();
-        
-        // Центрируем маркер, оставляя место для подписи справа
+
         const targetX = (containerRect.width / 2) - (marker.x * containerRect.width / 100) - 50;
         const targetY = (containerRect.height / 2) - (marker.y * containerRect.height / 100);
-        
+
         this.imagePosition.x = targetX;
         this.imagePosition.y = targetY;
-        
+
         this.constrainImagePosition();
-        
+
         this.updateImageTransform();
         this.renderMarkers();
     }
@@ -2167,7 +866,7 @@ class MarkerApp {
         const markerDiv = document.getElementById(`marker-${markerId}`);
         if (markerDiv) markerDiv.remove();
         this.markers = this.markers.filter(m => m.id !== markerId);
-        
+
         if (this.selectedMarkerId === markerId) {
             this.selectedMarkerId = null;
             this.isAddingNote = false;
@@ -2176,64 +875,173 @@ class MarkerApp {
             this.noteText.value = '';
             this.descriptionText.value = '';
             this.updateButtonsState();
-            
+
             this.editPanel.classList.add('hidden');
             this.closeViewModal();
         }
-        
+
         this.renderMarkers();
     }
 
     deleteMarker(markerId, e) {
-        e.stopPropagation();
+        if (e) e.stopPropagation();
         if (confirm('Удалить маркер?')) {
             this.requestDeleteMarker(markerId);
-            // this.deleteMarkerImpl(markerId);
-            // this.showTooltip('Маркер удален', 1500);
         }
     }
 
     responseDeleteMarker(response) {
-        if (!response || response.entityType != 'marker' || response.action != 'del') return;
-        console.log('response delete marker')
+        if (!response || response.entityType !== 'marker' || response.action !== 'del') return;
         const markerId = response.object;
         this.deleteMarkerImpl(markerId);
         this.showTooltip('Маркер удален', 1500);
     }
 
+    async requestMoveMarker(marker, x, y) {
+        this.wsClient.sendMessage(
+            `/map/${this.mapId}/markers/${marker.id}/move`,
+            { x, y }
+        );
+    }
+
+    async requestCopyMarker(marker, x, y) {
+        this.wsClient.sendMessage(
+            `/map/${this.mapId}/markers/${marker.id}/copy`,
+            { x, y }
+        );
+    }
+
     async requestDeleteMarker(markerId) {
+        this.wsClient.sendMessage(
+            `/map/${this.mapId}/markers/${markerId}/delete`,
+            {}
+        );
+    }
+
+    async requestUpdateMarker(markerId, markerDto) {
+        this.wsClient.sendMessage(
+            `/map/${this.mapId}/markers/${markerId}`,
+            markerDto
+        );
+    }
+
+    responseMoveMarker(response) {
+        if (!response || response.entityType !== 'marker' || response.action !== 'move') return;
+        const markerRes = response.object;
+        const marker = this.markers.find(m => m.id === markerRes.id);
+        if (!marker) return;
+        marker.x = markerRes.x;
+        marker.y = markerRes.y;
+        marker.isUpdated = true;
+
+        this.renderMarkers();
+        this.showTooltip('Маркер перемещен', 1500);
+    }
+
+    responseSaveMarker(response) {
+        if (!response || response.entityType !== 'marker' || response.action !== 'add') return;
+        const marker = response.object;
+        if (!marker.visibility && this.currentRole !== 'ADMIN') return;
+        if (marker) this.markers.push(marker);
+
+        this.removeTempMarker();
+        this.isAddingNote = false;
+        this.selectedMarkerId = null;
+
+        this.markerNumber.value = '';
+        this.markerTitle.value = '';
+        this.noteText.value = '';
+        this.descriptionText.value = '';
+
+        this.updateButtonsState();
+        this.editPanel.classList.add('hidden');
+        this.renderMarkers();
+
+        this.showTooltip('Добавлен маркер', 1500);
+    }
+
+    async requestSaveMarker(marker) {
         try {
-            if (!this.wsClient.sendMessage(`/markers/${markerId}/delete`, {})) {
-                this.showTooltip('Ошибка удаления маркера', 1500);
+            if (!this.wsClient.sendMessage(`/map/${this.mapId}/markers`, this.getMarkerDTO(marker))) {
+                this.showTooltip('Ошибка обновления маркера', 1500);
             }
         } catch (error) {
-            this.showTooltip('Ошибка удаления маркера', 1500);
+            this.showTooltip('Ошибка сохранения маркера', 1500);
         }
     }
 
-    // async requestDeleteMarker(markerId) {
-    //     try {
-    //         const response = await apiRequest(`/markers/${markerId}`, {
-    //             method: 'DELETE'
-    //             // body: JSON.stringify(getMarkerDTO(marker))
-    //         });            
-    //         if (response.ok) {
-    //             const markerId = await response.json();
-    //             this.deleteMarkerImpl(markerId);
-    //             this.showTooltip('Маркер удален', 1500);
-    //         } else {
-    //             this.showTooltip('Ошибка удаления маркера', 1500);
-    //         }
-    //     } catch (error) {
-    //         this.showTooltip('Ошибка удаления маркера', 1500);
-    //     }
-    // }
+    getMarkerDTO(marker) {
+        return {
+            x: marker.x,
+            y: marker.y,
+            number: marker.number,
+            title: marker.title,
+            note: marker.note,
+            description: marker.description,
+            color: marker.color,
+            shape: marker.shape,
+            size: marker.size,
+            visibility: marker.visibility
+        };
+    }
+
+    responseUpdateMarker(response) {
+        if (!response || response.entityType !== 'marker' || response.action !== 'upd') return;
+        const markerRes = response.object;
+        if (!markerRes) return;
+        const marker = this.markers.find(m => m.id === markerRes.id);
+        if (marker) {
+            if (!markerRes.visibility && this.currentRole !== 'ADMIN') {
+                this.deleteMarkerImpl(markerRes.id);
+            }
+            marker.isUpdated = true;
+            marker.number = markerRes.number;
+            marker.title = markerRes.title;
+            marker.note = markerRes.note;
+            marker.description = markerRes.description;
+            marker.updatedAt = markerRes.updatedAt;
+            marker.visibility = markerRes.visibility;
+            marker.color = markerRes.color;
+            marker.shape = markerRes.shape;
+            marker.size = markerRes.size;
+        } else {
+            markerRes.isUpdated = true;
+            this.markers.push(markerRes);
+            this.renderMarkers();
+            this.showTooltip('Появился маркер', 1500);
+        }
+
+        this.selectedMarkerId = null;
+        this.isAddingNote = false;
+
+        this.markerNumber.value = '';
+        this.markerTitle.value = '';
+        this.noteText.value = '';
+        this.descriptionText.value = '';
+
+        this.updateButtonsState();
+        this.editPanel.classList.add('hidden');
+        this.renderMarkers();
+
+        this.showTooltip('Маркер обновлен', 1500);
+    }
+
+    toggleMarkerVisibility() {
+        if (this.currentRole !== 'ADMIN') return;
+        if (this.changeMarkerVisibility.textContent === '🚫') {
+            this.changeMarkerVisibility.textContent = '👁️';
+            this.changeMarkerVisibility.title = 'Маркер будет виден всем';
+        } else {
+            this.changeMarkerVisibility.textContent = '🚫';
+            this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
+        }
+    }
 
     updateButtonsState() {
         this.changeMarkerVisibility.disabled = !this.isAddingNote;
         this.saveNoteBtn.disabled = !this.isAddingNote;
         this.cancelNoteBtn.disabled = !this.isAddingNote;
-        
+
         if (this.selectedMarkerId && this.markers.find(m => m.id === this.selectedMarkerId)) {
             this.saveNoteBtn.textContent = '✏️ Обновить';
         } else {
@@ -2241,10 +1049,11 @@ class MarkerApp {
         }
     }
 
-    renderMarkers(updateShowLabels = false) {        
+    /* ================= Рендер маркеров ================= */
+
+    renderMarkers(updateShowLabels = false) {
         if (!this.mainImage.src || this.mainImage.src === '#') return;
 
-        // Сначала отрисовываем все маркеры
         this.markers.forEach(marker => {
             this.drawMarker(marker, marker.id === this.selectedMarkerId, updateShowLabels);
         });
@@ -2275,43 +1084,35 @@ class MarkerApp {
             if (isSelected) className += ' selected';
             if (marker.description) className += ' has-description';
             if (!marker.visibility) className += ' invisible';
-            
+
             markerDiv.className = className;
             markerDiv.id = `marker-${marker.id}`;
-        
-            // Применяем цвет
+
             if (shape === 'circle' || shape === 'square') {
                 markerDiv.style.background = color;
             } else if (shape === 'triangle' || shape === 'star') {
                 markerDiv.style.color = color;
             }
-            
-            // Применяем размер
+
             markerDiv.style.width = size + 'px';
             markerDiv.style.height = size + 'px';
-            // markerDiv.style.lineHeight = '100%';
 
             if (shape === 'circle' || shape === 'square') {
-                // markerDiv.style.width = size + 'px';
-                // markerDiv.style.height = size + 'px';
                 markerDiv.style.fontSize = `${size/3}px`;
             } else if (shape === 'triangle' || shape === 'star') {
                 markerDiv.style.fontSize = size + 'px';
             }
-            
-            // Первая буква названия для круга и квадрата
+
             if (shape === 'circle' || shape === 'square') {
                 const firstChar = marker.title ? marker.title.charAt(0).toUpperCase() : '#';
-                // markerDiv.textContent = firstChar;
                 const p = document.createElement('p');
                 p.textContent = marker.number || firstChar;
                 markerDiv.appendChild(p);
             }
-            
+
             markerDiv.style.left = `${marker.x}%`;
             markerDiv.style.top = `${marker.y}%`;
 
-            // Добавляем атрибуты для хранения информации о маркере
             markerDiv.dataset.markerId = marker.id;
             markerDiv.dataset.markerNumber = marker.number || '';
             markerDiv.dataset.markerTitle = marker.title || '';
@@ -2330,13 +1131,12 @@ class MarkerApp {
             markerDiv.addEventListener('mouseleave', () => {
                 this.hideMarkerTooltip();
             });
-        
+
             if ((this.showLabels || isSelected) && (marker.title || marker.note)) {
                 const labelDiv = document.createElement('div');
                 labelDiv.className = `marker-label ${isSelected ? 'selected-label' : ''}`;
                 labelDiv.style.left = `${size + 1}px`;
                 if (marker.title) {
-                    // Имя маркера всегда отображаем
                     const titleSpan = document.createElement('span');
                     titleSpan.className = 'marker-label-title';
                     titleSpan.textContent = marker.title || `Маркер #${marker.id.toString().slice(-4)}`;
@@ -2344,23 +1144,17 @@ class MarkerApp {
                     titleSpan.style.fontWeight = 'bold';
                     labelDiv.appendChild(titleSpan);
                 }
-                    
-                // Если есть краткая заметка, добавляем её
                 if (marker.note) {
                     const noteSpan = document.createElement('span');
                     noteSpan.className = 'marker-label-note';
                     noteSpan.textContent = `: ${marker.note.substring(0, 20)}${marker.note.length > 20 ? '...' : ''}`;
                     labelDiv.appendChild(noteSpan);
                 }
-
                 markerDiv.appendChild(labelDiv);
-            }
-            else {
+            } else {
                 markerDiv.replaceChildren();
-                // Первая буква названия для круга и квадрата
                 if (shape === 'circle' || shape === 'square') {
                     const firstChar = marker.title ? marker.title.charAt(0).toUpperCase() : '#';
-                    // markerDiv.textContent = firstChar;
                     const p = document.createElement('p');
                     p.textContent = marker.number || firstChar;
                     markerDiv.appendChild(p);
@@ -2368,12 +1162,11 @@ class MarkerApp {
             }
             this.markersLayer.appendChild(markerDiv);
         }
-        
+
         markerDiv.style.transform = `translate(-50%, -50%) scale(${1 / this.currentZoom})`;
     }
 
     showMarkerTooltip(marker, event) {
-        // Показываем полную информацию при наведении, если подпись скрыта
         if ((this.currentZoom < this.markerSettings.minZoomForLabels || !this.markerSettings.showNotes) && (marker.title || marker.note)) {
             const markerDiv = document.getElementById(`marker-${marker.id}`);
             const existingLabels = markerDiv.querySelector('.marker-label');
@@ -2384,7 +1177,6 @@ class MarkerApp {
             labelDiv.className = `marker-label ${marker.id === this.selectedMarkerId ? 'selected-label' : ''}`;
             labelDiv.style.left = `${size + 1}px`;
             if (marker.title) {
-                // Имя маркера всегда отображаем
                 const titleSpan = document.createElement('span');
                 titleSpan.className = 'marker-label-title';
                 titleSpan.textContent = marker.title || `Маркер #${marker.id.toString().slice(-4)}`;
@@ -2392,15 +1184,12 @@ class MarkerApp {
                 titleSpan.style.fontWeight = 'bold';
                 labelDiv.appendChild(titleSpan);
             }
-                
-            // Если есть краткая заметка, добавляем её
             if (marker.note) {
                 const noteSpan = document.createElement('span');
                 noteSpan.className = 'marker-label-note';
                 noteSpan.textContent = `: ${marker.note.substring(0, 20)}${marker.note.length > 20 ? '...' : ''}`;
                 labelDiv.appendChild(noteSpan);
             }
-
             markerDiv.appendChild(labelDiv);
         }
     }
@@ -2435,24 +1224,307 @@ class MarkerApp {
         `).join('');
     }
 
+    /* ================= Зум и панорамирование ================= */
+
+    getShowLabels() {
+        return (this.currentZoom > this.minZoom * this.markerSettings.minZoomForLabels) && this.markerSettings.showNotes;
+    }
+
+    customColorChanged() {
+        this.customColorIsChanged = true;
+    }
+
+    markerSizeChanged() {
+        this.markerSizeIsChanged = true;
+    }
+
+    shapeChanged() {
+        this.shapeIsChanged = true;
+    }
+
+    handleWheel(e) {
+        e.preventDefault();
+
+        if (!this.mainImage.src || this.mainImage.src === '#') return;
+
+        const rect = this.transformContainer.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        const newZoom = Math.min(Math.max(this.currentZoom + delta, this.minZoom), this.maxZoom);
+
+        if (newZoom !== this.currentZoom) {
+            const zoomStep = newZoom / this.currentZoom;
+
+            const showLabelsOld = this.showLabels;
+
+            this.currentZoom = newZoom;
+
+            this.imagePosition.x = this.imagePosition.x + (mouseX - rect.width/2) * (1 - zoomStep);
+            this.imagePosition.y = this.imagePosition.y + (mouseY - rect.height/2) * (1 - zoomStep);
+
+            this.constrainImagePosition(zoomStep);
+
+            this.updateImageTransform();
+
+            this.showLabels = this.getShowLabels();
+            const updateShowLabels = (this.showLabels != showLabelsOld);
+
+            this.renderMarkers(updateShowLabels);
+
+            if (!this.showLabels && updateShowLabels) {
+                this.showTooltip('Подписи скрыты, наведите на маркер для просмотра', 1000);
+            }
+        }
+    }
+
+    startDrag(e) {
+        if (e.button !== 0 || this.movingMarkerId !== null) return;
+
+        if (e.target === this.mainImage || e.target === this.markersLayer || e.target === this.imageContainer) {
+            this.isDragging = true;
+            this.clickStarted = true;
+            this.dragStart.x = e.clientX - this.imagePosition.x;
+            this.dragStart.y = e.clientY - this.imagePosition.y;
+            this.imageContainer.style.cursor = 'grabbing';
+            e.preventDefault();
+        }
+    }
+
+    drag(e) {
+        if (!this.isDragging) return;
+        e.preventDefault();
+
+        this.imagePosition.x = e.clientX - this.dragStart.x;
+        this.imagePosition.y = e.clientY - this.dragStart.y;
+
+        this.constrainImagePosition();
+        this.updateImageTransform();
+        this.renderMarkers();
+    }
+
+    stopDrag(e) {
+        if (this.isDragging) {
+            this.isDragging = false;
+            this.imageContainer.style.cursor = 'default';
+
+            if (this.clickStarted) {
+                const mouseMoveThreshold = 5;
+                const movedX = Math.abs(e.clientX - this.dragStart.x - this.imagePosition.x);
+                const movedY = Math.abs(e.clientY - this.dragStart.y - this.imagePosition.y);
+
+                if (movedX > mouseMoveThreshold || movedY > mouseMoveThreshold) {
+                    this.clickStarted = false;
+                }
+            }
+        }
+    }
+
+    constrainImagePosition(zoomStep = 1) {
+        if (!this.mainImage.src || this.mainImage.src === '#') return;
+
+        const containerRect = this.imageContainer.getBoundingClientRect();
+        const transformRect = this.transformContainer.getBoundingClientRect();
+        const leftDist = (transformRect.width * zoomStep - containerRect.width) / 2;
+        const rightDist = (containerRect.width - transformRect.width * zoomStep) / 2;
+        const upDist = (transformRect.height * zoomStep - containerRect.height) / 2;
+        const downDist = (containerRect.height - transformRect.height * zoomStep) / 2;
+
+        const minX = Math.min(leftDist, rightDist);
+        const maxX = Math.max(leftDist, rightDist);
+        const minY = Math.min(upDist, downDist);
+        const maxY = Math.max(upDist, downDist);
+
+        this.imagePosition.x = Math.min(Math.max(this.imagePosition.x, minX), maxX);
+        this.imagePosition.y = Math.min(Math.max(this.imagePosition.y, minY), maxY);
+    }
+
+    updateImageTransform() {
+        this.transformContainer.style.transform = `translate(${this.imagePosition.x}px, ${this.imagePosition.y}px) scale(${this.currentZoom})`;
+    }
+
+    getRelativeMousePosition(e) {
+        const rect = this.markersLayer.getBoundingClientRect();
+        return {
+            x: (e.clientX - rect.left) / rect.width * 100,
+            y: (e.clientY - rect.top) / rect.height * 100
+        };
+    }
+
+    handleContainerClick(e) {
+        if (this.movingMarkerId) {
+            const marker = this.markers.find(m => m.id === this.movingMarkerId);
+            this.imageContainer.style.cursor = 'default';
+            this.movingMarkerId = null;
+            if (marker) {
+                const mousePos = this.getRelativeMousePosition(e);
+                if (mousePos.x >= 0 && mousePos.x <= 100 &&
+                    mousePos.y >= 0 && mousePos.y <= 100) {
+                    if (this.copyMarker) this.requestCopyMarker(marker, mousePos.x, mousePos.y);
+                    else this.requestMoveMarker(marker, mousePos.x, mousePos.y);
+                    this.copyMarker = false;
+                }
+            }
+            return;
+        }
+
+        if (!this.editPanel.classList.contains('hidden') ||
+            !document.getElementById('viewModalContent').classList.contains('hidden')) return;
+
+        const marker = this.markers.find(m => m.id === this.selectedMarkerId);
+        this.selectedMarkerId = null;
+        if (marker) {
+            this.drawMarker(marker, false, true);
+        }
+
+        this.clickStarted = false;
+    }
+
+    /* ================= Touch ================= */
+
+    handleTouchStart(e) {
+        if (!this.mainImage.src || this.mainImage.src === '#') return;
+
+        const touches = e.touches;
+        this.touchStartPositions = [];
+
+        for (let i = 0; i < touches.length; i++) {
+            this.touchStartPositions.push({
+                x: touches[i].clientX,
+                y: touches[i].clientY
+            });
+        }
+
+        if (touches.length === 1) {
+            this.isDragging = true;
+            this.clickStarted = true;
+            this.dragStart.x = touches[0].clientX - this.imagePosition.x;
+            this.dragStart.y = touches[0].clientY - this.imagePosition.y;
+            this.imageContainer.style.cursor = 'grabbing';
+        } else if (touches.length === 2) {
+            this.isPinching = true;
+            this.isDragging = false;
+
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            this.touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+            this.touchStartZoom = this.currentZoom;
+
+            const centerX = (touches[0].clientX + touches[1].clientX) / 2;
+            const centerY = (touches[0].clientY + touches[1].clientY) / 2;
+
+            const containerRect = this.imageContainer.getBoundingClientRect();
+            this.pinchCenter = {
+                x: centerX - containerRect.left,
+                y: centerY - containerRect.top
+            };
+        }
+    }
+
+    handleTouchMove(e) {
+        e.preventDefault();
+
+        if (!this.mainImage.src || this.mainImage.src === '#') return;
+
+        const touches = e.touches;
+
+        if (touches.length === 1 && this.isDragging && !this.isPinching) {
+            const touch = touches[0];
+            this.imagePosition.x = touch.clientX - this.dragStart.x;
+            this.imagePosition.y = touch.clientY - this.dragStart.y;
+
+            this.constrainImagePosition();
+            this.updateImageTransform();
+            this.renderMarkers();
+
+        } else if (touches.length === 2 && this.isPinching) {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            const currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+            if (this.touchStartDistance > 0) {
+                const scale = currentDistance / this.touchStartDistance;
+                const newZoom = Math.min(
+                    Math.max(this.touchStartZoom * scale, this.minZoom),
+                    this.maxZoom
+                );
+
+                if (Math.abs(newZoom - this.currentZoom) > 0.01) {
+                    const containerRect = this.imageContainer.getBoundingClientRect();
+                    const centerX = (touches[0].clientX + touches[1].clientX) / 2 - containerRect.left;
+                    const centerY = (touches[0].clientY + touches[1].clientY) / 2 - containerRect.top;
+
+                    const zoomStep = newZoom / this.currentZoom;
+
+                    this.imagePosition.x = this.imagePosition.x + (centerX - containerRect.width/2) * (1 - zoomStep);
+                    this.imagePosition.y = this.imagePosition.y + (centerY - containerRect.height/2) * (1 - zoomStep);
+
+                    this.currentZoom = newZoom;
+
+                    this.constrainImagePosition();
+                    this.updateImageTransform();
+
+                    const showLabelsOld = this.showLabels;
+                    this.showLabels = this.getShowLabels();
+                    const updateShowLabels = (this.showLabels != showLabelsOld);
+
+                    this.renderMarkers(updateShowLabels);
+
+                    if (!this.showLabels && updateShowLabels) {
+                        this.showTooltip('Подписи скрыты, коснитесь маркера для просмотра', 1000);
+                    }
+                }
+            }
+
+            if (this.touchStartPositions.length === 2) {
+                const currentCenter = {
+                    x: (touches[0].clientX + touches[1].clientX) / 2,
+                    y: (touches[0].clientY + touches[1].clientY) / 2
+                };
+
+                if (this.lastTouchCenter) {
+                    const dx = currentCenter.x - this.lastTouchCenter.x;
+                    const dy = currentCenter.y - this.lastTouchCenter.y;
+
+                    this.imagePosition.x += dx;
+                    this.imagePosition.y += dy;
+
+                    this.constrainImagePosition();
+                    this.updateImageTransform();
+                    this.renderMarkers();
+                }
+
+                this.lastTouchCenter = currentCenter;
+            }
+        }
+    }
+
+    handleTouchEnd(e) {
+        this.isDragging = false;
+        this.isPinching = false;
+        this.imageContainer.style.cursor = 'default';
+        this.lastTouchCenter = null;
+        this.touchStartDistance = 0;
+        this.touchStartPositions = [];
+    }
+
+    /* ================= Кнопки зума ================= */
+
     zoomIn() {
-        const centerX = 0;
-        const centerY = 0;
-        this.zoomAtPoint(centerX, centerY, 0.25);
+        this.zoomAtPoint(0, 0, 0.25);
     }
 
     zoomOut() {
-        const centerX = 0;
-        const centerY = 0;
-        this.zoomAtPoint(centerX, centerY, -0.25);
+        this.zoomAtPoint(0, 0, -0.25);
     }
 
     zoomAtPoint(pointX, pointY, delta) {
         if (!this.mainImage.src || this.mainImage.src === '#') return;
-        
+
         const showLabelsOld = this.showLabels;
         const newZoom = Math.min(Math.max(this.currentZoom + delta, this.minZoom), this.maxZoom);
-        
+
         if (newZoom !== this.currentZoom) {
             const imageX = (pointX - this.imagePosition.x) / this.currentZoom;
             const imageY = (pointY - this.imagePosition.y) / this.currentZoom;
@@ -2463,8 +1535,8 @@ class MarkerApp {
             this.imagePosition.y = pointY - imageY * this.currentZoom;
 
             this.constrainImagePosition();
-            
             this.updateImageTransform();
+
             this.showLabels = this.getShowLabels();
             const updateShowLabels = (this.showLabels != showLabelsOld);
             this.renderMarkers(updateShowLabels);
@@ -2479,12 +1551,12 @@ class MarkerApp {
         this.imagePosition = { x: 0, y: 0 };
         this.updateImageTransform();
         this.renderMarkers(updateShowLabels);
-        
+
         this.showTooltip('Масштаб сброшен', 1500);
     }
 
     countZoomLimits() {
-        this.imagePosition = {x: 0, y: 0};
+        this.imagePosition = { x: 0, y: 0 };
         this.currentZoom = 1;
         this.updateImageTransform();
         if (!this.mainImage.src || this.mainImage.src === '#') {
@@ -2515,12 +1587,37 @@ class MarkerApp {
         this.updateButtonsState();
         this.markersLayer.innerHTML = '';
         this.renderMarkers();
-        
+
         this.editPanel.classList.add('hidden');
         this.closeViewModal();
     }
 
-    // Методы для работы с файлами
+    /* ================= Панели ================= */
+
+    toggleMarkersPanel() {
+        this.fileMenu.classList.add('hidden');
+        this.markersPanel.classList.toggle('hidden');
+        if (!this.markersPanel.classList.contains('hidden')) {
+            this.editPanel.classList.add('hidden');
+            if (this.tempMarker) {
+                this.cancelNote();
+            }
+            this.renderMarkersList();
+        }
+    }
+
+    toggleGeneralInfoPanel() {
+        this.editGeneralInfo = true;
+        this.openViewModal(null);
+    }
+
+    showEditPanel() {
+        this.editPanel.classList.remove('hidden');
+        this.markersPanel.classList.add('hidden');
+    }
+
+    /* ================= Файлы ================= */
+
     toggleFileMenu(e) {
         e.stopPropagation();
         this.fileMenu.classList.toggle('hidden');
@@ -2540,18 +1637,18 @@ class MarkerApp {
             this.showNotification('Сначала загрузите изображение', 'error');
             return;
         }
-        
+
         const data = {
             version: '1.0',
             timestamp: new Date().toISOString(),
-            imageData: this.imageData, // Сохраняем копию изображения
+            imageData: this.imageData,
             generalInfo: this.generalInfo,
             markers: this.markers,
             zoom: this.currentZoom,
             position: this.imagePosition,
             settings: this.markerSettings
         };
-        
+
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -2561,7 +1658,7 @@ class MarkerApp {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
+
         this.showNotification('Проект сохранен в файл');
         this.fileMenu.classList.add('hidden');
     }
@@ -2569,15 +1666,13 @@ class MarkerApp {
     handleFileLoad(e) {
         const file = e.target.files[0];
         if (!file) return;
-        
+
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const data = JSON.parse(e.target.result);
-                
-                // Проверяем формат файла
+
                 if (data.imageData) {
-                    // Полный проект с изображением
                     this.imageData = data.imageData;
                     this.mainImage.src = this.imageData;
                     this.mainImage.style.display = 'block';
@@ -2594,7 +1689,6 @@ class MarkerApp {
                         this.showNotification('Проект успешно загружен');
                     };
                 } else if (Array.isArray(data)) {
-                    // Только маркеры
                     this.clearMarkers();
                     this.markers = data;
                     this.renderMarkers();
@@ -2608,8 +1702,7 @@ class MarkerApp {
             }
         };
         reader.readAsText(file);
-        
-        // Сбрасываем input
+
         this.fileLoader.value = '';
         this.fileMenu.classList.add('hidden');
         this.markers.forEach(m => m.isUpdated = false);
@@ -2620,7 +1713,7 @@ class MarkerApp {
             this.showNotification('Нет маркеров для экспорта', 'error');
             return;
         }
-        
+
         const blob = new Blob([JSON.stringify(this.markers, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -2630,7 +1723,7 @@ class MarkerApp {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
+
         this.showNotification('Маркеры экспортированы');
         this.fileMenu.classList.add('hidden');
     }
@@ -2647,14 +1740,15 @@ class MarkerApp {
             this.renderMarkers();
             this.showNotification('localStorage очищен');
             this.fileMenu.classList.add('hidden');
-            
+
             this.editPanel.classList.add('hidden');
             this.markersPanel.classList.add('hidden');
             this.closeViewModal();
         }
     }
 
-    // Методы для настроек маркеров
+    /* ================= Настройки маркеров ================= */
+
     loadMarkerSettings() {
         const saved = localStorage.getItem('markerAppSettings');
         if (saved) {
@@ -2671,22 +1765,19 @@ class MarkerApp {
     }
 
     loadSettingsToModal() {
-        // Устанавливаем значения в модальном окне
         const shapeRadios = document.querySelectorAll('input[name="markerShape"]');
         shapeRadios.forEach(radio => {
             if (radio.value === this.markerSettings.defaultShape) {
                 radio.checked = true;
             }
         });
-        
-        //> add button for default marker visibility
+
         this.customColor.value = this.markerSettings.defaultColor;
         this.markerSizeDefault.value = this.markerSettings.defaultSize;
         this.sizeValueDefault.textContent = this.markerSettings.defaultSize + 'px';
         this.showNotes.checked = this.markerSettings.showNotes;
         this.defaultVisibility.checked = this.markerSettings.defaultVisibility;
-        
-        // Подсветка выбранного цвета
+
         document.querySelectorAll('.color-preset').forEach(btn => {
             if (btn.dataset.color === this.markerSettings.defaultColor) {
                 btn.classList.add('selected');
@@ -2695,48 +1786,21 @@ class MarkerApp {
             }
         });
 
-        // Устанавливаем значение для ползунка масштаба подписей, если он есть
         const minZoomForLabels = document.getElementById('minZoomForLabels');
         const zoomValue = document.getElementById('zoomValue');
         if (minZoomForLabels && zoomValue) {
             minZoomForLabels.value = this.markerSettings.minZoomForLabels;
             zoomValue.textContent = this.markerSettings.minZoomForLabels + 'x';
-            
+
             minZoomForLabels.addEventListener('input', (e) => {
                 zoomValue.textContent = e.target.value + 'x';
             });
         }
-        
+
         this.customColorIsChanged = false;
         this.markerSizeIsChanged = false;
         this.shapeIsChanged = false;
     }
-
-    // applyMarkerSettingsToAll() {
-    //     const shape = document.querySelector('input[name="markerShape"]:checked')?.value || 'circle';
-    //     const color = this.customColor.value;
-    //     const size = parseInt(this.markerSizeDefault.value);
-        
-    //     this.markers.forEach(marker => {
-    //         if (this.shapeIsChanged) marker.shape = shape;
-    //         if (this.customColorIsChanged) marker.color = color;
-    //         if (this.markerSizeIsChanged) marker.size = size;
-    //     });
-        
-    //     this.markerSettings.showNotes = this.showNotes.checked;
-    //     this.markerSettings.defaultVisibility = this.defaultVisibility.checked;
-    //     this.markers.forEach(m => m.isUpdated = true);
-        
-    //     this.renderMarkers();
-        
-    //     this.markerSettingsModal.style.display = 'none';
-        
-    //     this.customColorIsChanged = false;
-    //     this.markerSizeIsChanged = false;
-    //     this.shapeIsChanged = false;
-        
-    //     this.showNotification('Настройки применены ко всем маркерам');
-    // }
 
     saveMarkerSettingsAsDefault() {
         this.markerSettings.defaultShape = document.querySelector('input[name="markerShape"]:checked')?.value || 'circle';
@@ -2744,13 +1808,12 @@ class MarkerApp {
         this.markerSettings.defaultSize = parseInt(this.markerSizeDefault.value);
         this.markerSettings.showNotes = this.showNotes.checked;
         this.markerSettings.defaultVisibility = this.defaultVisibility.checked;
-        
-        // Сохраняем значение ползунка масштаба подписей, если он есть
+
         const minZoomForLabels = document.getElementById('minZoomForLabels');
         if (minZoomForLabels) {
             this.markerSettings.minZoomForLabels = parseFloat(minZoomForLabels.value);
         }
-        
+
         this.saveMarkerSettings();
         this.showNotification('Настройки сохранены как default');
     }
@@ -2769,11 +1832,12 @@ class MarkerApp {
         this.showNotification('Настройки сброшены');
     }
 
-    //> to remove
+    /* ================= Загрузка карты ================= */
+
     saveToStorage() {
         if (this.mainImage.src && this.mainImage.src !== '#' && this.imageData) {
             const data = {
-                imageUrl: this.imageUrl, // Сохраняем ссылку изображения
+                imageUrl: this.imageUrl,
                 generalInfo: this.generalInfo,
                 markers: this.markers,
                 zoom: this.currentZoom,
@@ -2786,8 +1850,7 @@ class MarkerApp {
     async loadMap() {
         try {
             const response = await apiRequest(`/maps/${this.mapId}${this.shareToken ? `?share=${this.shareToken}` : ''}`);
-            console.log(response)
-            
+
             if (response.ok) {
                 const data = await response.json();
                 const map = data.map;
@@ -2795,22 +1858,12 @@ class MarkerApp {
                 this.userId = data.userId;
                 this.userIdToNick = new Map();
                 Object.keys(data.userIdToNick).forEach(key => {
-                  this.userIdToNick.set(Number(key), data.userIdToNick[key]);
+                    this.userIdToNick.set(Number(key), data.userIdToNick[key]);
                 });
-                console.log(this.userIdToNick)
-                console.log(map)
-                console.log(this.currentRole)
-                if (this.currentRole && (this.currentRole === 'EDITOR' || this.currentRole === 'ADMIN')) {
-                    this.editViewModal.addEventListener('click', this.openEditMarkerView.bind(this));
-                    this.visChatBtn.addEventListener('click', this.switchMessageVisibility.bind(this));
-                }
-                else {
-                    this.editViewModal.classList.add('hidden');
-                    this.visChatBtn.style.display = 'none';
-                    if (this.currentRole === 'READ_ONLY') {
-                        this.chatInputArea.classList.add('hidden');
-                    }
-                }
+
+                // Создаём ChatView — теперь у нас есть userId/currentRole/userIdToNick
+                this.initChatView();
+
                 if (map.file && map.fileVersion) {
                     map.imageUrl = URL + map.imageUrl;
                 }
@@ -2821,13 +1874,12 @@ class MarkerApp {
                         return;
                     }
                     const img = new Image();
-                        
+
                     img.onload = () => {
-                        // Изображение успешно загружено
                         this.mainImage.src = url;
                         this.mainImage.onload = () => {
                             this.countZoomLimits();
-                            this.generalInfo = map.description ? {description: map.description} : {}; //> temp
+                            this.generalInfo = map.description ? { description: map.description } : {};
                             this.markers = map.markers || [];
                             this.currentZoom = map.zoom || this.minZoom;
                             this.imagePosition = map.position || { x: 0, y: 0 };
@@ -2835,26 +1887,25 @@ class MarkerApp {
                             this.showLabels = this.getShowLabels();
 
                             this.renderMarkers();
-                            
+
                             setTimeout(() => {
                                 this.showTooltip('Данные загружены', 1500);
                             }, 500);
                         };
                     };
-                    
+
                     img.onerror = () => {
                         this.showNotification('Не удалось загрузить изображение. Проверьте ссылку.', 'error');
                     };
-                    
+
                     img.src = url;
                     this.mainImage.style.display = 'block';
-                    
                 }
             } else {
                 this.showNotification('Ошибка загрузки карты', 'error');
             }
         } catch (error) {
-            console.log(error)
+            console.log(error);
             this.showNotification('Ошибка соединения с сервером', 'error');
         }
     }
@@ -2878,7 +1929,7 @@ class MarkerApp {
                         this.showLabels = this.getShowLabels();
 
                         this.renderMarkers();
-                        
+
                         setTimeout(() => {
                             this.showTooltip('Данные загружены', 1500);
                         }, 500);

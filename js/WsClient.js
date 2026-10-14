@@ -2,65 +2,50 @@ const WS_REQ_PREFIX = '/app';
 const WS_URL = URL + '/ws';
 
 class WsClient {
-    constructor(token, shareToken, mapId) {
+    /**
+     * @param {string} token       JWT пользователя
+     * @param {string} shareToken  токен шаринга (если есть)
+     * @param {string} topic       тип топика: 'map' | 'note'
+     * @param {string|number} entityId  id сущности (mapId / noteId)
+     */
+    constructor(token, shareToken, topic, entityId) {
         this.token = token;
         this.shareToken = shareToken;
-        this.mapId = mapId;
+        this.topic = topic;
+        this.entityId = entityId;
         this.stompClient = null;
         this.messageHandlers = [];
         this.connectionStatusHandlers = [];
     }
-    
-    // Подключение к WebSocket
-    connect() {
-        // Используем SockJS для надежности (работает везде)
-        const socket = new SockJS(WS_URL/*, connectHeaders: {'Authorization': `Bearer ${this.token}`}*/);
-        this.stompClient = Stomp.over(socket);
 
-        // this.stompClient.connectHeaders = {'Authorization': `Bearer ${this.token}`};
-        
-        // Отключаем отладочный вывод (опционально)
+    connect() {
+        const socket = new SockJS(WS_URL);
+        this.stompClient = Stomp.over(socket);
         this.stompClient.debug = () => {};
-        
-        if (this.token) {
-            this.stompClient.connect(
-                {
-                    'Authorization': `Bearer ${this.token}`
-                },  // headers
-                this.onConnected.bind(this),
-                this.onError.bind(this)
-            );
-        }
-        else if (this.shareToken) {
-            this.stompClient.connect(
-                {
-                    'X-Share-Token': this.shareToken
-                },  // headers
-                this.onConnected.bind(this),
-                this.onError.bind(this)
-            );
-        }
+
+        const headers = {};
+        if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+        else if (this.shareToken) headers['X-Share-Token'] = this.shareToken;
+
+        this.stompClient.connect(
+            headers,
+            this.onConnected.bind(this),
+            this.onError.bind(this)
+        );
     }
-    
-    // Обработка успешного подключения
+
     onConnected() {
-        console.log('Connected to WebSocket');
-        
-        // Подписываемся на комнату чата
+        console.log(`Connected to WebSocket (${this.topic}/${this.entityId})`);
         this.stompClient.subscribe(
-            `/topic/map/${this.mapId}`,
+            `/topic/${this.topic}/${this.entityId}`,
             this.onMessageReceived.bind(this)
         );
-        
         this.updateConnectionStatus(true);
     }
-    
-    // Обработка ошибки подключения
+
     onError(error) {
         console.error('WebSocket error:', error);
         this.updateConnectionStatus(false);
-        
-        // Пытаемся переподключиться через 5 секунд
         setTimeout(() => {
             if (!this.stompClient || !this.stompClient.connected) {
                 console.log('Reconnecting...');
@@ -68,38 +53,25 @@ class WsClient {
             }
         }, 5000);
     }
-    
-    // Получение сообщения
+
     onMessageReceived(message) {
-        console.log('ws message received')
         const content = JSON.parse(message.body);
-        console.log(content)
         this.messageHandlers.forEach(handler => handler(content));
     }
-    
-    // Отправка сообщения
+
     sendMessage(destination, message) {
         if (!this.stompClient || !this.stompClient.connected) {
             console.error('Not connected to WebSocket');
             return false;
         }
-        
-        // const message = {
-        //     content: content,
-        //     type: 'CHAT',
-        //     timestamp: new Date().toISOString()
-        // };
-        
         this.stompClient.send(
             WS_REQ_PREFIX + destination,
             {},
             JSON.stringify(message)
         );
-        
         return true;
     }
-    
-    // Отключение
+
     disconnect() {
         if (this.stompClient && this.stompClient.connected) {
             this.stompClient.disconnect(() => {
@@ -108,17 +80,9 @@ class WsClient {
             });
         }
     }
-    
-    // Регистрация обработчика сообщений
-    onMessage(handler) {
-        this.messageHandlers.push(handler);
-    }
-    
-    // Регистрация обработчика статуса соединения
-    onConnectionStatus(handler) {
-        this.connectionStatusHandlers.push(handler);
-    }
-    
+
+    onMessage(handler) { this.messageHandlers.push(handler); }
+    onConnectionStatus(handler) { this.connectionStatusHandlers.push(handler); }
     updateConnectionStatus(isConnected) {
         this.connectionStatusHandlers.forEach(handler => handler(isConnected));
     }

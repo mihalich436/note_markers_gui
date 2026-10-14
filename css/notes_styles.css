@@ -1,0 +1,310 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: #E3DAC3;
+    background-image: url("../icons/background.webp");
+    background-blend-mode: soft-light;
+    background-size: 700px auto;
+    color: #212529;
+    line-height: 1.5;
+    min-height: 100vh;
+}
+
+.container {
+    width: 100%;
+    height: 100dvh;
+    max-width: 1600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap: 12px;
+}
+
+/* ============ Верхняя навигация ============ */
+
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    padding: 10px 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    gap: 12px;
+    flex-shrink: 0;
+    min-height: 60px;
+}
+
+.navbar-left,
+.navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.navbar-center {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    overflow: hidden;
+}
+
+.note-title-top {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    text-decoration: none;
+    background: linear-gradient(135deg, #474641 0%, #696758 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.logo-img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    background: none;
+    -webkit-background-clip: unset;
+    -webkit-text-fill-color: unset;
+}
+
+.sidebar-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: #333;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    width: auto;
+    line-height: 1;
+    transition: background 0.2s;
+}
+
+.sidebar-toggle:hover {
+    background: #f0e9dc;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ============ Layout ============ */
+
+.notes-layout {
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    gap: 12px;
+}
+
+/* Левая колонка со списком заметок */
+.notes-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.25s ease;
+}
+
+.notes-sidebar-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+    font-weight: 600;
+    color: #734666;
+    flex-shrink: 0;
+    background: #f9f5fa;
+}
+
+.notes-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.notes-list-empty,
+.notes-list-loading {
+    padding: 20px 12px;
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+}
+
+.note-list-item {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    background: #fafafa;
+}
+
+.note-list-item:hover {
+    background: #f2eef4;
+}
+
+.note-list-item.active {
+    background: #f2eef4;
+    border-left-color: #734666;
+}
+
+.note-list-item.invisible {
+    opacity: 0.6;
+}
+
+.note-list-item-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.note-list-item-preview {
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.note-list-item-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: #aaa;
+    margin-top: 6px;
+}
+
+/* Оверлей для мобильных */
+.sidebar-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 50;
+    border-radius: 12px;
+}
+
+.sidebar-overlay.hidden {
+    display: none;
+}
+
+/* Центральная колонка */
+.notes-center {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.notes-center.hidden {
+    visibility: hidden;
+}
+
+/* Обёртка, чтобы chat-view.css не привязывал ширину 400px */
+.notes-center.view-modal-content {
+    width: auto;
+    height: auto;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.notes-center .view-modal-body {
+    padding: 16px;
+}
+
+/* ============ Адаптивность ============ */
+
+@media (max-width: 900px) {
+    .sidebar-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .logo-text {
+        display: none;
+    }
+
+    .note-title-top {
+        font-size: 16px;
+    }
+
+    /* Сайдбар как выезжающая панель */
+    .notes-sidebar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: min(85vw, 320px);
+        z-index: 100;
+        transform: translateX(-110%);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    }
+
+    .notes-sidebar.open {
+        transform: translateX(0);
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .navbar {
+        padding: 8px 10px;
+        min-height: 52px;
+    }
+
+    .navbar-right .view-modal-btn {
+        padding: 6px 10px;
+    }
+
+    .notes-center .view-modal-body {
+        padding: 10px;
+    }
+}

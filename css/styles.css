@@ -929,27 +929,39 @@ input:checked + .toggle-slider:before {
     flex-direction: column;
     align-items: flex-end;
     gap: 12px;
+    pointer-events: none;
 }
 
-.fab-menu {
+.fab-wrapper .fab {
+    position: static;
+    pointer-events: auto;
+    transition: transform 0.3s, box-shadow 0.2s;
+}
+
+.fab-wrapper .fab.active {
+    transform: rotate(45deg);
+}
+
+.fab-wrapper .fab-menu {
     display: flex;
     flex-direction: column;
     gap: 8px;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(10px) scale(0.95);
+    transform: translateY(10px);
     transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
     pointer-events: none;
 }
 
-.fab-menu.active {
+.fab-wrapper .fab-menu.active {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
     pointer-events: auto;
 }
 
-.fab-menu-item {
+.fab-wrapper .fab-menu-item {
+    pointer-events: auto;
     background: white;
     color: #333;
     border: none;
@@ -964,23 +976,10 @@ input:checked + .toggle-slider:before {
     white-space: nowrap;
 }
 
-.fab-menu-item:hover {
+.fab-wrapper .fab-menu-item:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     background: #f9f5fa;
-}
-
-.fab-menu-item:active {
-    transform: translateY(0);
-}
-
-.fab-wrapper .fab {
-    position: static;
-    transition: transform 0.3s, box-shadow 0.2s;
-}
-
-.fab.active {
-    transform: rotate(45deg);
 }
 
 /* Заметки */
