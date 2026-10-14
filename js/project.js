@@ -185,7 +185,7 @@ function renderNoteItem(note) {
     return `
         <div class="map-item note-item${isVisible ? '' : ' invisible'}" data-type="note" data-note-id="${note.id}"
              data-note-title="${escapeHtml(note.title)}" data-note-description="${escapeHtml(note.description || '')}"
-             data-note-visibility="${isVisible}">
+             data-note-visibility="${isVisible}"
              onclick="openNote(${note.id})">
             <div class="map-item-header">
                 <div class="map-title${isVisible ? '' : ' invisible'}">
