@@ -877,3 +877,117 @@ input:checked + .toggle-slider:before {
         min-height: 48px;
     }
 }
+
+/* ============ Вкладки-фильтры ============ */
+.tabs-filter {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 0;
+    flex-wrap: wrap;
+}
+
+.tab-btn {
+    background: none;
+    color: #666;
+    border: none;
+    padding: 10px 18px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    position: relative;
+    bottom: -2px;
+    border-bottom: 3px solid transparent;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+    width: auto;
+    transform: none;
+    box-shadow: none;
+}
+
+.tab-btn:hover {
+    background: #f5f0f7;
+    color: #734666;
+    transform: none;
+    box-shadow: none;
+}
+
+.tab-btn.active {
+    color: #734666;
+    border-bottom-color: #734666;
+    background: #f9f5fa;
+}
+
+/* ============ FAB-меню ============ */
+.fab-wrapper {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.fab-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px) scale(0.95);
+    transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+    pointer-events: none;
+}
+
+.fab-menu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.fab-menu-item {
+    background: white;
+    color: #333;
+    border: none;
+    padding: 12px 18px;
+    border-radius: 24px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    width: auto;
+    white-space: nowrap;
+}
+
+.fab-menu-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    background: #f9f5fa;
+}
+
+.fab-menu-item:active {
+    transform: translateY(0);
+}
+
+.fab-wrapper .fab {
+    position: static;
+    transition: transform 0.3s, box-shadow 0.2s;
+}
+
+.fab.active {
+    transform: rotate(45deg);
+}
+
+/* Заметки */
+.note-item {
+    border-left-color: #734666;
+}
+
+.note-item .map-title {
+    color: #4a2c44;
+}

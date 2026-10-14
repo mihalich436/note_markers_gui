@@ -3,14 +3,21 @@ const urlParams = new URLSearchParams(window.location.search);
 const projectId = urlParams.get('id');
 
 let editingMapId = null;
+let editingNoteId = null;
 let uploadedFile = null; // загруженный файл
-// let uploadedImageUrl = null; // URL изображения
+
+// Текущий фильтр: 'all' | 'notes' | 'maps'
+let currentFilter = 'all';
+
+// Локальные массивы
+let projectMaps = [];
+let projectNotes = [];
 
 if (!projectId) {
     window.location.href = './projects.html';
 }
 
-// Загрузка информации о проекте
+// ============ ЗАГРУЗКА ПРОЕКТА ============
 async function loadProject() {
     try {
         const response = await apiRequest(`/projects/${projectId}${shareToken ? `?share=${shareToken}` : ''}`);
@@ -20,13 +27,13 @@ async function loadProject() {
             this.role = projectData.role;
             this.project = projectData.project;
             if (this.role !== 'ADMIN') {
-                const addBtn = document.getElementById('addButton');
+                const addBtn = document.getElementById('addButtonWrapper');
                 if (addBtn) addBtn.remove();
             }
             displayProjectInfo(this.project);
-            if (this.project.maps) {
-                displayMaps(this.project.maps);
-            }
+            projectMaps = this.project.maps || [];
+            projectNotes = this.project.notes || [];
+            renderItems();
         } else if (response.status === 403) {
             showMessage('У вас нет доступа к этому проекту');
             setTimeout(() => {
@@ -59,30 +66,13 @@ function displayProjectInfo(project) {
     `;
 }
 
-// function toggleDescription() {
-//     const descElement = document.getElementById('projectFullDesc');
-//     const btn = document.getElementById("toggleDescBtn");
-    
-//     if (descElement.style.display === 'none') {
-//         descElement.style.display = 'block';
-//         // btn.textContent = 'ⓘ';
-//         btn.title = 'Скрыть описание';
-//     } else {
-//         descElement.style.display = 'none';
-//         // btn.textContent = 'ⓘ';
-//         btn.title = 'Показать описание';
-//     }
-// }
-
-// Загрузка заметок (отдельный запрос, только для этого проекта)
+// ============ ЗАГРУЗКА ДАННЫХ ============
 async function loadMaps() {
     try {
         const response = await apiRequest(`/projects/${projectId}/maps`);
-        
         if (response.ok) {
-            const maps = await response.json();
-            this.project.maps = maps;
-            displayMaps(maps);
+            projectMaps = await response.json();
+            renderItems();
         } else {
             showMessage('Ошибка загрузки карт');
         }
@@ -91,43 +81,176 @@ async function loadMaps() {
     }
 }
 
-// Закрыть все открытые меню карт
-function closeAllMapMenus() {
-    document.querySelectorAll('.map-context-menu.active').forEach(menu => {
-        menu.classList.remove('active');
-    });
-    const addBtn = document.getElementById('addButton');
-    if (addBtn) addBtn.style.display = 'flex';
+async function loadNotes() {
+    try {
+        const response = await apiRequest(`/projects/${projectId}/notes`);
+        if (response.ok) {
+            projectNotes = await response.json();
+            renderItems();
+        } else {
+            showMessage('Ошибка загрузки заметок');
+        }
+    } catch (error) {
+        showMessage('Ошибка соединения с сервером');
+    }
 }
 
-// Переключение контекстного меню карты
-function toggleMapMenu(mapId, btn) {
+// ============ ФИЛЬТРЫ ============
+function setFilter(filter) {
+    currentFilter = filter;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filter);
+    });
+    renderItems();
+}
+
+// ============ РЕНДЕР СПИСКА ============
+function renderItems() {
+    const container = document.getElementById('itemsList');
+    
+    let items = [];
+    if (currentFilter === 'all') {
+        items = [
+            ...projectNotes.map(n => ({ type: 'note', data: n })),
+            ...projectMaps.map(m => ({ type: 'map', data: m }))
+        ];
+    } else if (currentFilter === 'notes') {
+        items = projectNotes.map(n => ({ type: 'note', data: n }));
+    } else {
+        items = projectMaps.map(m => ({ type: 'map', data: m }));
+    }
+    
+    if (items.length === 0) {
+        container.innerHTML = '<p style="color: #666; text-align: center;">Здесь пока ничего нет</p>';
+        return;
+    }
+    
+    container.innerHTML = items.map(item => {
+        if (item.type === 'note') return renderNoteItem(item.data);
+        return renderMapItem(item.data);
+    }).join('');
+}
+
+// ============ РЕНДЕР КАРТЫ ============
+function renderMapItem(map) {
+    const isVisible = map.visibility !== false;
+    const menuDiv = this.role !== 'ADMIN' ? '' : `
+        <div class="map-menu-container">
+            <button class="menu-trigger-btn" onclick="event.stopPropagation(); toggleItemMenu('map', ${map.id}, this)">⋮</button>
+            <div id="map-menu-${map.id}" class="map-context-menu">
+                <div class="menu-item" onclick="event.stopPropagation(); toggleMapVisibilityFromCard(${map.id})">
+                    ${isVisible ? '🔒 Скрыть' : '👁️ Показать'}
+                </div>
+                <div class="menu-item" onclick="event.stopPropagation(); editMapFromCard(${map.id})">✏️ Редактировать</div>
+                <div class="menu-item menu-item-danger" onclick="event.stopPropagation(); deleteMapFromCard(${map.id})">🗑️ Удалить</div>
+            </div>
+        </div>`;
+    
+    return `
+        <div class="map-item${isVisible ? '' : ' invisible'}" data-type="map" data-map-id="${map.id}"
+             data-map-title="${escapeHtml(map.title)}" data-map-description="${escapeHtml(map.description || '')}"
+             data-map-imageurl="${escapeHtml(map.imageUrl || '')}" data-map-visibility="${isVisible}" data-map-isFile="${map.file}"
+             onclick="openMap(${map.id})">
+            <div class="map-item-header">
+                <div class="map-title${isVisible ? '' : ' invisible'}">
+                    🗺️ ${escapeHtml(map.title)}
+                </div>
+                ${menuDiv}
+            </div>
+            <button class="expand-btn" onclick="event.stopPropagation(); toggleItemDescription('map', ${map.id})">
+                ► Описание
+            </button>
+            <div id="map-desc-${map.id}" class="map-description hidden">
+                ${map.description ? escapeHtml(map.description) : 'Описание отсутствует'}
+            </div>
+        </div>
+    `;
+}
+
+// ============ РЕНДЕР ЗАМЕТКИ ============
+function renderNoteItem(note) {
+    const isVisible = note.visibility !== false;
+    const menuDiv = this.role !== 'ADMIN' ? '' : `
+        <div class="map-menu-container">
+            <button class="menu-trigger-btn" onclick="event.stopPropagation(); toggleItemMenu('note', ${note.id}, this)">⋮</button>
+            <div id="note-menu-${note.id}" class="map-context-menu">
+                <div class="menu-item" onclick="event.stopPropagation(); toggleNoteVisibilityFromCard(${note.id})">
+                    ${isVisible ? '🔒 Скрыть' : '👁️ Показать'}
+                </div>
+                <div class="menu-item" onclick="event.stopPropagation(); editNoteFromCard(${note.id})">✏️ Редактировать</div>
+                <div class="menu-item menu-item-danger" onclick="event.stopPropagation(); deleteNoteFromCard(${note.id})">🗑️ Удалить</div>
+            </div>
+        </div>`;
+    
+    return `
+        <div class="map-item note-item${isVisible ? '' : ' invisible'}" data-type="note" data-note-id="${note.id}"
+             data-note-title="${escapeHtml(note.title)}" data-note-description="${escapeHtml(note.description || '')}"
+             data-note-visibility="${isVisible}">
+             onclick="openNote(${note.id})">
+            <div class="map-item-header">
+                <div class="map-title${isVisible ? '' : ' invisible'}">
+                    📝 ${escapeHtml(note.title)}
+                </div>
+                ${menuDiv}
+            </div>
+            <button class="expand-btn" onclick="event.stopPropagation(); toggleItemDescription('note', ${note.id})">
+                ► Описание
+            </button>
+            <div id="note-desc-${note.id}" class="map-description hidden">
+                ${note.description ? escapeHtml(note.description) : 'Описание отсутствует'}
+            </div>
+        </div>
+    `;
+}
+
+// ============ СВОРАЧИВАНИЕ ОПИСАНИЯ ============
+function toggleItemDescription(type, id) {
     event.stopPropagation();
-    const menu = document.getElementById(`map-menu-${mapId}`);
+    const prefix = type === 'map' ? 'map' : 'note';
+    const descElement = document.getElementById(`${prefix}-desc-${id}`);
+    const btn = descElement.previousElementSibling;
+    
+    if (descElement.classList.contains('hidden')) {
+        descElement.classList.remove('hidden');
+        btn.textContent = '▼ Описание';
+    } else {
+        descElement.classList.add('hidden');
+        btn.textContent = '► Описание';
+    }
+}
+
+// ============ КОНТЕКСТНЫЕ МЕНЮ ============
+function closeAllItemMenus() {
+    document.querySelectorAll('.map-context-menu.active').forEach(menu => menu.classList.remove('active'));
+    const wrapper = document.getElementById('addButtonWrapper');
+    if (wrapper) wrapper.style.display = 'flex';
+}
+
+function toggleItemMenu(type, id, btn) {
+    event.stopPropagation();
+    const menu = document.getElementById(`${type}-menu-${id}`);
     const isActive = menu.classList.contains('active');
     
-    // Закрываем все другие меню
-    closeAllMapMenus();
+    closeAllItemMenus();
     
     if (!isActive) {
-        const addBtn = document.getElementById('addButton');
-        if (addBtn) addBtn.style.display = 'none';
+        const wrapper = document.getElementById('addButtonWrapper');
+        if (wrapper) wrapper.style.display = 'none';
         menu.classList.add('active');
-        // Закрыть меню при клике вне его
         setTimeout(() => {
             document.addEventListener('click', function closeMenu(e) {
                 if (!menu.contains(e.target) && e.target !== btn) {
                     menu.classList.remove('active');
                     document.removeEventListener('click', closeMenu);
-                    const addBtn = document.getElementById('addButton');
-                    if (addBtn) addBtn.style.display = 'flex';
+                    const w = document.getElementById('addButtonWrapper');
+                    if (w) w.style.display = 'flex';
                 }
             });
         }, 0);
     }
 }
 
-// Получение данных карты из DOM
+// ============ ПОЛУЧЕНИЕ ДАННЫХ ИЗ DOM ============
 function getMapCardData(mapId) {
     const card = document.querySelector(`.map-item[data-map-id="${mapId}"]`);
     if (card) {
@@ -143,108 +266,75 @@ function getMapCardData(mapId) {
     return null;
 }
 
-// Редактирование карты (из контекстного меню)
+function getNoteCardData(noteId) {
+    const card = document.querySelector(`.map-item[data-note-id="${noteId}"]`);
+    if (card) {
+        return {
+            id: noteId,
+            title: card.getAttribute('data-note-title'),
+            description: card.getAttribute('data-note-description'),
+            visibility: card.getAttribute('data-note-visibility') === 'true'
+        };
+    }
+    return null;
+}
+
+// ============ ДЕЙСТВИЯ С КАРТАМИ ============
 function editMapFromCard(mapId) {
     const mapData = getMapCardData(mapId);
     if (mapData) {
         editMap(mapId, mapData.title, mapData.description, mapData.imageUrl, mapData.visibility, mapData.isFile);
     }
-    closeAllMapMenus();
+    closeAllItemMenus();
 }
 
-// Переключение видимости карты (из контекстного меню)
 async function toggleMapVisibilityFromCard(mapId) {
-    closeAllMapMenus();
-    
+    closeAllItemMenus();
     const mapData = getMapCardData(mapId);
     if (mapData) {
-        const newVisibility = !mapData.visibility;
-        const fileRadio = document.querySelector('input[name="imageUploadType"][value="file"]');
-        const isFile = (fileRadio && fileRadio.checked);
-        await toggleMapVisibility(mapId, newVisibility);
+        await toggleMapVisibility(mapId, !mapData.visibility);
     }
 }
 
-// Удаление карты (из контекстного меню)
 function deleteMapFromCard(mapId) {
-    closeAllMapMenus();
+    closeAllItemMenus();
     deleteMap(mapId);
 }
 
-function displayMaps(maps) {
-    const container = document.getElementById('mapsList');
-    
-    if (maps.length === 0) {
-        container.innerHTML = '<p style="color: #666; text-align: center;">В этом проекте пока нет карт</p>';
-        return;
+// ============ ДЕЙСТВИЯ С ЗАМЕТКАМИ ============
+function editNoteFromCard(noteId) {
+    const noteData = getNoteCardData(noteId);
+    if (noteData) {
+        editNote(noteId, noteData.title, noteData.description, noteData.visibility);
     }
-    
-    container.innerHTML = maps.map(map => {
-        const isVisible = map.visibility !== false; // по умолчанию true
-        const menuDiv = this.role !== 'ADMIN' ? '' : `<div class="map-menu-container">
-                        <button class="menu-trigger-btn" onclick="event.stopPropagation(); toggleMapMenu(${map.id}, this)">
-                            ⋮
-                        </button>
-                        <div id="map-menu-${map.id}" class="map-context-menu">
-                            <div class="menu-item" onclick="event.stopPropagation(); toggleMapVisibilityFromCard(${map.id})">
-                                ${isVisible ? '🔒 Скрыть' : '👁️ Показать'}
-                            </div>
-                            <div class="menu-item" onclick="event.stopPropagation(); editMapFromCard(${map.id})">
-                                ✏️ Редактировать
-                            </div>
-                            <div class="menu-item menu-item-danger" onclick="event.stopPropagation(); deleteMapFromCard(${map.id})">
-                                🗑️ Удалить
-                            </div>
-                        </div>
-                    </div>`;
-        
-        return `
-            <div class="map-item${isVisible ? '' : ' invisible'}" data-map-id="${map.id}" data-map-title="${escapeHtml(map.title)}" data-map-description="${escapeHtml(map.description || '')}" data-map-imageurl="${escapeHtml(map.imageUrl || '')}" data-map-visibility="${isVisible}" data-map-isFile="${map.file}" onclick="openMap(${map.id})">
-                <div class="map-item-header">
-                    <div class="map-title${isVisible ? '' : ' invisible'}">
-                        ${isVisible ? '🗺️' : '🔒'} ${escapeHtml(map.title)}
-                    </div>
-                    ${menuDiv}
-                </div>
-                <button class="expand-btn" onclick="event.stopPropagation(); toggleMapDescription(${map.id})">
-                    ► Описание
-                </button>
-                <div id="map-desc-${map.id}" class="map-description hidden">
-                    ${map.description ? escapeHtml(map.description) : 'Описание отсутствует'}
-                </div>
-            </div>
-        `;
-    }).join('');
+    closeAllItemMenus();
 }
 
-// Функция для сворачивания/разворачивания описания карты
-function toggleMapDescription(mapId) {
-    event.stopPropagation();
-    const descElement = document.getElementById(`map-desc-${mapId}`);
-    const btn = descElement.previousElementSibling;
-    
-    if (descElement.classList.contains('hidden')) {
-        descElement.classList.remove('hidden');
-        btn.textContent = '▼ Описание';
-    } else {
-        descElement.classList.add('hidden');
-        btn.textContent = '► Описание';
+async function toggleNoteVisibilityFromCard(noteId) {
+    closeAllItemMenus();
+    const noteData = getNoteCardData(noteId);
+    if (noteData) {
+        await toggleNoteVisibility(noteId, !noteData.visibility);
     }
 }
 
-// Создание карты
+function deleteNoteFromCard(noteId) {
+    closeAllItemMenus();
+    deleteNote(noteId);
+}
+
+// ============ CRUD КАРТ ============
 async function createMap(title, description, imageUrl, visibility = true, file) {
     try {
         const response = await apiRequest(`/projects/${projectId}/maps`, {
             method: 'POST',
             body: JSON.stringify({ title, description, imageUrl, visibility, file })
         });
-        
         if (response.ok) {
             const map = await response.json();
             closeMapModal();
-            this.project.maps.push(map);
-            displayMaps(this.project.maps);
+            projectMaps.push(map);
+            renderItems();
             showMessage('Карта создана успешно', 'success');
             return map.id;
         } else {
@@ -256,22 +346,19 @@ async function createMap(title, description, imageUrl, visibility = true, file) 
     return null;
 }
 
-// Редактирование карты
 async function updateMap(id, title, description, imageUrl, visibility, file) {
     try {
         const response = await apiRequest(`/projects/${projectId}/maps/${id}`, {
             method: 'PUT',
             body: JSON.stringify({ title, description, imageUrl, visibility, file })
         });
-        
         if (response.ok) {
             const map = await response.json();
             closeMapModal();
-            // Обновляем карту в локальном массиве
-            const mapIndex = this.project.maps.findIndex(m => m.id === map.id);
-            if (mapIndex !== -1) {
-                this.project.maps[mapIndex] = map;
-                displayMaps(this.project.maps);
+            const idx = projectMaps.findIndex(m => m.id === map.id);
+            if (idx !== -1) {
+                projectMaps[idx] = map;
+                renderItems();
             }
             showMessage('Карта обновлена успешно', 'success');
         } else {
@@ -282,25 +369,20 @@ async function updateMap(id, title, description, imageUrl, visibility, file) {
     }
 }
 
-// Изменение видимости карты
 async function toggleMapVisibility(id, visibility) {
     try {
         const response = await apiRequest(`/projects/${projectId}/maps/${id}/visibility`, {
             method: 'PUT',
             body: JSON.stringify({ visibility })
         });
-        
         if (response.ok) {
             const map = await response.json();
-            closeMapModal();
-            // Обновляем карту в локальном массиве
-            const mapIndex = this.project.maps.findIndex(m => m.id === map.id);
-            if (mapIndex !== -1) {
-                this.project.maps[mapIndex] = map;
-                displayMaps(this.project.maps);
+            const idx = projectMaps.findIndex(m => m.id === map.id);
+            if (idx !== -1) {
+                projectMaps[idx] = map;
+                renderItems();
             }
-            if (map.visibility) showMessage('Карта видна всем', 'success');
-            else showMessage('Карта скрыта', 'success');
+            showMessage(map.visibility ? 'Карта видна всем' : 'Карта скрыта', 'success');
         } else {
             showMessage('Ошибка обновления карты');
         }
@@ -309,14 +391,10 @@ async function toggleMapVisibility(id, visibility) {
     }
 }
 
-// Удаление карты
 async function deleteMap(id) {
     if (confirm('Вы уверены, что хотите удалить эту карту?')) {
         try {
-            const response = await apiRequest(`/projects/${projectId}/maps/${id}`, {
-                method: 'DELETE'
-            });
-            
+            const response = await apiRequest(`/projects/${projectId}/maps/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 loadMaps();
                 showMessage('Карта удалена успешно', 'success');
@@ -329,8 +407,91 @@ async function deleteMap(id) {
     }
 }
 
-// Модальное окно
+// ============ CRUD ЗАМЕТОК ============
+async function createNote(title, description, visibility = true) {
+    try {
+        const response = await apiRequest(`/projects/${projectId}/notes`, {
+            method: 'POST',
+            body: JSON.stringify({ title, description, visibility })
+        });
+        if (response.ok) {
+            const note = await response.json();
+            closeNoteModal();
+            projectNotes.push(note);
+            renderItems();
+            showMessage('Заметка создана успешно', 'success');
+        } else {
+            showMessage('Ошибка создания заметки');
+        }
+    } catch (error) {
+        showMessage('Ошибка создания заметки');
+    }
+}
+
+async function updateNote(id, title, description, visibility) {
+    try {
+        const response = await apiRequest(`/projects/${projectId}/notes/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ title, description, visibility })
+        });
+        if (response.ok) {
+            const note = await response.json();
+            closeNoteModal();
+            const idx = projectNotes.findIndex(n => n.id === note.id);
+            if (idx !== -1) {
+                projectNotes[idx] = note;
+                renderItems();
+            }
+            showMessage('Заметка обновлена успешно', 'success');
+        } else {
+            showMessage('Ошибка обновления заметки');
+        }
+    } catch (error) {
+        showMessage('Ошибка обновления заметки');
+    }
+}
+
+async function toggleNoteVisibility(id, visibility) {
+    try {
+        const response = await apiRequest(`/projects/${projectId}/notes/${id}/visibility`, {
+            method: 'PUT',
+            body: JSON.stringify({ visibility })
+        });
+        if (response.ok) {
+            const note = await response.json();
+            const idx = projectNotes.findIndex(n => n.id === note.id);
+            if (idx !== -1) {
+                projectNotes[idx] = note;
+                renderItems();
+            }
+            showMessage(note.visibility ? 'Заметка видна всем' : 'Заметка скрыта', 'success');
+        } else {
+            showMessage('Ошибка обновления заметки');
+        }
+    } catch (error) {
+        showMessage('Ошибка обновления заметки');
+    }
+}
+
+async function deleteNote(id) {
+    if (confirm('Вы уверены, что хотите удалить эту заметку?')) {
+        try {
+            const response = await apiRequest(`/projects/${projectId}/notes/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                loadNotes();
+                showMessage('Заметка удалена успешно', 'success');
+            } else {
+                showMessage('Ошибка удаления заметки');
+            }
+        } catch (error) {
+            showMessage('Ошибка удаления заметки');
+        }
+    }
+}
+
+// ============ МОДАЛЬНОЕ ОКНО КАРТЫ ============
 function showCreateMapModal() {
+    closeFabMenu();
     editingMapId = null;
     document.getElementById('mapModalTitle').textContent = 'Создать карту';
     document.getElementById('mapTitle').value = '';
@@ -338,13 +499,10 @@ function showCreateMapModal() {
     document.getElementById('mapImageUrl').value = '';
     document.getElementById('mapVisibility').checked = true;
     
-    // Сбрасываем загрузку файлов
-    // uploadedImageUrl = null;
     uploadedFile = null;
     document.getElementById('mapImageFile').value = '';
     document.getElementById('imagePreview').classList.add('hidden');
     
-    // Устанавливаем вариант "По ссылке" по умолчанию
     document.querySelector('input[name="imageUploadType"][value="url"]').checked = true;
     document.getElementById('imageUrlGroup').classList.remove('hidden');
     document.getElementById('imageFileGroup').classList.add('hidden');
@@ -360,8 +518,6 @@ function editMap(id, title, description, imageUrl, visibility, isFile) {
     document.getElementById('mapImageUrl').value = imageUrl || '';
     document.getElementById('mapVisibility').checked = visibility !== false;
     
-    // Сбрасываем загрузку файлов
-    // uploadedImageUrl = null;
     uploadedFile = null;
     document.getElementById('mapImageFile').value = '';
     document.getElementById('imagePreview').classList.add('hidden');
@@ -370,8 +526,7 @@ function editMap(id, title, description, imageUrl, visibility, isFile) {
         document.querySelector('input[name="imageUploadType"][value="file"]').checked = true;
         document.getElementById('imageUrlGroup').classList.add('hidden');
         document.getElementById('imageFileGroup').classList.remove('hidden');
-    }
-    else {
+    } else {
         document.querySelector('input[name="imageUploadType"][value="url"]').checked = true;
         document.getElementById('imageUrlGroup').classList.remove('hidden');
         document.getElementById('imageFileGroup').classList.add('hidden');
@@ -392,264 +547,70 @@ function closeMapModal() {
 
 function toggleImageUploadType() {
     const urlRadio = document.querySelector('input[name="imageUploadType"][value="url"]');
-    const fileRadio = document.querySelector('input[name="imageUploadType"][value="file"]');
     const urlGroup = document.getElementById('imageUrlGroup');
     const fileGroup = document.getElementById('imageFileGroup');
     
     if (urlRadio.checked) {
         urlGroup.classList.remove('hidden');
         fileGroup.classList.add('hidden');
-        // Очищаем файл
-        // uploadedImageUrl = null;
-        // uploadedFile = null;
-        // document.getElementById('mapImageFile').value = '';
         document.getElementById('imagePreview').classList.add('hidden');
-    } else if (fileRadio.checked) {
+    } else {
         urlGroup.classList.add('hidden');
         fileGroup.classList.remove('hidden');
     }
 }
 
-// Обработчик выбора файла
-document.getElementById('mapImageFile').addEventListener('change', async function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    // Проверка размера файла (30 МБ)
-    if (file.size > 30 * 1024 * 1024) {
-        showMessage('Файл слишком большой. Максимальный размер: 30 МБ');
-        this.value = '';
-        return;
-    }
-    
-    // Проверка типа файла - обновленные поддерживаемые форматы
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/avif'];
-    const fileName = file.name.toLowerCase();
-    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.avif'];
-    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
-    
-    if (!allowedTypes.includes(file.type) && !hasValidExtension) {
-        showMessage('Неподдерживаемый формат файла. Поддерживаются: PNG, JPG, JPEG, WEBP, AVIF');
-        this.value = '';
-        return;
-    }
-    
-    // Применяем сжатие к загруженному файлу
-    showMessage('Обработка изображения...', 'info');
-    try {
-        const compressedFile = await compressImage(file);
-        uploadedFile = compressedFile;
-        
-        // Показываем превью сжатого изображения
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const preview = document.getElementById('imagePreview');
-            const previewImg = document.getElementById('previewImage');
-            previewImg.src = e.target.result;
-            preview.classList.remove('hidden');
-            
-            // Показываем информацию о сжатии
-            if (compressedFile !== file) {
-                const sizeReduction = ((file.size - compressedFile.size) / file.size * 100).toFixed(1);
-                const originalSize = (file.size / (1024 * 1024)).toFixed(2);
-                const compressedSize = (compressedFile.size / (1024 * 1024)).toFixed(2);
-                showMessage(`Изображение сжато: ${originalSize}MB → ${compressedSize}MB (${sizeReduction}% меньше)`, 'info');
-            }
-        };
-        reader.readAsDataURL(compressedFile);
-        
-    } catch (error) {
-        console.error('Ошибка при обработке файла:', error);
-        showMessage('Не удалось сжать файл. Попробуйте самостоятельно конвертировать файл в один из форматов: JPG, WEBP, AVIF');
-        this.value = '';
-        return;
-    }
-});
-
-// Загрузка файла на сервер через POST
-async function uploadImageFile(mapId, file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    try {
-        const response = await fileUploadRequest(`/maps/${mapId}/upload`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (response.ok) {
-            // const data = await response.json();
-            // uploadedImageUrl = data.url;
-            showMessage('Изображение загружено успешно', 'success');
-        } else {
-            showMessage('Ошибка загрузки изображения');
-        }
-    } catch (error) {
-        showMessage('Ошибка загрузки изображения');
-    }
-    uploadedFile = null;
+// ============ МОДАЛЬНОЕ ОКНО ЗАМЕТКИ ============
+function showCreateNoteModal() {
+    closeFabMenu();
+    editingNoteId = null;
+    document.getElementById('noteModalTitle').textContent = 'Создать заметку';
+    document.getElementById('noteTitle').value = '';
+    document.getElementById('noteDescription').value = '';
+    document.getElementById('noteVisibility').checked = true;
+    document.getElementById('noteModal').classList.add('active');
 }
 
-// Удаление превью
-function removeImagePreview() {
-    document.getElementById('imagePreview').classList.add('hidden');
-    document.getElementById('mapImageFile').value = '';
-    // uploadedImageUrl = null;
-    uploadedFile = null;
+function editNote(id, title, description, visibility) {
+    editingNoteId = id;
+    document.getElementById('noteModalTitle').textContent = 'Редактировать заметку';
+    document.getElementById('noteTitle').value = title;
+    document.getElementById('noteDescription').value = description;
+    document.getElementById('noteVisibility').checked = visibility !== false;
+    document.getElementById('noteModal').classList.add('active');
 }
 
-async function compressImage(file) {
-    // Проверяем, нужно ли сжимать
-    const fileType = file.type;
-    const fileName = file.name.toLowerCase();
+function openNote(id) {
+    window.location.href = `./note.html?noteId=${id}${shareToken ? `&share=${shareToken}` : ''}`;
+}
+
+function closeNoteModal() {
+    document.getElementById('noteModal').classList.remove('active');
+}
+
+// ============ FAB МЕНЮ ============
+function toggleFabMenu(e) {
+    if (e) e.stopPropagation();
+    const menu = document.getElementById('fabMenu');
+    const btn = document.getElementById('addButton');
+    const isActive = menu.classList.contains('active');
     
-    // Если это webp или avif - сжатие не нужно
-    if (fileType === 'image/webp' || fileType === 'image/avif' || 
-        fileName.endsWith('.webp') || fileName.endsWith('.avif')) {
-        return file;
-    }
-    
-    try {
-        // Пытаемся сжать в webp
-        const webpFile = await compressToWebP(file);
-        if (webpFile) {
-            return webpFile;
-        }
-        
-        // Если webp не получился, пытаемся сжать в jpg (только если не jpg)
-        if (fileType !== 'image/jpeg' && fileType !== 'image/jpg' && 
-            !fileName.endsWith('.jpg') && !fileName.endsWith('.jpeg')) {
-            const jpgFile = await compressToJPG(file);
-            if (jpgFile) {
-                return jpgFile;
-            }
-        }
-        
-        // Если ничего не получилось, возвращаем исходный файл
-        return file;
-    } catch (error) {
-        console.error('Ошибка при сжатии изображения:', error);
-        return file;
+    if (isActive) {
+        closeFabMenu();
+    } else {
+        menu.classList.add('active');
+        btn.classList.add('active');
     }
 }
 
-function compressToWebP(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = new Image();
-            img.onload = function() {
-                try {
-                    // Создаем canvas для сжатия
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    // Оптимальные размеры (по ширине/высоте)
-                    let width = img.width;
-                    let height = img.height;
-                    const maxDimension = 8192;
-                    
-                    if (width > maxDimension || height > maxDimension) {
-                        const ratio = Math.min(maxDimension / width, maxDimension / height);
-                        width = Math.round(width * ratio);
-                        height = Math.round(height * ratio);
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    
-                    // Рисуем изображение
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // Пытаемся сохранить в WebP с качеством 80%
-                    const webpDataUrl = canvas.toDataURL('image/webp', 0.8);
-                    
-                    // Конвертируем DataURL в File
-                    fetch(webpDataUrl)
-                        .then(res => res.blob())
-                        .then(blob => {
-                            const webpFile = new File([blob], 
-                                file.name.replace(/\.[^.]+$/, '.webp'), 
-                                { type: 'image/webp' }
-                            );
-                            resolve(webpFile);
-                        })
-                        .catch(() => reject(new Error('Failed to convert WebP to File')));
-                } catch (error) {
-                    reject(error);
-                }
-            };
-            img.onerror = function() {
-                reject(new Error('Failed to load image'));
-            };
-            img.src = e.target.result;
-        };
-        reader.onerror = function() {
-            reject(new Error('Failed to read file'));
-        };
-        reader.readAsDataURL(file);
-    });
+function closeFabMenu() {
+    const menu = document.getElementById('fabMenu');
+    const btn = document.getElementById('addButton');
+    if (menu) menu.classList.remove('active');
+    if (btn) btn.classList.remove('active');
 }
 
-function compressToJPG(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = new Image();
-            img.onload = function() {
-                try {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    // Оптимальные размеры (по ширине/высоте)
-                    let width = img.width;
-                    let height = img.height;
-                    const maxDimension = 8192;
-                    
-                    if (width > maxDimension || height > maxDimension) {
-                        const ratio = Math.min(maxDimension / width, maxDimension / height);
-                        width = Math.round(width * ratio);
-                        height = Math.round(height * ratio);
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    
-                    // Рисуем изображение на белом фоне (для JPG)
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.fillRect(0, 0, width, height);
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // Пытаемся сохранить в JPG с качеством 85%
-                    const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                    
-                    fetch(jpgDataUrl)
-                        .then(res => res.blob())
-                        .then(blob => {
-                            const jpgFile = new File([blob], 
-                                file.name.replace(/\.[^.]+$/, '.jpg'), 
-                                { type: 'image/jpeg' }
-                            );
-                            resolve(jpgFile);
-                        })
-                        .catch(() => reject(new Error('Failed to convert JPG to File')));
-                } catch (error) {
-                    reject(error);
-                }
-            };
-            img.onerror = function() {
-                reject(new Error('Failed to load image'));
-            };
-            img.src = e.target.result;
-        };
-        reader.onerror = function() {
-            reject(new Error('Failed to read file'));
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
-// Обработчик формы
+// ============ ОБРАБОТЧИКИ ФОРМ ============
 document.getElementById('mapForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = document.getElementById('mapTitle').value;
@@ -666,20 +627,229 @@ document.getElementById('mapForm').addEventListener('submit', async (e) => {
         mapId = await createMap(title, description, imageUrl, visibility, isFile);
     }
 
-    
     if (isFile && mapId && uploadedFile) {
         uploadImageFile(mapId, uploadedFile);
     } 
 });
 
-// Закрытие меню при нажатии ESC
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        closeAllMapMenus();
+document.getElementById('noteForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = document.getElementById('noteTitle').value;
+    const description = document.getElementById('noteDescription').value;
+    const visibility = document.getElementById('noteVisibility').checked;
+    
+    if (editingNoteId) {
+        await updateNote(editingNoteId, title, description, visibility);
+    } else {
+        await createNote(title, description, visibility);
     }
 });
 
-// Инициализация
-// checkAuth();
+// ============ ЗАГРУЗКА ФАЙЛА ============
+document.getElementById('mapImageFile').addEventListener('change', async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 30 * 1024 * 1024) {
+        showMessage('Файл слишком большой. Максимальный размер: 30 МБ');
+        this.value = '';
+        return;
+    }
+    
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/avif'];
+    const fileName = file.name.toLowerCase();
+    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.avif'];
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!allowedTypes.includes(file.type) && !hasValidExtension) {
+        showMessage('Неподдерживаемый формат файла. Поддерживаются: PNG, JPG, JPEG, WEBP, AVIF');
+        this.value = '';
+        return;
+    }
+    
+    showMessage('Обработка изображения...', 'info');
+    try {
+        const compressedFile = await compressImage(file);
+        uploadedFile = compressedFile;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('imagePreview');
+            const previewImg = document.getElementById('previewImage');
+            previewImg.src = e.target.result;
+            preview.classList.remove('hidden');
+            
+            if (compressedFile !== file) {
+                const sizeReduction = ((file.size - compressedFile.size) / file.size * 100).toFixed(1);
+                const originalSize = (file.size / (1024 * 1024)).toFixed(2);
+                const compressedSize = (compressedFile.size / (1024 * 1024)).toFixed(2);
+                showMessage(`Изображение сжато: ${originalSize}MB → ${compressedSize}MB (${sizeReduction}% меньше)`, 'info');
+            }
+        };
+        reader.readAsDataURL(compressedFile);
+    } catch (error) {
+        console.error('Ошибка при обработке файла:', error);
+        showMessage('Не удалось сжать файл. Попробуйте конвертировать в JPG, WEBP, AVIF');
+        this.value = '';
+    }
+});
+
+async function uploadImageFile(mapId, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+        const response = await fileUploadRequest(`/maps/${mapId}/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        if (response.ok) {
+            showMessage('Изображение загружено успешно', 'success');
+        } else {
+            showMessage('Ошибка загрузки изображения');
+        }
+    } catch (error) {
+        showMessage('Ошибка загрузки изображения');
+    }
+    uploadedFile = null;
+}
+
+function removeImagePreview() {
+    document.getElementById('imagePreview').classList.add('hidden');
+    document.getElementById('mapImageFile').value = '';
+    uploadedFile = null;
+}
+
+// ============ СЖАТИЕ ИЗОБРАЖЕНИЙ ============
+async function compressImage(file) {
+    const fileType = file.type;
+    const fileName = file.name.toLowerCase();
+    
+    if (fileType === 'image/webp' || fileType === 'image/avif' || 
+        fileName.endsWith('.webp') || fileName.endsWith('.avif')) {
+        return file;
+    }
+    
+    try {
+        const webpFile = await compressToWebP(file);
+        if (webpFile) return webpFile;
+        
+        if (fileType !== 'image/jpeg' && fileType !== 'image/jpg' && 
+            !fileName.endsWith('.jpg') && !fileName.endsWith('.jpeg')) {
+            const jpgFile = await compressToJPG(file);
+            if (jpgFile) return jpgFile;
+        }
+        return file;
+    } catch (error) {
+        console.error('Ошибка при сжатии изображения:', error);
+        return file;
+    }
+}
+
+function compressToWebP(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    let width = img.width, height = img.height;
+                    const maxDimension = 8192;
+                    
+                    if (width > maxDimension || height > maxDimension) {
+                        const ratio = Math.min(maxDimension / width, maxDimension / height);
+                        width = Math.round(width * ratio);
+                        height = Math.round(height * ratio);
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    const webpDataUrl = canvas.toDataURL('image/webp', 0.8);
+                    fetch(webpDataUrl)
+                        .then(res => res.blob())
+                        .then(blob => {
+                            const webpFile = new File([blob], 
+                                file.name.replace(/\.[^.]+$/, '.webp'), 
+                                { type: 'image/webp' });
+                            resolve(webpFile);
+                        })
+                        .catch(() => reject(new Error('Failed to convert WebP to File')));
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+    });
+}
+
+function compressToJPG(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    let width = img.width, height = img.height;
+                    const maxDimension = 8192;
+                    
+                    if (width > maxDimension || height > maxDimension) {
+                        const ratio = Math.min(maxDimension / width, maxDimension / height);
+                        width = Math.round(width * ratio);
+                        height = Math.round(height * ratio);
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    fetch(jpgDataUrl)
+                        .then(res => res.blob())
+                        .then(blob => {
+                            const jpgFile = new File([blob], 
+                                file.name.replace(/\.[^.]+$/, '.jpg'), 
+                                { type: 'image/jpeg' });
+                            resolve(jpgFile);
+                        })
+                        .catch(() => reject(new Error('Failed to convert JPG to File')));
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+    });
+}
+
+// ============ ЗАКРЫТИЕ МЕНЮ ПО ESC / КЛИКУ ВНЕ ============
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeAllItemMenus();
+        closeFabMenu();
+    }
+});
+
+document.addEventListener('click', (e) => {
+    const wrapper = document.getElementById('addButtonWrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        closeFabMenu();
+    }
+});
+
+// ============ ИНИЦИАЛИЗАЦИЯ ============
 loadUserInfo();
 loadProject();
