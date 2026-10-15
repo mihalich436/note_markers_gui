@@ -1864,7 +1864,7 @@ class MarkerApp {
                 // Создаём ChatView — теперь у нас есть userId/currentRole/userIdToNick
                 this.initChatView();
 
-                if (map.file && map.fileVersion) {
+                if (map.file && map.fileName) {
                     map.imageUrl = URL + map.imageUrl;
                 }
                 if (map.imageUrl) {
