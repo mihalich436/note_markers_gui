@@ -71,6 +71,15 @@ class ChatView {
         this.messageMenu = document.createElement('div');
         this.messageMenu.className = 'context-menu note hidden';
         document.body.appendChild(this.messageMenu);
+
+        // Кнопка «вставить картинку» в пустой строке
+        this.imageInsertBtn = document.createElement('button');
+        this.imageInsertBtn.type = 'button';
+        this.imageInsertBtn.className = 'image-insert-btn hidden';
+        this.imageInsertBtn.title = 'Вставить картинку по ссылке';
+        this.imageInsertBtn.setAttribute('aria-label', 'Вставить картинку по ссылке');
+        this.imageInsertBtn.textContent = '🖼️';
+        document.body.appendChild(this.imageInsertBtn);
     }
 
     _initEvents() {
@@ -83,7 +92,7 @@ class ChatView {
             this.expandBtn.addEventListener('click', () => this._toggleSize());
         }
 
-        // Плагиат копипастой из map.js: обработка клика по картинке
+        // Клик по картинке в сообщении — открыть в новой вкладке
         this.chatMessages.addEventListener('click', (e) => {
             if (e.target.tagName === 'IMG') {
                 window.open(e.target.src, '_blank', 'noopener');
@@ -104,10 +113,38 @@ class ChatView {
             );
         });
 
-        // Закрытие меню и тулбара по клику вне
+        // Кнопка вставки картинки: не терять каретку + открыть диалог
+        this.imageInsertBtn.addEventListener('mousedown', (e) => e.preventDefault());
+        this.imageInsertBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this._hideImageInsertBtn();
+            this._openLinkDialog('image');
+        });
+
+        // Скрытие кнопки при потере фокуса полем ввода
+        if (this.chatInput) {
+            this.chatInput.addEventListener('blur', () => this._hideImageInsertBtn());
+        }
+
+        // Скрытие кнопки при выходе из режима правки сообщения
+        this.chatMessages.addEventListener('focusout', (e) => {
+            const target = e.target;
+            if (!(target instanceof Element)) return;
+            if (!target.matches?.('.chat-text[contenteditable="true"]')) return;
+
+            // mousedown на кнопке картинки делает preventDefault и фокус не уходит,
+            // так что здесь можно сразу прятать.
+            const next = e.relatedTarget;
+            if (next instanceof Element && next.closest?.('.chat-text[contenteditable="true"]')) return;
+            this._hideImageInsertBtn();
+        });
+
+        // Закрытие меню и тулбара по клику вне.
+        // _hideImageInsertBtn здесь НЕ вызываем — иначе кнопка исчезает
+        // сразу после появления при клике в поле.
         document.addEventListener('click', () => {
             this._closeMessageMenu();
-            // тулбар закрываем только если не внутри него
         });
 
         document.addEventListener('keydown', (e) => {
@@ -115,6 +152,7 @@ class ChatView {
                 this._closeMessageMenu();
                 this._closeLinkDialog();
                 this._hideFormatToolbar();
+                this._hideImageInsertBtn();
             }
             if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
                 const active = document.activeElement;
@@ -167,6 +205,7 @@ class ChatView {
 
     close() {
         this._hideFormatToolbar();
+        this._hideImageInsertBtn();
         this._closeMessageMenu();
         if (typeof this.onClose === 'function') this.onClose();
         else this.root.classList.add('hidden');
@@ -182,11 +221,13 @@ class ChatView {
             this.chatInputArea.classList.toggle('hidden', this.readOnly);
         }
         if (this.editBtn) this.editBtn.classList.toggle('hidden', this.readOnly);
+        if (this.readOnly) this._hideImageInsertBtn();
     }
 
     setShowInputArea(show) {
         this.showInputArea = !!show;
         if (this.chatInputArea) this.chatInputArea.classList.toggle('hidden', !show);
+        if (!show) this._hideImageInsertBtn();
     }
 
     setNewMessageVisibility(visible) {
@@ -309,6 +350,7 @@ class ChatView {
         this.onSendMessage(text, this.newMessageVisibility);
         this._clearInput();
         this._hideFormatToolbar();
+        this._hideImageInsertBtn();
     }
 
     _clearInput() {
@@ -451,12 +493,14 @@ class ChatView {
         cancelBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             this._hideFormatToolbar();
+            this._hideImageInsertBtn();
             this._removeEditBtns(messageId, prevText);
         });
 
         saveBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             this._hideFormatToolbar();
+            this._hideImageInsertBtn();
             const newHtml = this.sanitizeHtml(textSpan.innerHTML).trim();
             if (!newHtml) { this._removeEditBtns(messageId, prevText); return; }
             this.onUpdateText(messageId, newHtml);
@@ -503,33 +547,61 @@ class ChatView {
     /* ================== Форматирование ================== */
 
     _handleSelectionChange() {
-        if (!this.formatToolbar) return;
         const sel = window.getSelection();
-        if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+        if (!sel || sel.rangeCount === 0) {
             this._hideFormatToolbar();
+            this._hideImageInsertBtn();
             return;
         }
+
         const range = sel.getRangeAt(0);
         const container = range.commonAncestorContainer;
         const el = container.nodeType === 3 ? container.parentElement : container;
 
-        const editingText  = el.closest('.chat-text[contenteditable="true"]');
-        const editingInput = el.closest('#chatInput');
-        if (!editingText && !editingInput) { this._hideFormatToolbar(); return; }
+        const editingText  = el.closest?.('.chat-text[contenteditable="true"]');
+        const editingInput = el.closest?.('#chatInput');
+        const editingTarget = editingInput || editingText;
 
-        this._formatTarget = editingText || editingInput;
+        // Непустое выделение → тулбар форматирования (как раньше).
+        // Кнопку вставки картинки в этом случае прячем.
+        if (!sel.isCollapsed) {
+            this._hideImageInsertBtn();
 
-        const rect = range.getBoundingClientRect();
-        if (!rect.width && !rect.height) { this._hideFormatToolbar(); return; }
+            if (!this.formatToolbar) return;
+            if (!editingTarget) { this._hideFormatToolbar(); return; }
 
-        this.formatToolbar.classList.remove('hidden');
-        const tbRect = this.formatToolbar.getBoundingClientRect();
-        let left = rect.left + rect.width / 2 - tbRect.width / 2;
-        let top  = rect.top - tbRect.height - 8;
-        left = Math.max(8, Math.min(left, window.innerWidth - tbRect.width - 8));
-        if (top < 8) top = rect.bottom + 8;
-        this.formatToolbar.style.left = left + 'px';
-        this.formatToolbar.style.top  = top + 'px';
+            this._formatTarget = editingTarget;
+
+            const rect = range.getBoundingClientRect();
+            if (!rect.width && !rect.height) { this._hideFormatToolbar(); return; }
+
+            this.formatToolbar.classList.remove('hidden');
+            const tbRect = this.formatToolbar.getBoundingClientRect();
+            let left = rect.left + rect.width / 2 - tbRect.width / 2;
+            let top  = rect.top - tbRect.height - 8;
+            left = Math.max(8, Math.min(left, window.innerWidth - tbRect.width - 8));
+            if (top < 8) top = rect.bottom + 8;
+            this.formatToolbar.style.left = left + 'px';
+            this.formatToolbar.style.top  = top + 'px';
+            return;
+        }
+
+        // Выделение схлопнуто — тулбар форматирования не нужен.
+        this._hideFormatToolbar();
+
+        // Кнопка «вставить картинку» — в поле ввода или в режиме правки
+        // сообщения, когда от начала текущего блока до каретки нет контента.
+        if (this.readOnly || !editingTarget) {
+            this._hideImageInsertBtn();
+            return;
+        }
+
+        if (!this._isCaretAtEmptyLineStart(range, editingTarget)) {
+            this._hideImageInsertBtn();
+            return;
+        }
+
+        this._showImageInsertBtn(range);
     }
 
     _hideFormatToolbar() {
@@ -562,6 +634,8 @@ class ChatView {
     }
 
     _openLinkDialog(mode) {
+        this._hideImageInsertBtn();
+
         const sel = window.getSelection();
         let selectedText = '';
         if (sel && sel.rangeCount > 0) {
@@ -620,6 +694,186 @@ class ChatView {
             sel.addRange(insertRange);
         }
         this._closeLinkDialog();
+    }
+
+    /* ================== Кнопка вставки картинки ================== */
+
+    /**
+     * Каретка схлопнута, и от начала текущего блока до неё нет
+     * видимого контента (текста или <img>).
+     */
+    _isCaretAtEmptyLineStart(range, root) {
+        if (!range || !range.collapsed) return false;
+        if (!root || !root.contains(range.startContainer)) return false;
+
+        const isBlankText = (t) => t.replace(/\u200B/g, '').trim() === '';
+
+        let node = range.startContainer;
+        let offset = range.startOffset;
+
+        while (node && node !== root) {
+            if (node.nodeType === 3) {
+                // Текстовый узел: смотрим срез до каретки
+                const before = node.textContent.slice(0, offset);
+                if (!isBlankText(before)) return false;
+                // Иначе поднимаемся к родителю и продолжаем с предыдущих siblings
+                const parent = node.parentNode;
+                if (!parent) return true;
+                offset = Array.prototype.indexOf.call(parent.childNodes, node);
+                node = parent;
+                continue;
+            }
+
+            if (node.nodeType === 1) {
+                const tag = node.tagName;
+                if (tag === 'BR') return true;   // начало строки после переноса
+                if (tag === 'IMG') return false; // картинка в этой же строке до каретки
+
+                // Элемент: ищем ближайшего непустого ребёнка до offset
+                let prev = null;
+                for (let i = offset - 1; i >= 0; i--) {
+                    const c = node.childNodes[i];
+                    if (c.nodeType === 3 && isBlankText(c.textContent)) continue;
+                    prev = c;
+                    break;
+                }
+
+                if (prev) {
+                    // Спускаемся в предыдущего ребёнка с offset = его конец
+                    node = prev;
+                    offset = (prev.nodeType === 3)
+                        ? prev.textContent.length
+                        : prev.childNodes.length;
+                    continue;
+                }
+
+                // До offset в этом элементе ничего нет — поднимаемся
+                const parent = node.parentNode;
+                if (!parent || parent === root) return true;
+                offset = Array.prototype.indexOf.call(parent.childNodes, node);
+                node = parent;
+                continue;
+            }
+
+            // Прочие узлы (комментарии и т.п.) — пропускаем
+            const parent = node.parentNode;
+            if (!parent) return false;
+            offset = Array.prototype.indexOf.call(parent.childNodes, node);
+            node = parent;
+        }
+
+        // Дошли до root, не встретив контента до каретки
+        return true;
+    }
+
+    _showImageInsertBtn(range) {
+        if (!this.imageInsertBtn) return;
+        this.imageInsertBtn.classList.remove('hidden');
+        this._positionImageInsertBtn(range);
+    }
+
+    _hideImageInsertBtn() {
+        if (this.imageInsertBtn) this.imageInsertBtn.classList.add('hidden');
+    }
+
+    /**
+     * Измерить прямоугольник каретки.
+     *
+     * 1. Прямой путь: range.getClientRects() / getBoundingClientRect().
+     * 2. Probe: временный span с height:1em (не 0, иначе браузер «прилипает»
+     *    к следующей строке в пустом блоке). Если каретка сразу после <br>,
+     *    probe вставляется ПЕРЕД этим <br>, чтобы остаться на строке <br>.
+     */
+    _measureCaretRect(range) {
+        // 1. Прямой путь
+        try {
+            const rects = range.getClientRects();
+            if (rects && rects.length > 0) {
+                const r = rects[0];
+                if (r && (r.width || r.height || r.top || r.left)) return r;
+            }
+            const r = range.getBoundingClientRect();
+            if (r && (r.width || r.height || r.top || r.left)) return r;
+        } catch (e) {
+            // пойдём через probe
+        }
+
+        // 2. Probe
+        const sel = window.getSelection();
+        const savedRange = range.cloneRange();
+        const probe = document.createElement('span');
+        probe.style.cssText =
+            'display:inline-block;width:0;height:1em;padding:0;margin:0;border:0;' +
+            'outline:0;background:transparent;vertical-align:baseline;pointer-events:none;';
+        probe.setAttribute('aria-hidden', 'true');
+
+        let rect = null;
+        try {
+            const insertRange = savedRange.cloneRange();
+            insertRange.collapse(false);
+            insertRange.insertNode(probe);
+            rect = probe.getBoundingClientRect();
+        } catch (e) {
+            rect = null;
+        } finally {
+            if (probe.parentNode) probe.parentNode.removeChild(probe);
+            // Восстанавливаем каретку туда, где она была
+            try {
+                if (sel) {
+                    sel.removeAllRanges();
+                    sel.addRange(savedRange);
+                }
+            } catch (e) { /* ignore */ }
+        }
+        return rect;
+    }
+
+    _positionImageInsertBtn(range) {
+        if (!this.imageInsertBtn) return;
+
+        const rect = this._measureCaretRect(range);
+
+        const btn = this.imageInsertBtn;
+        // Размеры кнопки нужны до позиционирования — снимаем их после показа.
+        const btnRect = btn.getBoundingClientRect();
+        const btnW = btnRect.width || 30;
+        const btnH = btnRect.height || 30;
+
+        // Элемент-якорь каретки — для lineHeight и fallback.
+        const anchorEl = range.startContainer.nodeType === 1
+            ? range.startContainer
+            : range.startContainer.parentElement;
+
+        let left, top;
+
+        if (rect && (rect.width || rect.height || rect.left || rect.top)) {
+            // Ставим кнопку у каретки, чуть правее, по центру строки.
+            let lineH = rect.height;
+            if (!lineH) {
+                const cs = window.getComputedStyle(anchorEl || this.chatInput);
+                lineH = parseFloat(cs.lineHeight) || (parseFloat(cs.fontSize) || 14) * 1.5;
+            }
+            left = rect.left + 2;
+            top  = rect.top + (lineH - btnH) / 2;
+        } else {
+            const fallbackEl = (anchorEl && anchorEl.getBoundingClientRect)
+                ? anchorEl
+                : this.chatInput;
+            if (!fallbackEl) return;
+            const ir = fallbackEl.getBoundingClientRect();
+            const cs = window.getComputedStyle(fallbackEl);
+            const padTop  = parseFloat(cs.paddingTop)  || 8;
+            const padLeft = parseFloat(cs.paddingLeft) || 12;
+            left = ir.left + padLeft;
+            top  = ir.top + padTop;
+        }
+
+        // Клэмп в вьюпорт
+        left = Math.max(4, Math.min(left, window.innerWidth  - btnW - 4));
+        top  = Math.max(4, Math.min(top,  window.innerHeight - btnH - 4));
+
+        btn.style.left = left + 'px';
+        btn.style.top  = top + 'px';
     }
 
     /* =================== sanitize / linkify =================== */
