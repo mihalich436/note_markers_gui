@@ -168,14 +168,19 @@
 
 .chat-input-area {
     display: flex;
-    flex-direction: row;
-    align-items: flex-end;
-    gap: 8px;
+    flex-direction: column;   /* было row */
+    align-items: stretch;
+    gap: 6px;
     flex-shrink: 0;
 }
 
-.chat-input-area.hidden {
-    display: none;
+.chat-input-area.hidden { display: none; }
+
+.chat-input-row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 8px;
 }
 
 .chat-input {
@@ -266,6 +271,48 @@
 .format-btn:hover  { background: #495057; }
 .format-btn:active { background: #343a40; }
 .format-sep { width: 1px; height: 20px; background: #495057; margin: 0 3px; }
+
+/* Статичный тулбар над полем ввода */
+.static-format-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: #f1f3f5;
+    border-radius: 8px;
+    padding: 2px;
+    border: 1px solid #e9ecef;
+    flex-wrap: wrap;
+    width: fit-content;
+    max-width: 100%;
+    user-select: none;
+}
+
+.static-format-toolbar .format-btn {
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: #495057;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    padding: 0;
+    line-height: 1;
+}
+
+.static-format-toolbar .format-btn:hover  { background: #dee2e6; }
+.static-format-toolbar .format-btn:active { background: #ced4da; }
+
+.static-format-toolbar .format-sep {
+    width: 1px;
+    height: 16px;
+    background: #ced4da;
+    margin: 0 2px;
+}
 
 /* Диалог вставки ссылки/картинки */
 .link-dialog {

@@ -41,9 +41,21 @@ class ChatView {
         this.readOnly = false;
         this.showInputArea = true;
 
-        // Тулбар форматирования
-        this.formatToolbar = document.getElementById('formatToolbar');
-        this.linkDialog    = document.getElementById('linkDialog');
+        // Статичный тулбар (внутри chatInputArea) — для нового сообщения
+        this.staticFormatToolbar = null;
+
+        // Всплывающий тулбар — только для редактируемых сообщений
+        this.formatToolbar = null;
+
+        // Цель всплывающего тулбара (конкретный .chat-text)
+        this._floatingTarget = null;
+
+        // Последняя активная цель форматирования (chatInput или редактируемый .chat-text).
+        // Статичный тулбар применяет формат именно сюда.
+        this._lastFormatTarget = null;
+
+        // Диалог вставки ссылки/картинки
+        this.linkDialog      = document.getElementById('linkDialog');
         this.linkDialogTitle = document.getElementById('linkDialogTitle');
         this.linkDialogUrl   = document.getElementById('linkDialogUrl');
         this.linkDialogText  = document.getElementById('linkDialogText');
@@ -67,6 +79,12 @@ class ChatView {
         this.expandBtn     = this.root.querySelector('#expandViewModal');
         this.closeBtn      = this.root.querySelector('#closeViewModal');
 
+        // Статичный тулбар — внутри chatInputArea (новый элемент в HTML)
+        this.staticFormatToolbar = this.root.querySelector('#staticFormatToolbar');
+
+        // Всплывающий тулбар — глобальный, лежит в body
+        this.formatToolbar = document.getElementById('formatToolbar');
+
         // Контекстное меню сообщений
         this.messageMenu = document.createElement('div');
         this.messageMenu.className = 'context-menu note hidden';
@@ -83,14 +101,14 @@ class ChatView {
             this.expandBtn.addEventListener('click', () => this._toggleSize());
         }
 
-        // Плагиат копипастой из map.js: обработка клика по картинке
+        // Клик по картинке — открыть в новой вкладке
         this.chatMessages.addEventListener('click', (e) => {
             if (e.target.tagName === 'IMG') {
                 window.open(e.target.src, '_blank', 'noopener');
             }
         });
 
-        // Контекстное меню для сообщений
+        // Контекстное меню сообщений
         this.chatMessages.addEventListener('contextmenu', (e) => {
             const messageEl = e.target.closest('.chat-message');
             if (!messageEl) return;
@@ -100,14 +118,13 @@ class ChatView {
             this._showMessageMenu(
                 e.clientX, e.clientY,
                 messageEl.dataset.messageId,
-                messageEl.dataset.markerId // для заметок тут будет entity.id
+                messageEl.dataset.markerId
             );
         });
 
-        // Закрытие меню и тулбара по клику вне
+        // Закрытие меню по клику вне
         document.addEventListener('click', () => {
             this._closeMessageMenu();
-            // тулбар закрываем только если не внутри него
         });
 
         document.addEventListener('keydown', (e) => {
@@ -127,7 +144,7 @@ class ChatView {
             }
         });
 
-        // Paste handler (одинаковый для input и редактируемого текста)
+        // Paste handler
         const handlePaste = (e) => {
             e.preventDefault();
             const html = e.clipboardData.getData('text/html');
@@ -138,17 +155,48 @@ class ChatView {
         this.chatInput.addEventListener('paste', handlePaste);
         this.chatMessages.addEventListener('paste', handlePaste);
 
-        // Тулбар форматирования
-        document.addEventListener('selectionchange', () => this._handleSelectionChange());
-        if (this.formatToolbar) {
-            this.formatToolbar.querySelectorAll('.format-btn').forEach(btn => {
-                btn.addEventListener('mousedown', (e) => e.preventDefault()); // не терять выделение
+        // Статичный тулбар: цель определяется внутри _applyFormat
+        // по _lastFormatTarget (chatInput или редактируемое сообщение).
+        if (this.staticFormatToolbar) {
+            this.staticFormatToolbar.querySelectorAll('.format-btn').forEach(btn => {
+                btn.addEventListener('mousedown', (e) => e.preventDefault());
                 btn.addEventListener('click', (e) => {
-                    e.preventDefault(); e.stopPropagation();
+                    e.preventDefault();
+                    e.stopPropagation();
                     this._applyFormat(btn.dataset.format);
                 });
             });
         }
+
+        // Всплывающий тулбар: цель определяется при показе (_floatingTarget)
+        if (this.formatToolbar) {
+            this.formatToolbar.querySelectorAll('.format-btn').forEach(btn => {
+                btn.addEventListener('mousedown', (e) => e.preventDefault());
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this._applyFormat(btn.dataset.format, this._floatingTarget);
+                });
+            });
+        }
+
+        // Показ/скрытие всплывающего тулбара — только для редактируемых сообщений
+        document.addEventListener('selectionchange', () => this._handleSelectionChange());
+
+        // Запоминаем, куда пользователь последний раз поставил фокус —
+        // чтобы статичный тулбар применял формат именно туда.
+        document.addEventListener('focusin', (e) => {
+            const t = e.target;
+            if (!t) return;
+            if (t === this.chatInput) {
+                this._lastFormatTarget = this.chatInput;
+                return;
+            }
+            if (t.classList?.contains('chat-text') && t.contentEditable === 'true') {
+                this._lastFormatTarget = t;
+            }
+        });
+
         if (this.linkDialogCancel) this.linkDialogCancel.addEventListener('click', () => this._closeLinkDialog());
         if (this.linkDialogOk)     this.linkDialogOk.addEventListener('click', () => this._confirmLinkDialog());
         if (this.linkDialogUrl)    this.linkDialogUrl.addEventListener('keydown', (e) => {
@@ -232,9 +280,6 @@ class ChatView {
         const messageEl = this.chatMessages.querySelector(
             `.chat-message[data-message-id="${msg.id}"]`
         );
-
-        // Сообщения нет в DOM — view не создаёт его сам,
-        // это решает контроллер (например, если сообщение стало видимым).
         if (!messageEl) return false;
 
         const messageDiv = messageEl.querySelector('.chat-message-div');
@@ -243,23 +288,21 @@ class ChatView {
         const textSpan = messageDiv.querySelector('.chat-text');
         if (!textSpan) return false;
 
-        // 1. Снимаем режим редактирования, если был
         messageDiv.classList.remove('editing');
-
-        // 2. Обновляем видимость (класс на контейнере и на тексте)
         messageDiv.classList.toggle('invisible', !msg.visibility);
         textSpan.classList.toggle('invisible', !msg.visibility);
 
-        // 3. Убираем кнопки редактирования, если они были
         const btnsContainer = messageEl.querySelector('.message-edit-buttons-container');
         if (btnsContainer) btnsContainer.remove();
 
-        // 4. Возвращаем span в нередактируемое состояние и обновляем содержимое
         textSpan.contentEditable = 'false';
         textSpan.innerHTML = this.linkify(msg.text);
 
-        // 5. Обновляем подпись автора и время (на случай, если они изменились —
-        //    например, при переносе сообщения или редактировании системой)
+        // Если это сообщение было целью статичного тулбара — сбрасываем цель
+        if (this._lastFormatTarget === textSpan) {
+            this._lastFormatTarget = this.chatInput;
+        }
+
         const bottom = messageDiv.querySelector('.chat-bottom');
         if (bottom) {
             const authorSpan = bottom.querySelector('.chat-author, .chat-author-me');
@@ -287,14 +330,16 @@ class ChatView {
         const el = this.chatMessages.querySelector(`.chat-message[data-message-id="${messageId}"]`);
         if (el) el.remove();
         this.entity.messages = this.entity.messages.filter(m => m.id !== messageId);
-        console.log(this.entity.messages)
         if (this.chatMessages.children.length === 0) {
             this.chatMessages.innerHTML = '<div class="chat-empty">Нет заметок</div>';
         }
     }
 
     focusInput() {
-        if (this.chatInput) this.chatInput.focus();
+        if (this.chatInput) {
+            this.chatInput.focus();
+            this._lastFormatTarget = this.chatInput;
+        }
     }
 
     /* ====================== Отправка ====================== */
@@ -309,6 +354,7 @@ class ChatView {
         this.onSendMessage(text, this.newMessageVisibility);
         this._clearInput();
         this._hideFormatToolbar();
+        this._lastFormatTarget = this.chatInput;
     }
 
     _clearInput() {
@@ -378,7 +424,6 @@ class ChatView {
         const msg = this.entity?.messages?.find(m => String(m.id) === String(messageId));
         if (!msg) return;
 
-        // Только автор или админ
         if (msg.userId !== this.currentUserId && this.currentRole !== 'ADMIN') return;
 
         this.messageMenu.innerHTML = '';
@@ -468,6 +513,8 @@ class ChatView {
         messageEl.appendChild(btnsContainer);
 
         textSpan.focus();
+        // Делаем сообщение целью статичного тулбара, пока пользователь в нём
+        this._lastFormatTarget = textSpan;
     }
 
     _removeEditBtns(messageId, prevText) {
@@ -481,6 +528,11 @@ class ChatView {
         if (!textSpan) return;
         textSpan.contentEditable = 'false';
         textSpan.innerHTML = prevText;
+
+        // Если это сообщение было целью статичного тулбара — сбрасываем цель
+        if (this._lastFormatTarget === textSpan) {
+            this._lastFormatTarget = this.chatInput;
+        }
     }
 
     /* =============== Кнопка видимости нового =============== */
@@ -502,8 +554,14 @@ class ChatView {
 
     /* ================== Форматирование ================== */
 
+    /**
+     * Показывает всплывающий тулбар только когда выделение находится
+     * в редактируемом .chat-text (contenteditable="true").
+     * Для chatInput всплывающий тулбар не показывается — там есть статичный.
+     */
     _handleSelectionChange() {
         if (!this.formatToolbar) return;
+
         const sel = window.getSelection();
         if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
             this._hideFormatToolbar();
@@ -513,14 +571,20 @@ class ChatView {
         const container = range.commonAncestorContainer;
         const el = container.nodeType === 3 ? container.parentElement : container;
 
-        const editingText  = el.closest('.chat-text[contenteditable="true"]');
-        const editingInput = el.closest('#chatInput');
-        if (!editingText && !editingInput) { this._hideFormatToolbar(); return; }
+        // Только редактируемое сообщение; chatInput — исключаем
+        const editingText = el.closest?.('.chat-text[contenteditable="true"]');
+        if (!editingText || editingText === this.chatInput) {
+            this._hideFormatToolbar();
+            return;
+        }
 
-        this._formatTarget = editingText || editingInput;
+        this._floatingTarget = editingText;
 
         const rect = range.getBoundingClientRect();
-        if (!rect.width && !rect.height) { this._hideFormatToolbar(); return; }
+        if (!rect.width && !rect.height) {
+            this._hideFormatToolbar();
+            return;
+        }
 
         this.formatToolbar.classList.remove('hidden');
         const tbRect = this.formatToolbar.getBoundingClientRect();
@@ -534,10 +598,29 @@ class ChatView {
 
     _hideFormatToolbar() {
         if (this.formatToolbar) this.formatToolbar.classList.add('hidden');
+        this._floatingTarget = null;
     }
 
-    _applyFormat(format) {
-        const target = this._formatTarget;
+    /**
+     * @param {string} format
+     * @param {HTMLElement} [target] — если не передан, берётся _lastFormatTarget
+     *                                 (или chatInput как fallback). Так работает
+     *                                 статичный тулбар.
+     */
+    _applyFormat(format, target) {
+        if (!target) {
+            target = this._lastFormatTarget;
+            // Если цель — редактируемое сообщение, но оно уже вышло из режима
+            // редактирования (contentEditable=false или удалено из DOM) — сбрасываем на chatInput
+            if (
+                !target ||
+                (target !== this.chatInput &&
+                    (!target.isConnected || target.contentEditable !== 'true'))
+            ) {
+                target = this.chatInput;
+            }
+            this._lastFormatTarget = target;
+        }
         if (!target) return;
         target.focus();
 
@@ -672,7 +755,6 @@ class ChatView {
         };
         walk(root);
 
-        // схлопываем подряд идущие <br>
         let prevBr = false;
         const cleanup = (node) => {
             const children = Array.from(node.childNodes);
