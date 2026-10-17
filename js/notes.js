@@ -112,7 +112,6 @@ class NotesApp {
             this.chatView.setShowInputArea(this.currentRole !== 'READ_ONLY');
 
             this.renderView();
-            this.chatView.focusInput();
 
             // Список заметок — только когда знаем projectId
             if (this.projectId) {
