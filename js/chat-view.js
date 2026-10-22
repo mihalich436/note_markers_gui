@@ -692,7 +692,7 @@ class ChatView {
             sel.addRange(range);
         } else if (this._linkDialogMode === 'image') {
             const img = document.createElement('img');
-            img.src = url; img.alt = ''; img.loading = 'lazy';
+            img.src = url; img.alt = '🖼'; img.loading = 'lazy';
             const insertRange = range.cloneRange();
             insertRange.collapse(false);
             range.insertNode(img);
