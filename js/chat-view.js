@@ -1060,6 +1060,24 @@ class ChatView {
             }
         };
         cleanup(root);
+
+        // Удаляем zero-width space (\u200B) — нужен только как якорь
+        // для курсора в contenteditable
+        const stripZeroWidth = (node) => {
+            const children = Array.from(node.childNodes);
+            for (const child of children) {
+                if (child.nodeType === 3) {
+                    if (child.textContent.includes('\u200B')) {
+                        child.textContent = child.textContent.replace(/\u200B/g, '');
+                        if (child.textContent === '') child.remove();
+                    }
+                } else if (child.nodeType === 1) {
+                    stripZeroWidth(child);
+                }
+            }
+        };
+        stripZeroWidth(root);
+
         return root.innerHTML;
     }
 
