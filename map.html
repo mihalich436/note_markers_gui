@@ -333,6 +333,39 @@
         </div>
     </div>
 
+    <!-- Диалог загрузки изображения (по ссылке или с устройства) -->
+    <div id="imageUploadDialog" class="link-dialog hidden">
+        <div class="link-dialog-content image-upload-dialog-content">
+            <h4>Вставить картинку</h4>
+
+            <div class="image-upload-tabs">
+                <button type="button" class="image-upload-tab active" data-tab="url">По ссылке</button>
+                <button type="button" class="image-upload-tab" data-tab="file">Загрузить</button>
+            </div>
+
+            <!-- Вкладка: по ссылке -->
+            <div class="image-upload-pane" data-pane="url">
+                <input type="text" id="imageUploadUrl" placeholder="https://..." />
+            </div>
+
+            <!-- Вкладка: загрузка файла -->
+            <div class="image-upload-pane hidden" data-pane="file">
+                <input type="file" id="imageUploadFile" accept="image/png,image/jpeg,image/webp,image/avif" />
+                <div id="imageUploadPreviewWrap" class="image-upload-preview-wrap hidden">
+                    <img id="imageUploadPreview" alt="Превью" />
+                    <div id="imageUploadInfo" class="image-upload-info"></div>
+                </div>
+            </div>
+
+            <div id="imageUploadError" class="image-upload-error hidden"></div>
+
+            <div class="link-dialog-buttons">
+                <button id="imageUploadCancel" type="button">Отмена</button>
+                <button id="imageUploadOk" type="button" class="primary" disabled>Вставить</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Скрытый input для загрузки файлов -->
     <input type="file" id="fileLoader" accept=".json, .markerapp" style="display: none;">
 
@@ -342,6 +375,7 @@
     <script src="./js/config.js"></script>
     <script src="./js/common.js"></script>
     <script src="./js/WsClient.js"></script>
+    <script src="./js/image-compress.js"></script>
     <script src="./js/chat-view.js"></script>
     <script src="./js/map.js"></script>
 </body>

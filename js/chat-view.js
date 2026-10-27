@@ -62,6 +62,25 @@ class ChatView {
         this.linkDialogOk    = document.getElementById('linkDialogOk');
         this.linkDialogCancel= document.getElementById('linkDialogCancel');
 
+        // Диалог загрузки изображения
+        this.imageDialog            = document.getElementById('imageUploadDialog');
+        this.imageDialogTabs        = this.imageDialog?.querySelectorAll('.image-upload-tab');
+        this.imageDialogPanes       = this.imageDialog?.querySelectorAll('.image-upload-pane');
+        this.imageDialogUrl         = document.getElementById('imageUploadUrl');
+        this.imageDialogFile        = document.getElementById('imageUploadFile');
+        this.imageDialogPreviewWrap = document.getElementById('imageUploadPreviewWrap');
+        this.imageDialogPreview     = document.getElementById('imageUploadPreview');
+        this.imageDialogInfo        = document.getElementById('imageUploadInfo');
+        this.imageDialogError       = document.getElementById('imageUploadError');
+        this.imageDialogOk          = document.getElementById('imageUploadOk');
+        this.imageDialogCancel      = document.getElementById('imageUploadCancel');
+
+        // Состояние диалога загрузки
+        this._imageDialogMode   = 'url';   // 'url' | 'file'
+        this._imageUploadFile   = null;    // сжатый File
+        this._imageUploadBusy   = false;
+        this._imageSavedRange   = null;
+
         this._initDom();
         this._initEvents();
     }
@@ -79,7 +98,7 @@ class ChatView {
         this.expandBtn     = this.root.querySelector('#expandViewModal');
         this.closeBtn      = this.root.querySelector('#closeViewModal');
 
-        // Статичный тулбар — внутри chatInputArea (новый элемент в HTML)
+        // Статичный тулбар — внутри chatInputArea
         this.staticFormatToolbar = this.root.querySelector('#staticFormatToolbar');
 
         // Всплывающий тулбар — глобальный, лежит в body
@@ -131,6 +150,7 @@ class ChatView {
             if (e.key === 'Escape') {
                 this._closeMessageMenu();
                 this._closeLinkDialog();
+                this._closeImageDialog();
                 this._hideFormatToolbar();
             }
             if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
@@ -155,8 +175,7 @@ class ChatView {
         this.chatInput.addEventListener('paste', handlePaste);
         this.chatMessages.addEventListener('paste', handlePaste);
 
-        // Статичный тулбар: цель определяется внутри _applyFormat
-        // по _lastFormatTarget (chatInput или редактируемое сообщение).
+        // Статичный тулбар
         if (this.staticFormatToolbar) {
             this.staticFormatToolbar.querySelectorAll('.format-btn').forEach(btn => {
                 btn.addEventListener('mousedown', (e) => e.preventDefault());
@@ -168,7 +187,7 @@ class ChatView {
             });
         }
 
-        // Всплывающий тулбар: цель определяется при показе (_floatingTarget)
+        // Всплывающий тулбар
         if (this.formatToolbar) {
             this.formatToolbar.querySelectorAll('.format-btn').forEach(btn => {
                 btn.addEventListener('mousedown', (e) => e.preventDefault());
@@ -180,11 +199,10 @@ class ChatView {
             });
         }
 
-        // Показ/скрытие всплывающего тулбара — только для редактируемых сообщений
+        // Показ/скрытие всплывающего тулбара
         document.addEventListener('selectionchange', () => this._handleSelectionChange());
 
-        // Запоминаем, куда пользователь последний раз поставил фокус —
-        // чтобы статичный тулбар применял формат именно туда.
+        // Запоминаем последнюю цель форматирования
         document.addEventListener('focusin', (e) => {
             const t = e.target;
             if (!t) return;
@@ -203,6 +221,36 @@ class ChatView {
             if (e.key === 'Enter') this._confirmLinkDialog();
             if (e.key === 'Escape') this._closeLinkDialog();
         });
+
+        // ===== Диалог загрузки изображения =====
+        if (this.imageDialog) {
+            this.imageDialogTabs.forEach(tab => {
+                tab.addEventListener('click', () => this._switchImageTab(tab.dataset.tab));
+            });
+
+            this.imageDialogUrl.addEventListener('input', () => this._updateImageOkState());
+
+            this.imageDialogFile.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                await this._handleImageFileSelected(file);
+            });
+
+            this.imageDialogOk.addEventListener('click', () => this._confirmImageDialog());
+            this.imageDialogCancel.addEventListener('click', () => this._closeImageDialog());
+
+            this.imageDialogUrl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !this.imageDialogOk.disabled) {
+                    this._confirmImageDialog();
+                }
+                if (e.key === 'Escape') this._closeImageDialog();
+            });
+
+            this.imageDialog.addEventListener('mousedown', (e) => {
+                if (e.target === this.imageDialog && !this._imageUploadBusy) {
+                    this._closeImageDialog();
+                }
+            });
+        }
     }
 
     /* ======================== Публичное API ====================== */
@@ -216,6 +264,7 @@ class ChatView {
     close() {
         this._hideFormatToolbar();
         this._closeMessageMenu();
+        this._closeImageDialog(true);
         if (typeof this.onClose === 'function') this.onClose();
         else this.root.classList.add('hidden');
     }
@@ -513,7 +562,6 @@ class ChatView {
         messageEl.appendChild(btnsContainer);
 
         textSpan.focus();
-        // Делаем сообщение целью статичного тулбара, пока пользователь в нём
         this._lastFormatTarget = textSpan;
     }
 
@@ -529,7 +577,6 @@ class ChatView {
         textSpan.contentEditable = 'false';
         textSpan.innerHTML = prevText;
 
-        // Если это сообщение было целью статичного тулбара — сбрасываем цель
         if (this._lastFormatTarget === textSpan) {
             this._lastFormatTarget = this.chatInput;
         }
@@ -554,11 +601,6 @@ class ChatView {
 
     /* ================== Форматирование ================== */
 
-    /**
-     * Показывает всплывающий тулбар только когда выделение находится
-     * в редактируемом .chat-text (contenteditable="true").
-     * Для chatInput всплывающий тулбар не показывается — там есть статичный.
-     */
     _handleSelectionChange() {
         if (!this.formatToolbar) return;
 
@@ -571,7 +613,6 @@ class ChatView {
         const container = range.commonAncestorContainer;
         const el = container.nodeType === 3 ? container.parentElement : container;
 
-        // Только редактируемое сообщение; chatInput — исключаем
         const editingText = el.closest?.('.chat-text[contenteditable="true"]');
         if (!editingText || editingText === this.chatInput) {
             this._hideFormatToolbar();
@@ -601,17 +642,9 @@ class ChatView {
         this._floatingTarget = null;
     }
 
-    /**
-     * @param {string} format
-     * @param {HTMLElement} [target] — если не передан, берётся _lastFormatTarget
-     *                                 (или chatInput как fallback). Так работает
-     *                                 статичный тулбар.
-     */
     _applyFormat(format, target) {
         if (!target) {
             target = this._lastFormatTarget;
-            // Если цель — редактируемое сообщение, но оно уже вышло из режима
-            // редактирования (contentEditable=false или удалено из DOM) — сбрасываем на chatInput
             if (
                 !target ||
                 (target !== this.chatInput &&
@@ -629,7 +662,7 @@ class ChatView {
             case 'italic':    document.execCommand('italic'); break;
             case 'underline': document.execCommand('underline'); break;
             case 'link':  this._openLinkDialog('link');  return;
-            case 'image': this._openLinkDialog('image'); return;
+            case 'image': this._openImageDialog();       return;
             case 'copy':  document.execCommand('copy'); this._hideFormatToolbar(); return;
             case 'cut':   document.execCommand('cut');  this._hideFormatToolbar(); return;
             case 'paste':
@@ -643,6 +676,8 @@ class ChatView {
         }
         this._hideFormatToolbar();
     }
+
+    /* ============== Старый диалог вставки ссылки ============== */
 
     _openLinkDialog(mode) {
         const sel = window.getSelection();
@@ -703,6 +738,262 @@ class ChatView {
             sel.addRange(insertRange);
         }
         this._closeLinkDialog();
+    }
+
+    /* =============== Диалог загрузки изображения =============== */
+
+    _openImageDialog() {
+        // Запоминаем текущий range — куда вставлять
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+            this._imageSavedRange = sel.getRangeAt(0).cloneRange();
+        } else {
+            this._imageSavedRange = null;
+        }
+
+        // Сброс состояния
+        this._imageDialogMode = 'url';
+        this._imageUploadFile = null;
+        this._imageUploadBusy = false;
+
+        this.imageDialogUrl.value = '';
+        this.imageDialogFile.value = '';
+        this.imageDialogPreviewWrap.classList.add('hidden');
+        this.imageDialogPreview.src = '';
+        this.imageDialogInfo.textContent = '';
+        this.imageDialogError.classList.add('hidden');
+        this.imageDialogError.textContent = '';
+        this.imageDialogCancel.disabled = false;
+
+        this._switchImageTab('url');
+        this._updateImageOkState();
+
+        this.imageDialog.classList.remove('hidden');
+        this._hideFormatToolbar();
+        setTimeout(() => this.imageDialogUrl.focus(), 50);
+    }
+
+    _switchImageTab(tab) {
+        this._imageDialogMode = tab;
+
+        this.imageDialogTabs.forEach(t => {
+            t.classList.toggle('active', t.dataset.tab === tab);
+        });
+        this.imageDialogPanes.forEach(p => {
+            p.classList.toggle('hidden', p.dataset.pane !== tab);
+        });
+
+        this._updateImageOkState();
+
+        if (tab === 'url') {
+            setTimeout(() => this.imageDialogUrl.focus(), 30);
+        }
+    }
+
+    _updateImageOkState() {
+        if (this._imageUploadBusy) return;
+
+        let enabled = false;
+        if (this._imageDialogMode === 'url') {
+            enabled = this.imageDialogUrl.value.trim().length > 0;
+        } else {
+            enabled = !!this._imageUploadFile;
+        }
+        this.imageDialogOk.disabled = !enabled;
+        this.imageDialogOk.textContent = 'Вставить';
+    }
+
+    async _handleImageFileSelected(file) {
+        this._imageUploadFile = null;
+        this.imageDialogPreviewWrap.classList.add('hidden');
+        this.imageDialogInfo.textContent = '';
+        this._hideImageError();
+        this._updateImageOkState();
+
+        if (!file) return;
+
+        const check = validateImageFile(file);
+        if (!check.ok) {
+            this._showImageError(check.message);
+            this.imageDialogFile.value = '';
+            return;
+        }
+
+        this.imageDialogOk.disabled = true;
+        this.imageDialogInfo.textContent = 'Обработка изображения...';
+        this.imageDialogPreviewWrap.classList.remove('hidden');
+
+        try {
+            const compressed = await compressImage(file);
+            this._imageUploadFile = compressed;
+
+            // Превью
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.imageDialogPreview.src = e.target.result;
+                if (compressed !== file) {
+                    const reduction = ((file.size - compressed.size) / file.size * 100).toFixed(1);
+                    const orig = (file.size / (1024 * 1024)).toFixed(2);
+                    const comp = (compressed.size / (1024 * 1024)).toFixed(2);
+                    this.imageDialogInfo.textContent =
+                        `Сжато: ${orig} МБ → ${comp} МБ (−${reduction}%)`;
+                } else {
+                    this.imageDialogInfo.textContent =
+                        `${(compressed.size / (1024 * 1024)).toFixed(2)} МБ`;
+                }
+                this._updateImageOkState();
+            };
+            reader.readAsDataURL(compressed);
+        } catch (err) {
+            console.error(err);
+            this._showImageError('Не удалось обработать файл. Попробуйте JPG/WEBP/AVIF');
+            this.imageDialogFile.value = '';
+            this._imageUploadFile = null;
+            this.imageDialogPreviewWrap.classList.add('hidden');
+            this._updateImageOkState();
+        }
+    }
+
+    _showImageError(msg) {
+        this.imageDialogError.textContent = msg;
+        this.imageDialogError.classList.remove('hidden');
+    }
+
+    _hideImageError() {
+        this.imageDialogError.classList.add('hidden');
+        this.imageDialogError.textContent = '';
+    }
+
+    async _confirmImageDialog() {
+        if (this._imageUploadBusy) return;
+        this._hideImageError();
+
+        // ---- Режим URL ----
+        if (this._imageDialogMode === 'url') {
+            const url = this.imageDialogUrl.value.trim();
+            if (!url) return;
+            this._closeImageDialog();
+            this._insertImageAtSavedRange(url);
+            return;
+        }
+
+        // ---- Режим файла ----
+        if (!this._imageUploadFile) return;
+
+        this._imageUploadBusy = true;
+        this.imageDialogOk.disabled = true;
+        this.imageDialogCancel.disabled = true;
+        this.imageDialogOk.textContent = 'Загрузка...';
+
+        try {
+            const formData = new FormData();
+            formData.append('file', this._imageUploadFile);
+
+            const response = await fileUploadRequest('/messages/images', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                // Сервер может вернуть текст ошибки (NotImageUploadedException)
+                let msg = 'Ошибка загрузки изображения';
+                try {
+                    const text = await response.text();
+                    if (text) msg = text;
+                } catch (_) { /* ignore */ }
+                throw new Error(msg);
+            }
+
+            // Сервер возвращает plain text — URL картинки
+            const raw = await response.text();
+            const imageUrl = (raw || '').trim();
+            if (!imageUrl) {
+                throw new Error('Сервер не вернул URL изображения');
+            }
+
+            const finalUrl = URL + imageUrl;
+
+            // Проверка, что получился валидный http(s) URL
+            if (!/^https?:\/\//i.test(finalUrl)) {
+                throw new Error('Сервер вернул некорректный URL: ' + imageUrl);
+            }
+
+            this._imageUploadBusy = false;
+            this._closeImageDialog();
+            this._insertImageAtSavedRange(finalUrl);
+        } catch (err) {
+            console.error(err);
+            this._showImageError('Ошибка загрузки: ' + (err.message || 'неизвестно'));
+        } finally {
+            this._imageUploadBusy = false;
+            this.imageDialogCancel.disabled = false;
+            this.imageDialogOk.textContent = 'Вставить';
+            this._updateImageOkState();
+        }
+    }
+
+    /**
+     * @param {boolean} force — если true, закрывает даже во время загрузки
+     */
+    _closeImageDialog(force = false) {
+        if (this._imageUploadBusy && !force) return;
+        this._imageUploadBusy = false;
+        if (this.imageDialog) this.imageDialog.classList.add('hidden');
+        this._imageUploadFile = null;
+        this._imageSavedRange = null;
+        this._hideImageError();
+    }
+
+    _insertImageAtSavedRange(src) {
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = '🖼';
+        img.loading = 'lazy';
+
+        let inserted = false;
+        const range = this._imageSavedRange;
+
+        if (range) {
+            try {
+                if (range.startContainer.isConnected) {
+                    const insertRange = range.cloneRange();
+                    insertRange.collapse(false);
+
+                    insertRange.insertNode(img);
+
+                    // Ставим курсор после картинки, чтобы можно было продолжить печатать
+                    const after = document.createTextNode('\u200B');
+                    if (img.parentNode) {
+                        img.parentNode.insertBefore(after, img.nextSibling);
+                        const sel = window.getSelection();
+                        const newRange = document.createRange();
+                        newRange.setStartAfter(after);
+                        newRange.collapse(true);
+                        sel.removeAllRanges();
+                        sel.addRange(newRange);
+                    }
+                    inserted = true;
+                }
+            } catch (e) {
+                console.warn('Не удалось вставить в сохранённый range:', e);
+            }
+        }
+
+        // Fallback — вставляем в последнюю активную цель или chatInput
+        if (!inserted) {
+            const target = (this._lastFormatTarget &&
+                this._lastFormatTarget.isConnected &&
+                (this._lastFormatTarget === this.chatInput ||
+                 this._lastFormatTarget.contentEditable === 'true'))
+                ? this._lastFormatTarget
+                : this.chatInput;
+
+            if (target) {
+                target.focus();
+                target.appendChild(img);
+                target.appendChild(document.createTextNode('\u200B'));
+            }
+        }
     }
 
     /* =================== sanitize / linkify =================== */
