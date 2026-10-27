@@ -540,7 +540,7 @@ class ChatView {
 
         const prevText = textSpan.innerHTML;
         textSpan.contentEditable = 'true';
-        textSpan.innerHTML = msg.text;
+        textSpan.innerHTML = msg.text + '\u200B';
 
         cancelBtn.addEventListener('click', (e) => {
             e.stopPropagation();
