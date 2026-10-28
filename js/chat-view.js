@@ -892,8 +892,8 @@ class ChatView {
         if (this._imageDialogMode === 'url') {
             const url = this.imageDialogUrl.value.trim();
             if (!url) return;
-            this._closeImageDialog();
             this._insertImageAtSavedRange(url);
+            this._closeImageDialog();
             return;
         }
 
