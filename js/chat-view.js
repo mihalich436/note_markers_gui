@@ -918,9 +918,9 @@ class ChatView {
                 throw new Error('Сервер вернул некорректный URL: ' + imageUrl);
             }
 
+            this._insertImageAtSavedRange(finalUrl);
             this._imageUploadBusy = false;
             this._closeImageDialog();
-            this._insertImageAtSavedRange(finalUrl);
         } catch (err) {
             console.error(err);
             this._showImageError('Ошибка загрузки: ' + (err.message || 'неизвестно'));
