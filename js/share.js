@@ -2,68 +2,60 @@ const urlParams = new URLSearchParams(window.location.search);
 const projectId = urlParams.get('id');
 
 let currentProject = null;
+let shareTokenGenerated = null;
 
 if (!projectId) {
     window.location.href = './projects.html';
 }
 
-let shareTokenGenerated = null;
-
-// Загрузка информации о проекте
 async function loadProjectInfo() {
     try {
         const response = await apiRequest(`/projects/${projectId}`);
-        
+
         if (response.ok) {
             const projectData = await response.json();
             currentProject = projectData.project;
-            document.getElementById('projectInfo').textContent = ` Управление доступом: ${escapeHtml(currentProject.title)}`;
+            document.getElementById('projectInfo').textContent = ` ${t('share.title')}: ${currentProject.title}`;
             loadAccessUsers();
         } else if (response.status === 403) {
-            showMessage('У вас нет прав на управление доступом к этому проекту');
-            setTimeout(() => {
-                window.location.href = './projects.html';
-            }, 2000);
+            showMessage(t('share.error_no_permission'));
+            setTimeout(() => { window.location.href = './projects.html'; }, 2000);
         } else {
-            showMessage('Ошибка загрузки проекта');
+            showMessage(t('share.error_load_project'));
         }
     } catch (error) {
-        showMessage('Ошибка соединения с сервером');
+        showMessage(t('common.error_connection'));
     }
 }
 
-// Получение ссылки для быстрого доступа
 async function getShareLink() {
     try {
         const response = await apiRequest(`/projects/${projectId}/share-link`);
-        
+
         if (response.ok) {
             shareTokenGenerated = await response.text();
             displayShareLink();
         } else {
-            showMessage('Ошибка загрузки ссылки быстрого доступа');
+            showMessage(t('share.link_load_error'));
         }
     } catch (error) {
-        showMessage('Ошибка загрузки ссылки быстрого доступа');
+        showMessage(t('share.link_load_error'));
     }
 }
 
 function displayShareLink() {
+    const shareLinkInput = document.getElementById('shareLink');
+    const revokeShareLinkBtn = document.getElementById('revokeShareLinkBtn');
+    const createShareLinkBtn = document.getElementById('createShareLinkBtn');
+
     if (shareTokenGenerated) {
-        const shareLinkInput = document.getElementById('shareLink');
         if (shareLinkInput) shareLinkInput.value = `lazydmnotes.app/project.html?id=${projectId}&share=${shareTokenGenerated}`;
-        const revokeShareLinkBtn = document.getElementById('revokeShareLinkBtn');
-        const createShareLinkBtn = document.getElementById('createShareLinkBtn');
         if (revokeShareLinkBtn && createShareLinkBtn) {
             createShareLinkBtn.style.display = 'none';
             revokeShareLinkBtn.style.display = 'inline-block';
         }
-    }
-    else {
-        const shareLinkInput = document.getElementById('shareLink');
+    } else {
         if (shareLinkInput) shareLinkInput.value = '';
-        const revokeShareLinkBtn = document.getElementById('revokeShareLinkBtn');
-        const createShareLinkBtn = document.getElementById('createShareLinkBtn');
         if (revokeShareLinkBtn && createShareLinkBtn) {
             revokeShareLinkBtn.style.display = 'none';
             createShareLinkBtn.style.display = 'inline-block';
@@ -71,63 +63,68 @@ function displayShareLink() {
     }
 }
 
-// Загрузка списка пользователей с доступом
 async function loadAccessUsers() {
     try {
         const response = await apiRequest(`/projects/${projectId}/access`);
-        
+
         if (response.ok) {
             const users = await response.json();
             displayUsers(users);
         } else {
-            showMessage('Ошибка загрузки пользователей');
+            showMessage(t('share.error_load_users'));
         }
     } catch (error) {
-        showMessage('Ошибка загрузки пользователей');
+        showMessage(t('share.error_load_users'));
     }
 }
 
-// Отображение пользователей
+function roleLabel(role) {
+    switch (role) {
+        case 'OWNER': return t('share.role_owner');
+        case 'ADMIN': return t('share.role_admin');
+        case 'CHAT': return t('share.role_chat_short');
+        case 'EDITOR': return t('share.role_editor_short');
+        case 'READ_ONLY':
+        default: return t('share.role_reader');
+    }
+}
+
 function displayUsers(users) {
     const container = document.getElementById('usersList');
     const currentUsername = localStorage.getItem('username');
-    
+
     if (users.length === 0) {
-        container.innerHTML = '<tr><td colspan="4" style="text-align: center;">Нет участников</td></tr>';
+        container.innerHTML = `<tr><td colspan="5" style="text-align: center;">${escapeHtml(t('share.no_members'))}</td></tr>`;
         return;
     }
 
     const isCurrentUserOwner = (users[0].username === currentUsername);
-    console.log("Am Owner: " + isCurrentUserOwner)
-    
+
     container.innerHTML = users.map(user => {
         const isOwner = user.role === 'OWNER';
         const canEdit = isCurrentUserOwner && !isOwner;
         const username = escapeHtml(user.username);
-        
+
         return `
             <tr>
                 <td>
                     <strong>${username}</strong>
-                    ${isOwner ? '<span style="display: inline-block; margin-left: 8px; padding: 2px 8px; background: #667eea; color: white; border-radius: 4px; font-size: 12px;">Владелец</span>' : ''}
-                    ${user.username === currentUsername ? '<span style="display: inline-block; margin-left: 8px; padding: 2px 8px; background: #6c757d; color: white; border-radius: 4px; font-size: 12px;">Вы</span>' : ''}
+                    ${isOwner ? `<span style="display: inline-block; margin-left: 8px; padding: 2px 8px; background: #667eea; color: white; border-radius: 4px; font-size: 12px;">${escapeHtml(t('common.owner'))}</span>` : ''}
+                    ${user.username === currentUsername ? `<span style="display: inline-block; margin-left: 8px; padding: 2px 8px; background: #6c757d; color: white; border-radius: 4px; font-size: 12px;">${escapeHtml(t('common.you'))}</span>` : ''}
                 </td>
                 <td>${escapeHtml(user.email)}</td>
-                <td><input type="text" id="nickname-${user.id}" oninput="onUpdateUser(${user.id})" placeholder="${username}" title="Ник для обозначения пользователя ${username} в проекте" class="nickname-input" value="${escapeHtml(user.nickname)}"></td>
+                <td><input type="text" id="nickname-${user.id}" oninput="onUpdateUser(${user.id})" placeholder="${username}" title="${escapeHtml(t('share.nickname_title'))}" class="nickname-input" value="${escapeHtml(user.nickname)}"></td>
                 <td>
                     ${canEdit ? `
                         <select id="role-${user.id}" onchange="onUpdateUser(${user.id})" class="role-select">
-                            <option value="READ_ONLY" ${user.role === 'READ_ONLY' ? 'selected' : ''}>📖 Только чтение</option>
-                            <option value="CHAT" ${user.role === 'CHAT' ? 'selected' : ''}>💬 Чат</option>
-                            <option value="EDITOR" ${user.role === 'EDITOR' ? 'selected' : ''}>✏️ Редактирование</option>
-                            <option value="ADMIN" ${user.role === 'ADMIN' ? 'selected' : ''}>✨ Мастер</option>
+                            <option value="READ_ONLY" ${user.role === 'READ_ONLY' ? 'selected' : ''}>${escapeHtml(t('share.role_readonly'))}</option>
+                            <option value="CHAT" ${user.role === 'CHAT' ? 'selected' : ''}>${escapeHtml(t('share.role_chat'))}</option>
+                            <option value="EDITOR" ${user.role === 'EDITOR' ? 'selected' : ''}>${escapeHtml(t('share.role_editor'))}</option>
+                            <option value="ADMIN" ${user.role === 'ADMIN' ? 'selected' : ''}>${escapeHtml(t('share.role_admin'))}</option>
                         </select>
                     ` : `
                         <span style="display: inline-block; padding: 6px 12px; background: #f0f0f0; border-radius: 6px;">
-                            ${user.role === 'OWNER' ? '👑 Владелец' : 
-                              user.role === 'ADMIN' ? '✨ Мастер' :
-                              user.role === 'CHAT' ? '💬 Чат' :
-                              user.role === 'EDITOR' ? '✏️ Редактор' : '📖 Читатель'}
+                            ${escapeHtml(roleLabel(user.role))}
                         </span>
                     `}
                 </td>
@@ -142,53 +139,50 @@ function displayUsers(users) {
     }).join('');
 }
 
-// Добавить пользователя
 async function addUser() {
     const email = document.getElementById('inviteEmail').value;
     const role = document.getElementById('roleSelect').value;
     const nickname = document.getElementById('nickname').value;
     const messageDiv = document.getElementById('inviteMessage');
-    
+
     if (!email) {
-        messageDiv.innerHTML = '<span style="color: #dc3545;">❌ Введите email пользователя</span>';
+        messageDiv.innerHTML = `<span style="color: #dc3545;">${escapeHtml(t('share.invite_email_required'))}</span>`;
         setTimeout(() => messageDiv.innerHTML = '', 3000);
         return;
     }
-    
-    // Простая валидация email
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-        messageDiv.innerHTML = '<span style="color: #dc3545;">❌ Введите корректный email</span>';
+        messageDiv.innerHTML = `<span style="color: #dc3545;">${escapeHtml(t('share.invite_email_invalid'))}</span>`;
         setTimeout(() => messageDiv.innerHTML = '', 3000);
         return;
     }
-    
-    messageDiv.innerHTML = '<span style="color: #667eea;">⏳ Отправка...</span>';
-    
+
+    messageDiv.innerHTML = `<span style="color: #667eea;">${escapeHtml(t('share.invite_sending'))}</span>`;
+
     try {
         const response = await apiRequest(`/projects/${projectId}/access`, {
             method: 'POST',
             body: JSON.stringify({ email, role, nickname })
         });
-        
+
         if (response.ok) {
             const message = await response.text();
-            messageDiv.innerHTML = `<span style="color: #28a745;">✅ ${message}</span>`;
+            messageDiv.innerHTML = `<span style="color: #28a745;">${escapeHtml(t('share.invite_success', { message }))}</span>`;
             document.getElementById('inviteEmail').value = '';
             loadAccessUsers();
             setTimeout(() => messageDiv.innerHTML = '', 3000);
         } else {
             const error = await response.text();
-            messageDiv.innerHTML = `<span style="color: #dc3545;">❌ ${error}</span>`;
+            messageDiv.innerHTML = `<span style="color: #dc3545;">${escapeHtml(t('share.invite_error_msg', { message: error }))}</span>`;
             setTimeout(() => messageDiv.innerHTML = '', 3000);
         }
     } catch (error) {
-        messageDiv.innerHTML = '<span style="color: #dc3545;">❌ Ошибка добавления пользователя</span>';
+        messageDiv.innerHTML = `<span style="color: #dc3545;">${escapeHtml(t('share.invite_error'))}</span>`;
         setTimeout(() => messageDiv.innerHTML = '', 3000);
     }
 }
 
-// Обновить роль пользователя
 function onUpdateUser(userId) {
     const removeBtn = document.getElementById(`remove-${userId}`);
     const saveBtn = document.getElementById(`save-${userId}`);
@@ -215,7 +209,7 @@ async function saveRoleAndNickname(userId) {
             method: 'PUT',
             body: JSON.stringify({ role: newRole.value, nickname: newNick.value })
         });
-        
+
         if (response.ok) {
             const message = await response.text();
             showMessage(message, 'success');
@@ -225,18 +219,17 @@ async function saveRoleAndNickname(userId) {
             showMessage(error);
         }
     } catch (error) {
-        showMessage('Ошибка обновления роли');
+        showMessage(t('share.update_error'));
     }
 }
 
-// Удалить пользователя
 async function removeUser(userId) {
-    if (confirm('Вы уверены, что хотите удалить этого пользователя из проекта?')) {
+    if (confirm(t('common.confirm_remove_user'))) {
         try {
             const response = await apiRequest(`/projects/${projectId}/access/${userId}`, {
                 method: 'DELETE'
             });
-            
+
             if (response.ok) {
                 const message = await response.text();
                 showMessage(message, 'success');
@@ -246,7 +239,7 @@ async function removeUser(userId) {
                 showMessage(error);
             }
         } catch (error) {
-            showMessage('Ошибка удаления пользователя');
+            showMessage(t('share.user_remove_error'));
         }
     }
 }
@@ -257,28 +250,27 @@ async function createShareLink() {
             method: 'POST',
             body: ""
         });
-        
+
         if (response.ok) {
             shareTokenGenerated = await response.text();
             displayShareLink();
-            
-            showMessage('Ссылка создана', 'success');
+            showMessage(t('share.link_created'), 'success');
         } else {
             const error = await response.text();
             showMessage(error);
         }
     } catch (error) {
-        showMessage('Не удалось создать ссылку для быстрого доступа');
+        showMessage(t('share.link_create_error'));
     }
 }
 
 async function revokeShareLink() {
-    if (confirm('Вы уверены, что хотите закрыть доступ к проекту по ссылке?')) {
+    if (confirm(t('common.confirm_revoke_link'))) {
         try {
             const response = await apiRequest(`/projects/${projectId}/share-link`, {
                 method: 'DELETE'
             });
-            
+
             if (response.ok) {
                 const message = await response.text();
                 showMessage(message, 'success');
@@ -289,18 +281,20 @@ async function revokeShareLink() {
                 showMessage(error);
             }
         } catch (error) {
-            showMessage('Ошибка удаления ссылки доступа');
+            showMessage(t('share.link_revoke_error'));
         }
     }
 }
 
-// Инициализация страницы
-checkAuth();
-loadUserInfo();
-loadProjectInfo();
-getShareLink();
+// Инициализация после i18n
+(async () => {
+    await initI18n();
+    checkAuth();
+    loadUserInfo();
+    loadProjectInfo();
+    getShareLink();
+})();
 
-// Делаем функции глобальными для доступа из onclick
 window.addUser = addUser;
 window.onUpdateUser = onUpdateUser;
 window.removeUser = removeUser;

@@ -27,12 +27,12 @@ async function apiRequest(endpoint, options = {}) {
             ...options.headers
         }
     });
-    
+
     if (response.status === 401) {
         logout();
-        throw new Error('Неавторизован');
+        throw new Error(t('common.error_unauthorized'));
     }
-    
+
     return response;
 }
 
@@ -45,17 +45,17 @@ async function fileUploadRequest(endpoint, options = {}) {
             ...options.headers
         }
     });
-    
+
     if (response.status === 401) {
-        // logout();
-        throw new Error('Неавторизован');
+        throw new Error(t('common.error_unauthorized'));
     }
-    
+
     return response;
 }
 
 function showMessage(message, type = 'error') {
     const container = document.querySelector('.system-message-container');
+    if (!container) return;
     const messageDiv = document.createElement('div');
     messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
     messageDiv.textContent = message;
@@ -75,7 +75,7 @@ function escapeHtml(str) {
 
 // Проверка авторизации при загрузке страницы
 function checkAuth() {
-    if (!isAuthenticated() && !window.location.pathname.includes('login') && 
+    if (!isAuthenticated() && !window.location.pathname.includes('login') &&
         !window.location.pathname.includes('register') && !window.location.pathname.includes('invite')) {
         window.location.href = './login.html';
     }
@@ -97,7 +97,7 @@ async function loadUserInfo() {
                 return;
             }
         } catch (e) {}
-        updateUserAvatar(null); // гость
+        updateUserAvatar(null);
     }
 }
 
@@ -127,25 +127,24 @@ function updateUserAvatar(username) {
             actionsContainer.innerHTML = `
                 <div class="user-dropdown-login"
                      onclick="window.location.href='./login.html${shareParam}'; event.stopPropagation();">
-                    Войти
+                    ${escapeHtml(t('nav.login'))}
                 </div>
                 <div class="user-dropdown-register"
                      onclick="window.location.href='./register.html${shareParam}'; event.stopPropagation();">
-                    Зарегистрироваться
+                    ${escapeHtml(t('nav.register'))}
                 </div>
             `;
         } else {
             actionsContainer.innerHTML = `
                 <div class="user-dropdown-logout"
                      onclick="logout(); event.stopPropagation();">
-                    Выйти
+                    ${escapeHtml(t('nav.logout'))}
                 </div>
             `;
         }
     }
 }
 
-// Переключение выпадающего меню (работает и для гостя)
 function toggleUserMenu() {
     const menu = document.getElementById('userDropdownMenu');
     if (menu) {
@@ -153,11 +152,10 @@ function toggleUserMenu() {
     }
 }
 
-// Закрытие выпадающего меню при клике вне его
 document.addEventListener('click', function(event) {
     const userInfo = document.querySelector('.user-info');
     const menu = document.getElementById('userDropdownMenu');
-    
+
     if (userInfo && menu && !userInfo.contains(event.target)) {
         menu.classList.remove('active');
     }

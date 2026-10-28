@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Карты и заметки - The Lazy DM's Notes</title>
+    <title data-i18n="nav.projects">The Lazy DM's Notes</title>
     <link rel="stylesheet" href="./css/styles.css">
     <link rel="icon" href="./icons/yellow_dragon_sleep.ico" type="image/x-icon">
 </head>
@@ -11,145 +11,152 @@
     <div class="container">
         <div class="navbar">
             <div class="logo">
-                <img src="./icons/logo.png" alt="📝 " class="logo-img">
-                The Lazy DM's Notes
+                <img src="./icons/logo.png" alt="" class="logo-img">
+                <span data-i18n="app.name">The Lazy DM's Notes</span>
             </div>
-            <div class="user-info" onclick="toggleUserMenu()">
-                <div class="user-avatar">
-                    <span id="avatarLetter"></span>
-                </div>
-                <div id="userDropdownMenu" class="user-dropdown">
-                    <div class="user-dropdown-item">
-                        <div class="user-dropdown-username" id="userNameSpan"></div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div id="langSwitcher" class="lang-switcher" aria-label="Language"></div>
+                <div class="user-info" onclick="toggleUserMenu()">
+                    <div class="user-avatar">
+                        <span id="avatarLetter"></span>
                     </div>
-                    <div id="userDropdownActions"></div>
+                    <div id="userDropdownMenu" class="user-dropdown">
+                        <div class="user-dropdown-item">
+                            <div class="user-dropdown-username" id="userNameSpan"></div>
+                        </div>
+                        <div id="userDropdownActions"></div>
+                    </div>
                 </div>
             </div>
         </div>
-        
+
         <div class="card header">
             <div id="projectInfo">
-                <div style="text-align: center;">Загрузка проекта...</div>
+                <div style="text-align: center;" data-i18n="common.loading_project">Loading project...</div>
             </div>
         </div>
-        
-        <div class="card"> 
-            <!-- Вкладки-фильтры -->
+
+        <div class="card">
             <div class="tabs-filter">
-                <button class="tab-btn active" data-filter="all" onclick="setFilter('all')">Все</button>
-                <button class="tab-btn" data-filter="notes" onclick="setFilter('notes')">📝 Заметки</button>
-                <button class="tab-btn" data-filter="maps" onclick="setFilter('maps')">🗺️ Карты</button>
+                <button class="tab-btn active" data-filter="all" onclick="setFilter('all')" data-i18n="project.tab_all">All</button>
+                <button class="tab-btn" data-filter="notes" onclick="setFilter('notes')" data-i18n="project.tab_notes">📝 Notes</button>
+                <button class="tab-btn" data-filter="maps" onclick="setFilter('maps')" data-i18n="project.tab_maps">🗺️ Maps</button>
             </div>
 
             <div id="itemsList" class="maps-list">
-                <div style="text-align: center;">Загрузка...</div>
+                <div style="text-align: center;" data-i18n="common.loading">Loading...</div>
             </div>
         </div>
         <div class="system-message-container"></div>
     </div>
-    
-    <!-- Модальное окно создания/редактирования карты -->
+
+    <!-- Модалка карты -->
     <div id="mapModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="mapModalTitle">Создать карту</h3>
+                <h3 id="mapModalTitle" data-i18n="project.create_map">Create map</h3>
                 <button class="close-modal" onclick="closeMapModal()">&times;</button>
             </div>
             <form id="mapForm">
                 <div class="form-group">
-                    <label>Название</label>
+                    <label data-i18n="project.map_title_label">Title</label>
                     <input type="text" id="mapTitle" required>
                 </div>
                 <div class="form-group">
-                    <label>Описание</label>
+                    <label data-i18n="project.map_description_label">Description</label>
                     <textarea id="mapDescription" rows="6"></textarea>
                 </div>
-                
+
                 <div class="form-group">
-                    <label>Способ загрузки изображения</label>
+                    <label data-i18n="project.map_upload_type_label">Image upload method</label>
                     <div class="image-upload-options">
                         <label class="radio-option">
                             <input type="radio" name="imageUploadType" value="url" checked onchange="toggleImageUploadType()">
-                            <span>По ссылке</span>
+                            <span data-i18n="project.upload_by_url">By URL</span>
                         </label>
                         <label class="radio-option">
                             <input type="radio" name="imageUploadType" value="file" onchange="toggleImageUploadType()">
-                            <span>Загрузить файл</span>
+                            <span data-i18n="project.upload_by_file">Upload file</span>
                         </label>
                     </div>
                 </div>
-                
+
                 <div class="form-group" id="imageUrlGroup">
-                    <label>Ссылка на изображение</label>
-                    <input type="text" id="mapImageUrl" placeholder="https://example.com/image.jpg" title="Прямая ссылка на изображение.">
+                    <label data-i18n="project.image_url_label">Image URL</label>
+                    <input type="text" id="mapImageUrl"
+                           data-i18n-placeholder="project.image_url_placeholder"
+                           data-i18n-title="project.image_url_hint"
+                           placeholder="https://example.com/image.jpg">
                 </div>
-                
+
                 <div class="form-group hidden" id="imageFileGroup">
-                    <label>Выберите изображение</label>
+                    <label data-i18n="project.image_file_label">Choose an image</label>
                     <input type="file" id="mapImageFile" accept="image/*">
-                    <small class="file-hint">Поддерживаются форматы: JPG, JPEG, WEBP. Максимальный размер: 30 МБ</small>
+                    <small class="file-hint" data-i18n="project.image_file_hint">
+                        Supported formats: JPG, JPEG, WEBP. Maximum size: 30 MB
+                    </small>
                     <div id="imagePreview" class="image-preview hidden">
-                        <img id="previewImage" src="" alt="Предпросмотр">
+                        <img id="previewImage" src="" alt="Preview">
                         <button type="button" class="remove-preview-btn" onclick="removeImagePreview()">✕</button>
                     </div>
                 </div>
-                
+
                 <div class="visibility-option">
                     <div class="visibility-label">
-                        <span>Видимость карты</span>
-                        <small>Если выключено, карта будет скрыта от других участников</small>
+                        <span data-i18n="project.visibility_map_label">Map visibility</span>
+                        <small data-i18n="project.visibility_map_hint">If disabled, the map will be hidden from other participants</small>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="mapVisibility" checked>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                <button type="submit">Сохранить</button>
+                <button type="submit" data-i18n="common.save">Save</button>
             </form>
         </div>
     </div>
 
-    <!-- Модальное окно создания/редактирования заметки -->
+    <!-- Модалка заметки -->
     <div id="noteModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="noteModalTitle">Создать заметку</h3>
+                <h3 id="noteModalTitle" data-i18n="project.create_note">Create note</h3>
                 <button class="close-modal" onclick="closeNoteModal()">&times;</button>
             </div>
             <form id="noteForm">
                 <div class="form-group">
-                    <label>Название</label>
+                    <label data-i18n="project.note_title_label">Title</label>
                     <input type="text" id="noteTitle" required>
                 </div>
                 <div class="form-group">
-                    <label>Описание</label>
+                    <label data-i18n="project.note_description_label">Description</label>
                     <textarea id="noteDescription" rows="6"></textarea>
                 </div>
                 <div class="visibility-option">
                     <div class="visibility-label">
-                        <span>Видимость заметки</span>
-                        <small>Если выключено, заметка будет скрыта от других участников</small>
+                        <span data-i18n="project.visibility_note_label">Note visibility</span>
+                        <small data-i18n="project.visibility_note_hint">If disabled, the note will be hidden from other participants</small>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="noteVisibility" checked>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                <button type="submit">Сохранить</button>
+                <button type="submit" data-i18n="common.save">Save</button>
             </form>
         </div>
     </div>
 
-    <!-- Плавающая кнопка создания -->
     <div id="addButtonWrapper" class="fab-wrapper">
         <div id="fabMenu" class="fab-menu">
-            <button class="fab-menu-item" onclick="showCreateMapModal()">🗺️ Карта</button>
-            <button class="fab-menu-item" onclick="showCreateNoteModal()">📝 Заметка</button>
+            <button class="fab-menu-item" onclick="showCreateMapModal()" data-i18n="project.fab_map">🗺️ Map</button>
+            <button class="fab-menu-item" onclick="showCreateNoteModal()" data-i18n="project.fab_note">📝 Note</button>
         </div>
-        <button id="addButton" class="fab" onclick="toggleFabMenu(event)" aria-label="Создать">+</button>
+        <button id="addButton" class="fab" onclick="toggleFabMenu(event)" data-i18n-aria-label="project.fab_create" aria-label="Create">+</button>
     </div>
-    
+
     <script src="./js/config.js"></script>
+    <script src="./js/i18n.js"></script>
     <script src="./js/common.js"></script>
     <script src="./js/project.js"></script>
 </body>

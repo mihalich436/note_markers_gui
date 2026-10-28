@@ -1,53 +1,48 @@
 let editingProjectId = null;
+let currentProjects = [];
 
-// Загрузка проектов (только метаданные, без заметок!)
 async function loadProjects() {
     try {
         const response = await apiRequest('/projects');
-        console.log(response)
-        
         if (response.ok) {
-            const projects = await response.json();
-            this.projects = projects;
-            console.log(projects)
-            displayProjects(projects);
+            currentProjects = await response.json();
+            displayProjects(currentProjects);
         } else {
-            showMessage('Ошибка загрузки проектов');
+            showMessage(t('projects.error_load'));
         }
     } catch (error) {
-        console.log(error)
-        showMessage('Ошибка соединения с сервером');
+        showMessage(t('common.error_connection'));
     }
 }
 
 function getProjectContextDiv(project) {
-    return project.owner ? `<div class="project-menu-container">
-                    <button class="menu-trigger-btn" onclick="event.stopPropagation(); toggleProjectMenu(${project.id}, this)">
-                        ⋮
-                    </button>
-                    <div id="menu-${project.id}" class="project-context-menu">
-                        <div class="menu-item" onclick="event.stopPropagation(); editProjectFromCard(${project.id})">
-                            ✏️ Редактировать
-                        </div>
-                        <div class="menu-item" onclick="event.stopPropagation(); shareProject(${project.id})">
-                            👥 Поделиться
-                        </div>
-                        <div class="menu-item menu-item-danger" onclick="event.stopPropagation(); deleteProjectFromCard(${project.id})">
-                            🗑️ Удалить
-                        </div>
-                    </div>
-                </div>` : '';
+    return project.owner ? `
+        <div class="project-menu-container">
+            <button class="menu-trigger-btn" onclick="event.stopPropagation(); toggleProjectMenu(${project.id}, this)">
+                ⋮
+            </button>
+            <div id="menu-${project.id}" class="project-context-menu">
+                <div class="menu-item" onclick="event.stopPropagation(); editProjectFromCard(${project.id})">
+                    ✏️ ${escapeHtml(t('common.edit'))}
+                </div>
+                <div class="menu-item" onclick="event.stopPropagation(); shareProject(${project.id})">
+                    👥 ${escapeHtml(t('common.share'))}
+                </div>
+                <div class="menu-item menu-item-danger" onclick="event.stopPropagation(); deleteProjectFromCard(${project.id})">
+                    🗑️ ${escapeHtml(t('common.delete'))}
+                </div>
+            </div>
+        </div>` : '';
 }
 
-// Отображение проектов
 function displayProjects(projects) {
     const container = document.getElementById('projectsList');
-    
+
     if (projects.length === 0) {
-        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #666;">У вас пока нет проектов. Создайте первый!</p>';
+        container.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #666;">${escapeHtml(t('projects.empty'))}</p>`;
         return;
     }
-    
+
     container.innerHTML = projects.map(project => `
         <div class="project-card" data-project-id="${project.id}" data-project-title="${escapeHtml(project.title)}" data-project-description="${escapeHtml(project.description || '')}" onclick="openProject(${project.id})">
             <div class="project-card-header">
@@ -55,16 +50,15 @@ function displayProjects(projects) {
                 ${getProjectContextDiv(project)}
             </div>
             <button class="expand-btn" onclick="event.stopPropagation(); toggleDescription(${project.id})">
-                ► Описание
+                ${escapeHtml(t('projects.description_toggle'))}
             </button>
             <div id="desc-${project.id}" class="project-description hidden">
-                ${project.description ? escapeHtml(project.description) : 'Описание отсутствует'}
+                ${project.description ? escapeHtml(project.description) : escapeHtml(t('common.description_missing'))}
             </div>
         </div>
     `).join('');
 }
 
-// Закрыть все открытые меню
 function closeAllMenus() {
     document.querySelectorAll('.project-context-menu.active').forEach(menu => {
         menu.classList.remove('active');
@@ -73,20 +67,17 @@ function closeAllMenus() {
     if (addBtn) addBtn.style.display = 'flex';
 }
 
-// Переключение контекстного меню
 function toggleProjectMenu(projectId, btn) {
     event.stopPropagation();
     const menu = document.getElementById(`menu-${projectId}`);
     const isActive = menu.classList.contains('active');
-    
-    // Закрываем все другие меню
+
     closeAllMenus();
-    
+
     if (!isActive) {
         const addBtn = document.getElementById('addButton');
         if (addBtn) addBtn.style.display = 'none';
         menu.classList.add('active');
-        // Закрыть меню при клике вне его
         setTimeout(() => {
             document.addEventListener('click', function closeMenu(e) {
                 if (!menu.contains(e.target) && e.target !== btn) {
@@ -100,7 +91,6 @@ function toggleProjectMenu(projectId, btn) {
     }
 }
 
-// Получение данных проекта из карточки
 function getProjectCardData(projectId) {
     const card = document.querySelector(`.project-card[data-project-id="${projectId}"]`);
     if (card) {
@@ -112,7 +102,6 @@ function getProjectCardData(projectId) {
     return null;
 }
 
-// Редактирование проекта (из контекстного меню)
 function editProjectFromCard(projectId) {
     const projectData = getProjectCardData(projectId);
     if (projectData) {
@@ -121,7 +110,6 @@ function editProjectFromCard(projectId) {
     closeAllMenus();
 }
 
-// Удаление проекта (из контекстного меню)
 function deleteProjectFromCard(projectId) {
     closeAllMenus();
     deleteProject(projectId);
@@ -130,94 +118,85 @@ function deleteProjectFromCard(projectId) {
 function toggleDescription(projectId) {
     const descElement = document.getElementById(`desc-${projectId}`);
     const btn = descElement.previousElementSibling;
-    
+
     if (descElement.classList.contains('hidden')) {
         descElement.classList.remove('hidden');
-        btn.textContent = '▼ Описание';
+        btn.textContent = t('common.description_toggle_close');
     } else {
         descElement.classList.add('hidden');
-        btn.textContent = '► Описание';
+        btn.textContent = t('projects.description_toggle');
     }
 }
 
-// Открытие проекта - переход на отдельную страницу с заметками
 function openProject(projectId) {
     window.location.href = `./project.html?id=${projectId}`;
 }
 
-// Управление доступом
 function shareProject(projectId) {
     closeAllMenus();
     window.location.href = `./share.html?id=${projectId}`;
 }
 
-// Создание проекта
 async function createProject(title, description) {
     try {
         const response = await apiRequest('/projects', {
             method: 'POST',
             body: JSON.stringify({ title, description })
         });
-        console.log(response)
-        
+
         if (response.ok) {
             closeProjectModal();
             const project = await response.json();
-            this.projects.push(project);
-            displayProjects(this.projects);
-            showMessage('Проект создан успешно', 'success');
+            currentProjects.push(project);
+            displayProjects(currentProjects);
+            showMessage(t('projects.created'), 'success');
         } else {
-            showMessage('Ошибка создания проекта');
+            showMessage(t('projects.error_create'));
         }
     } catch (error) {
-        showMessage('Ошибка создания проекта');
+        showMessage(t('projects.error_create'));
     }
 }
 
-// Редактирование проекта
 async function updateProject(id, title, description) {
     try {
         const response = await apiRequest(`/projects/${id}`, {
             method: 'PUT',
             body: JSON.stringify({ title, description })
         });
-        
+
         if (response.ok) {
             closeProjectModal();
             loadProjects();
-            showMessage('Проект обновлён успешно', 'success');
+            showMessage(t('projects.updated'), 'success');
         } else {
-            showMessage('Ошибка обновления проекта');
+            showMessage(t('projects.error_update'));
         }
     } catch (error) {
-        showMessage('Ошибка обновления проекта');
+        showMessage(t('projects.error_update'));
     }
 }
 
-// Удаление проекта
 async function deleteProject(id) {
-    if (confirm('Вы уверены, что хотите удалить этот проект? Все заметки также будут удалены.')) {
+    if (confirm(t('common.confirm_delete_project'))) {
         try {
-            const response = await apiRequest(`/projects/${id}`, {
-                method: 'DELETE'
-            });
-            
+            const response = await apiRequest(`/projects/${id}`, { method: 'DELETE' });
+
             if (response.ok) {
                 loadProjects();
-                showMessage('Проект удалён успешно', 'success');
+                showMessage(t('projects.deleted'), 'success');
             } else {
-                showMessage('Ошибка удаления проекта');
+                showMessage(t('projects.error_delete'));
             }
         } catch (error) {
-            showMessage('Ошибка удаления проекта');
+            showMessage(t('projects.error_delete'));
         }
     }
 }
 
-// Модальное окно
 function showCreateProjectModal() {
     editingProjectId = null;
-    document.getElementById('projectModalTitle').textContent = 'Создать проект';
+    document.getElementById('projectModalTitle').textContent = t('projects.create_title');
     document.getElementById('projectTitle').value = '';
     document.getElementById('projectDescription').value = '';
     document.getElementById('projectModal').classList.add('active');
@@ -225,7 +204,7 @@ function showCreateProjectModal() {
 
 function editProject(id, title, description) {
     editingProjectId = id;
-    document.getElementById('projectModalTitle').textContent = 'Редактировать проект';
+    document.getElementById('projectModalTitle').textContent = t('projects.edit_title');
     document.getElementById('projectTitle').value = title;
     document.getElementById('projectDescription').value = description;
     document.getElementById('projectModal').classList.add('active');
@@ -235,12 +214,11 @@ function closeProjectModal() {
     document.getElementById('projectModal').classList.remove('active');
 }
 
-// Обработчики форм
 document.getElementById('projectForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = document.getElementById('projectTitle').value;
     const description = document.getElementById('projectDescription').value;
-    
+
     if (editingProjectId) {
         await updateProject(editingProjectId, title, description);
     } else {
@@ -248,14 +226,13 @@ document.getElementById('projectForm').addEventListener('submit', async (e) => {
     }
 });
 
-// Закрытие меню при нажатии ESC
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        closeAllMenus();
-    }
+    if (e.key === 'Escape') closeAllMenus();
 });
 
-// Инициализация
-checkAuth();
-loadUserInfo();
-loadProjects();
+// Инициализация: дождаться i18n, потом загружать данные
+(async () => {
+    await initI18n();
+    loadUserInfo();
+    loadProjects();
+})();

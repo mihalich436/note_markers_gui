@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Lazy DM's Notes</title>
+    <title data-i18n="app.name">The Lazy DM's Notes</title>
     <link rel="stylesheet" href="./css/chat-view.css">
     <link rel="stylesheet" href="./css/map_styles.css">
     <link rel="icon" href="./icons/yellow_dragon_sleep.ico" type="image/x-icon">
@@ -13,45 +13,50 @@
         <!-- Верхняя панель инструментов -->
         <div class="top-toolbar">
             <div class="toolbar-group">
-                <button id="fileMenuBtn" class="toolbar-btn" title="Файл">☰<span class="toolbar-btn-text"> Меню</span></button>
-                <button id="generalInfoBtn" class="toolbar-btn" title="Общая информация">📖<span class="toolbar-btn-text"> Общее</span></button>
+                <button id="fileMenuBtn" class="toolbar-btn"
+                        data-i18n-title="map.menu_file" title="File">
+                    ☰<span class="toolbar-btn-text" data-i18n="map.menu">Menu</span>
+                </button>
+                <button id="generalInfoBtn" class="toolbar-btn"
+                        data-i18n-title="map.general_info" title="General information">
+                    📖<span class="toolbar-btn-text" data-i18n="map.general_info">General</span>
+                </button>
             </div>
             <div class="toolbar-group">
                 <input type="file" id="imageUpload" accept="image/*" class="file-input">
                 <span>🔍 </span>
-                <button id="zoomIn" title="Приблизить (Ctrl +)">+</button>
-                <button id="zoomOut" title="Отдалить (Ctrl -)">−</button>
-                <button id="resetZoom" title="Сбросить масштаб">⟳</button>
+                <button id="zoomIn" data-i18n-title="map.zoom_in" title="Zoom in (Ctrl +)">+</button>
+                <button id="zoomOut" data-i18n-title="map.zoom_out" title="Zoom out (Ctrl -)">−</button>
+                <button id="resetZoom" data-i18n-title="map.reset_zoom" title="Reset zoom">⟳</button>
             </div>
         </div>
 
         <!-- Выпадающее меню файла -->
         <div id="fileMenu" class="file-menu hidden">
-            <div class="file-menu-item" id="loadImageBtn">
-                <span>📤 Загрузить изображение</span>
-                <small>Загрузить изображение по ссылке</small>
-            </div>
+            <!-- <div class="file-menu-item" id="loadImageBtn">
+                <span data-i18n="map.upload_image">📤 Upload image</span>
+                <small data-i18n="map.upload_image_hint">Upload an image by URL</small>
+            </div> -->
             <div class="file-menu-item" id="markerSettingsBtn">
-                <span>⚙️ Настройки маркеров</span>
-                <small>Настроить стили маркеров по умолчанию и др.</small>
+                <span data-i18n="map.marker_settings">⚙️ Marker settings</span>
+                <small data-i18n="map.marker_settings_hint">Configure default marker styles and more</small>
             </div>
             <div class="file-menu-item" id="showMarkersListBtn">
-                <span>📋 Список маркеров</span>
-                <small>Показать список маркеров на карте</small>
+                <span data-i18n="map.markers_list">📋 Markers list</span>
+                <small data-i18n="map.markers_list_hint">Show the list of markers on the map</small>
             </div>
             <div class="file-menu-item" id="helpBtn">
-                <span>❓ Справка</span>
-                <small>Показать подсказку о сайте</small>
+                <span data-i18n="map.help">❓ Help</span>
+                <small data-i18n="map.help_hint">Show site hints</small>
             </div>
         </div>
 
         <!-- Основной контент -->
         <div class="main-content">
-            <!-- Контейнер с изображением -->
             <div class="image-container-wrapper" id="imageContainerWrapper">
                 <div class="image-container" id="imageContainer">
                     <div class="transform-container" id="transform-container">
-                        <img id="mainImage" src="#" alt="Загрузите изображение" style="display: none;">
+                        <img id="mainImage" src="#" alt="" style="display: none;">
                         <div id="markersLayer"></div>
                     </div>
                     <div id="tooltip" class="tooltip hidden"></div>
@@ -59,35 +64,39 @@
             </div>
 
             <div id="viewModal" class="view-modal">
-                <!-- Панель просмотра / чата -->
                 <div id="viewModalContent" class="view-modal-content hidden">
                     <div class="view-modal-header">
-                        <h3 id="viewModalTitle">Просмотр маркера</h3>
+                        <h3 id="viewModalTitle" data-i18n="map.general_info_title_short">General information</h3>
                         <div class="view-modal-controls">
-                            <button id="editViewModal" class="view-modal-btn" title="Редактировать">✏️</button>
-                            <button id="expandViewModal" class="view-modal-btn" title="Развернуть">⤢</button>
-                            <button id="closeViewModal" class="view-modal-btn" title="Закрыть">✖</button>
+                            <button id="editViewModal" class="view-modal-btn"
+                                    data-i18n-title="map.edit" title="Edit">✏️</button>
+                            <button id="expandViewModal" class="view-modal-btn"
+                                    data-i18n-title="map.expand" title="Expand">⤢</button>
+                            <button id="closeViewModal" class="view-modal-btn"
+                                    data-i18n-title="map.close" title="Close">✖</button>
                         </div>
                     </div>
                     <div class="view-modal-body">
                         <div id="chatMessages" class="chat-messages"></div>
                         <div id="chatInputArea" class="chat-input-area">
                             <div id="staticFormatToolbar" class="static-format-toolbar">
-                                <button class="format-btn" data-format="bold" title="Жирный (Ctrl+B)"><b>B</b></button>
-                                <button class="format-btn" data-format="italic" title="Курсив (Ctrl+I)"><i>I</i></button>
-                                <button class="format-btn" data-format="underline" title="Подчёркнутый (Ctrl+U)"><u>U</u></button>
+                                <button class="format-btn" data-format="bold" data-i18n-title="map.format_bold" title="Bold (Ctrl+B)"><b>B</b></button>
+                                <button class="format-btn" data-format="italic" data-i18n-title="map.format_italic" title="Italic (Ctrl+I)"><i>I</i></button>
+                                <button class="format-btn" data-format="underline" data-i18n-title="map.format_underline" title="Underline (Ctrl+U)"><u>U</u></button>
                                 <span class="format-sep"></span>
-                                <button class="format-btn" data-format="link" title="Ссылка">🔗</button>
-                                <button class="format-btn" data-format="image" title="Картинка по ссылке">🖼️</button>
+                                <button class="format-btn" data-format="link" data-i18n-title="map.format_link" title="Link">🔗</button>
+                                <button class="format-btn" data-format="image" data-i18n-title="map.format_image" title="Image by URL">🖼️</button>
                                 <span class="format-sep"></span>
-                                <button class="format-btn" data-format="copy" title="Копировать">📋</button>
-                                <button class="format-btn" data-format="cut" title="Вырезать">✂️</button>
-                                <button class="format-btn" data-format="paste" title="Вставить">📥</button>
-                                <button class="format-btn" data-format="clear" title="Очистить форматирование">⌫</button>
+                                <button class="format-btn" data-format="copy" data-i18n-title="map.format_copy" title="Copy">📋</button>
+                                <button class="format-btn" data-format="cut" data-i18n-title="map.format_cut" title="Cut">✂️</button>
+                                <button class="format-btn" data-format="paste" data-i18n-title="map.format_paste" title="Paste">📥</button>
+                                <button class="format-btn" data-format="clear" data-i18n-title="map.format_clear" title="Clear formatting">⌫</button>
                             </div>
                             <div class="chat-input-row">
                                 <div id="chatInput" class="chat-input-resizable" contenteditable="true"></div>
-                                <button id="visChatBtn" class="visible-message-btn" title="Заметка будет видна всем"></button>
+                                <button id="visChatBtn" class="visible-message-btn"
+                                        data-i18n-title="map.notification_visibility_all"
+                                        title="Note will be visible to everyone"></button>
                                 <button id="sendChatBtn" class="send-message-btn"></button>
                             </div>
                         </div>
@@ -97,41 +106,51 @@
                 <!-- Панель редактирования маркера -->
                 <div class="edit-panel" id="editPanel">
                     <div class="edit-panel-header">
-                        <h3>Редактирование маркера</h3>
+                        <h3 data-i18n="map.edit_marker_title">Edit marker</h3>
                         <button class="close-panel-btn" id="closeEditPanel">✖</button>
                     </div>
                     <div class="edit-panel-content">
                         <div class="edit-panel-title-row">
-                            <input type="text" id="markerNumber" placeholder="№" class="marker-title-input number">
-                            <input type="text" id="markerTitle" placeholder="Название маркера..." class="marker-title-input">
+                            <input type="text" id="markerNumber"
+                                   data-i18n-placeholder="map.marker_number_placeholder"
+                                   placeholder="№" class="marker-title-input number">
+                            <input type="text" id="markerTitle"
+                                   data-i18n-placeholder="map.marker_title_placeholder"
+                                   placeholder="Marker name..." class="marker-title-input">
                         </div>
-                        <input type="text" id="noteText" placeholder="Краткая заметка (видна на маркере)..." class="marker-title-input">
-                        <textarea id="descriptionText" placeholder="Подробное описание (скрытое)..." rows="4"></textarea>
+                        <input type="text" id="noteText"
+                               data-i18n-placeholder="map.note_placeholder"
+                               placeholder="Short note (visible on the marker)..."
+                               class="marker-title-input">
+                        <textarea id="descriptionText"
+                                  data-i18n-placeholder="map.description_placeholder"
+                                  placeholder="Detailed description (hidden)..." rows="4"></textarea>
 
-                        <!-- Настройки для текущего маркера -->
                         <div class="marker-current-settings">
-                            <h4>Внешний вид</h4>
+                            <h4 data-i18n="map.appearance">Appearance</h4>
                             <div class="current-color-shape">
                                 <div class="visibility-picker-mini">
-                                    <button id="changeMarkerVisibility" disabled title="Маркер будет виден всем">👁️</button>
+                                    <button id="changeMarkerVisibility" disabled
+                                            data-i18n-title="map.notification_visibility_all"
+                                            title="Marker will be visible to everyone">👁️</button>
                                 </div>
                                 <div class="color-picker-mini">
-                                    <label>Цвет:</label>
+                                    <label data-i18n="map.color_label">Color:</label>
                                     <input type="color" id="currentMarkerColor" value="#ef4444">
                                 </div>
                                 <div class="shape-picker-mini">
-                                    <label>Форма:</label>
+                                    <label data-i18n="map.shape_label">Shape:</label>
                                     <select id="currentMarkerShape">
-                                        <option value="circle">Круг</option>
-                                        <option value="square">Квадрат</option>
-                                        <option value="triangle">Треугольник</option>
-                                        <option value="star">Звезда</option>
+                                        <option value="circle" data-i18n="map.shape_circle">Circle</option>
+                                        <option value="square" data-i18n="map.shape_square">Square</option>
+                                        <option value="triangle" data-i18n="map.shape_triangle">Triangle</option>
+                                        <option value="star" data-i18n="map.shape_star">Star</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="size-picker-mini">
                                 <div class="size-slider">
-                                    <label>Размер:</label>
+                                    <label data-i18n="map.size_label">Size:</label>
                                     <input type="range" id="markerSize" min="20" max="60" value="36" step="2">
                                     <span id="sizeValue">36px</span>
                                 </div>
@@ -139,17 +158,16 @@
                         </div>
 
                         <div class="form-buttons">
-                            <button id="cancelNote" disabled>❌ Отмена</button>
-                            <button id="saveNote" disabled>💾 Сохранить</button>
+                            <button id="cancelNote" disabled data-i18n="map.cancel_button">❌ Cancel</button>
+                            <button id="saveNote" disabled data-i18n="map.save_button">💾 Save</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Панель со списком маркеров -->
             <div class="markers-panel" id="markersPanel">
                 <div class="markers-panel-header">
-                    <h3>Список маркеров</h3>
+                    <h3 data-i18n="map.markers_panel_title">Markers list</h3>
                     <button class="close-panel-btn" id="closeMarkersPanel">✖</button>
                 </div>
                 <div class="markers-panel-content">
@@ -163,37 +181,37 @@
     <div id="markerSettingsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Настройки маркеров</h2>
+                <h2 data-i18n="map.settings_title">Marker settings</h2>
                 <span class="close-modal close-settings">&times;</span>
             </div>
             <div class="modal-body">
                 <div class="settings-section">
-                    <h3>Форма маркера по умолчанию</h3>
+                    <h3 data-i18n="map.default_shape_title">Default marker shape</h3>
                     <div class="shape-selector">
                         <label class="shape-option">
                             <input type="radio" name="markerShape" value="circle" checked>
                             <span class="shape-preview circle"></span>
-                            <span>Круг</span>
+                            <span data-i18n="map.shape_circle">Circle</span>
                         </label>
                         <label class="shape-option">
                             <input type="radio" name="markerShape" value="square">
                             <span class="shape-preview square"></span>
-                            <span>Квадрат</span>
+                            <span data-i18n="map.shape_square">Square</span>
                         </label>
                         <label class="shape-option">
                             <input type="radio" name="markerShape" value="triangle">
                             <span class="shape-preview triangle"></span>
-                            <span>Треугольник</span>
+                            <span data-i18n="map.shape_triangle">Triangle</span>
                         </label>
                         <label class="shape-option">
                             <input type="radio" name="markerShape" value="star">
                             <span class="shape-preview star">★</span>
-                            <span>Звезда</span>
+                            <span data-i18n="map.shape_star">Star</span>
                         </label>
                     </div>
                 </div>
                 <div class="settings-section">
-                    <h3>Цвет маркера по умолчанию</h3>
+                    <h3 data-i18n="map.default_color_title">Default marker color</h3>
                     <div class="color-settings">
                         <div class="color-presets">
                             <button class="color-preset" style="background: #ef4444" data-color="#ef4444"></button>
@@ -206,47 +224,47 @@
                             <button class="color-preset" style="background: #06b6d4" data-color="#06b6d4"></button>
                         </div>
                         <div class="custom-color">
-                            <label>Свой цвет:</label>
+                            <label data-i18n="map.custom_color_label">Custom color:</label>
                             <input type="color" id="customColor" value="#ef4444">
                         </div>
                     </div>
                 </div>
                 <div class="settings-section">
-                    <h3>Показывать подсказки</h3>
+                    <h3 data-i18n="map.show_notes_title">Show hints</h3>
                     <label class="toggle-switch">
                         <input type="checkbox" id="showNotes" checked>
                         <span class="toggle-slider"></span>
-                        <span class="toggle-label">Показывать короткие заметки рядом с маркерами</span>
+                        <span class="toggle-label" data-i18n="map.show_notes_label">Show short notes next to markers</span>
                     </label>
                 </div>
                 <div class="settings-section">
-                    <h3>Видимость маркера</h3>
+                    <h3 data-i18n="map.default_visibility_title">Marker visibility</h3>
                     <label class="toggle-switch">
                         <input type="checkbox" id="defaultVisibility">
                         <span class="toggle-slider"></span>
-                        <span class="toggle-label">Создавать маркер видимым для всех</span>
+                        <span class="toggle-label" data-i18n="map.default_visibility_label">Create marker visible to everyone</span>
                     </label>
                 </div>
                 <div class="settings-section">
-                    <h3>Размер маркера по умолчанию</h3>
+                    <h3 data-i18n="map.default_size_title">Default marker size</h3>
                     <div class="size-slider">
                         <input type="range" id="markerSizeDefault" min="20" max="60" value="36" step="2">
                         <span id="sizeValueDefault">36px</span>
                     </div>
                 </div>
                 <div class="settings-section">
-                    <h3>Масштаб для подписей</h3>
+                    <h3 data-i18n="map.labels_zoom_title">Zoom for labels</h3>
                     <div class="size-slider">
                         <input type="range" id="minZoomForLabels" min="0.5" max="3" value="1.5" step="0.1">
                         <span id="zoomValue">1.5x</span>
                     </div>
-                    <small style="color: #868e96; display: block; margin-top: 5px;">
-                        При меньшем масштабе подписи скрываются (показываются при наведении)
+                    <small style="color: #868e96; display: block; margin-top: 5px;" data-i18n="map.labels_zoom_hint">
+                        At lower zoom, labels are hidden (shown on hover)
                     </small>
                 </div>
                 <div class="settings-actions">
-                    <button id="saveDefaultSettings" class="settings-btn primary">Сохранить</button>
-                    <button id="resetMarkerSettings" class="settings-btn">Сбросить</button>
+                    <button id="saveDefaultSettings" class="settings-btn primary" data-i18n="common.save">Save</button>
+                    <button id="resetMarkerSettings" class="settings-btn" data-i18n="common.cancel">Reset</button>
                 </div>
             </div>
         </div>
@@ -256,50 +274,50 @@
     <div id="helpModal" class="help-modal hidden">
         <div class="help-modal-content">
             <div class="help-modal-header">
-                <h3>Справка по использованию</h3>
+                <h3 data-i18n="map.help_title">Usage help</h3>
                 <button class="close-panel-btn" id="close-help">✖</button>
             </div>
             <div class="help-modal-body">
-                <h4>🎯 Работа с заметками</h4>
-                <p><strong>➕ Клик правой кнопкой мыши по изображению</strong>, чтобы добавить маркер</p>
-                <p><strong>Клик по маркеру</strong> - открывает панель чата с сообщениями</p>
-                <p><strong>Клик по маркеру правой кнопкой мыши</strong> - для его редактирования или выбора новой позиции</p>
-                <p><strong>📋 Список</strong> - показывает список всех маркеров</p>
-                <p><strong>📖 Общее</strong> - открывает панель для редактирования общей информации по изображению</p>
+                <h4 data-i18n="map.help_notes_title">🎯 Working with notes</h4>
+                <p data-i18n="map.help_add_marker">➕ Right-click on the image to add a marker</p>
+                <p data-i18n="map.help_click_marker">Click on a marker — opens the chat panel with messages</p>
+                <p data-i18n="map.help_right_click_marker">Right-click on a marker to edit it or choose a new position</p>
+                <p data-i18n="map.help_list">📋 List — shows all markers</p>
+                <p data-i18n="map.help_general">📖 General — opens a panel to edit general information about the image</p>
                 <hr>
-                <h4>🖱️ Управление изображением</h4>
-                <p><strong>Колесико мыши</strong> - масштабирование</p>
-                <p><strong>Зажмите и двигайте</strong> - перемещение по изображению</p>
-                <p><strong>Кнопки масштаба</strong> - приближение/отдаление/сброс</p>
+                <h4 data-i18n="map.help_image_title">🖱️ Image controls</h4>
+                <p data-i18n="map.help_wheel">Mouse wheel — zoom</p>
+                <p data-i18n="map.help_drag">Click and drag — pan the image</p>
+                <p data-i18n="map.help_zoom_buttons">Zoom buttons — zoom in / out / reset</p>
                 <hr>
-                <h4>📁 Работа с файлами</h4>
-                <p><strong>Загрузить изображение</strong> - загружает изображение по прямой ссылке для создания заметок на нем</p>
-                <p><strong>Сохранить в файл</strong> - сохраняет изображение и все маркеры в один файл</p>
-                <p><strong>Загрузить из файла</strong> - загружает ранее сохраненный проект</p>
-                <p><strong>Экспорт маркеров</strong> - сохраняет только маркеры в JSON формате</p>
-                <p><strong>Импорт маркеров</strong> - загружает маркеры из JSON файла поверх изображения</p>
+                <h4 data-i18n="map.help_files_title">📁 Working with files</h4>
+                <p data-i18n="map.help_upload_file">Upload image — pick a file from your device, it is stored on the server</p>
+                <p data-i18n="map.help_upload_url">Or insert an image by URL — it stays at the source you provide and is shown in original quality, without compression</p>
+                <p data-i18n="map.help_upload_limit">Uploaded files have a total storage limit of 50 MB per account — that's why linking by URL helps save space</p>
                 <hr>
-                <h4>💾 Сохранение данных</h4>
-                <p>Данные автоматически сохраняются в localStorage браузера</p>
-                <p>Используйте "Сохранить в файл" для переноса между компьютерами</p>
+                <h4 data-i18n="map.help_storage_title">💾 Data storage</h4>
+                <p data-i18n="map.help_storage_server">All data is saved on the server — nothing is stored only in the browser</p>
+                <p data-i18n="map.help_storage_anywhere">Sign in from any device and your notes, markers and images will be there</p>
             </div>
         </div>
     </div>
 
     <div class="image-upload-modal hidden" id="imageUploadModal">
-        <!-- Панель редактирования ссылки на изображение -->
         <div id="imageSourceContent" class="image-upload-content">
             <div class="view-modal-header">
-                <h3 id="imageSourceTitle">Фоновое изображение</h3>
+                <h3 id="imageSourceTitle" data-i18n="map.image_source_title">Background image</h3>
                 <div class="view-modal-controls">
-                    <button id="closeImageSource" class="view-modal-btn" title="Закрыть">✖</button>
+                    <button id="closeImageSource" class="view-modal-btn"
+                            data-i18n-title="map.close" title="Close">✖</button>
                 </div>
             </div>
             <div class="view-modal-body">
-                <p>Вставьте ПРЯМУЮ ссылку на изображение.</p>
+                <p data-i18n="map.image_source_hint">Paste a DIRECT image URL.</p>
                 <div class="chat-input-area">
-                    <textarea id="imageSourceInput" placeholder="Вставьте ссылку на изображение..." class="chat-input" rows="1"></textarea>
-                    <button id="imageSourceSaveBtn" class="view-modal-btn primary">Загрузить</button>
+                    <textarea id="imageSourceInput"
+                              data-i18n-placeholder="map.image_source_placeholder"
+                              placeholder="Paste the image URL..." class="chat-input" rows="1"></textarea>
+                    <button id="imageSourceSaveBtn" class="view-modal-btn primary" data-i18n="map.image_source_load">Load</button>
                 </div>
             </div>
         </div>
@@ -307,76 +325,75 @@
 
     <!-- Плавающий тулбар форматирования -->
     <div id="formatToolbar" class="format-toolbar hidden">
-        <button class="format-btn" data-format="bold" title="Жирный (Ctrl+B)"><b>B</b></button>
-        <button class="format-btn" data-format="italic" title="Курсив (Ctrl+I)"><i>I</i></button>
-        <button class="format-btn" data-format="underline" title="Подчёркнутый (Ctrl+U)"><u>U</u></button>
+        <button class="format-btn" data-format="bold" data-i18n-title="map.format_bold" title="Bold (Ctrl+B)"><b>B</b></button>
+        <button class="format-btn" data-format="italic" data-i18n-title="map.format_italic" title="Italic (Ctrl+I)"><i>I</i></button>
+        <button class="format-btn" data-format="underline" data-i18n-title="map.format_underline" title="Underline (Ctrl+U)"><u>U</u></button>
         <span class="format-sep"></span>
-        <button class="format-btn" data-format="link" title="Ссылка">🔗</button>
-        <button class="format-btn" data-format="image" title="Картинка по ссылке">🖼️</button>
+        <button class="format-btn" data-format="link" data-i18n-title="map.format_link" title="Link">🔗</button>
+        <button class="format-btn" data-format="image" data-i18n-title="map.format_image" title="Image by URL">🖼️</button>
         <span class="format-sep"></span>
-        <button class="format-btn" data-format="copy" title="Копировать">📋</button>
-        <button class="format-btn" data-format="cut" title="Вырезать">✂️</button>
-        <button class="format-btn" data-format="paste" title="Вставить">📥</button>
-        <button class="format-btn" data-format="clear" title="Очистить форматирование">⌫</button>
+        <button class="format-btn" data-format="copy" data-i18n-title="map.format_copy" title="Copy">📋</button>
+        <button class="format-btn" data-format="cut" data-i18n-title="map.format_cut" title="Cut">✂️</button>
+        <button class="format-btn" data-format="paste" data-i18n-title="map.format_paste" title="Paste">📥</button>
+        <button class="format-btn" data-format="clear" data-i18n-title="map.format_clear" title="Clear formatting">⌫</button>
     </div>
 
-    <!-- Мини-модалка для вставки ссылки/картинки -->
     <div id="linkDialog" class="link-dialog hidden">
         <div class="link-dialog-content">
-            <h4 id="linkDialogTitle">Вставить ссылку</h4>
-            <input type="text" id="linkDialogUrl" placeholder="https://..." />
-            <input type="text" id="linkDialogText" placeholder="Текст ссылки (необязательно)" />
+            <h4 id="linkDialogTitle" data-i18n="map.link_dialog_title">Insert link</h4>
+            <input type="text" id="linkDialogUrl" data-i18n-placeholder="map.link_dialog_url" placeholder="https://..." />
+            <input type="text" id="linkDialogText" data-i18n-placeholder="map.link_dialog_text" placeholder="Link text (optional)" />
             <div class="link-dialog-buttons">
-                <button id="linkDialogCancel">Отмена</button>
-                <button id="linkDialogOk" class="primary">Вставить</button>
+                <button id="linkDialogCancel" data-i18n="map.link_dialog_cancel">Cancel</button>
+                <button id="linkDialogOk" class="primary" data-i18n="map.link_dialog_ok">Insert</button>
             </div>
         </div>
     </div>
 
-    <!-- Диалог загрузки изображения (по ссылке или с устройства) -->
     <div id="imageUploadDialog" class="link-dialog hidden">
         <div class="link-dialog-content image-upload-dialog-content">
-            <h4>Вставить картинку</h4>
-
+            <h4 data-i18n="map.image_dialog_title">Insert image</h4>
             <div class="image-upload-tabs">
-                <button type="button" class="image-upload-tab active" data-tab="url">По ссылке</button>
-                <button type="button" class="image-upload-tab" data-tab="file">Загрузить</button>
+                <button type="button" class="image-upload-tab active" data-tab="url" data-i18n="map.image_tab_url">By URL</button>
+                <button type="button" class="image-upload-tab" data-tab="file" data-i18n="map.image_tab_file">Upload</button>
             </div>
-
-            <!-- Вкладка: по ссылке -->
             <div class="image-upload-pane" data-pane="url">
-                <input type="text" id="imageUploadUrl" placeholder="https://..." />
+                <input type="text" id="imageUploadUrl" data-i18n-placeholder="map.image_dialog_url_placeholder" placeholder="https://..." />
             </div>
-
-            <!-- Вкладка: загрузка файла -->
             <div class="image-upload-pane hidden" data-pane="file">
                 <input type="file" id="imageUploadFile" accept="image/png,image/jpeg,image/webp,image/avif" />
                 <div id="imageUploadPreviewWrap" class="image-upload-preview-wrap hidden">
-                    <img id="imageUploadPreview" alt="Превью" />
+                    <img id="imageUploadPreview" alt="Preview" />
                     <div id="imageUploadInfo" class="image-upload-info"></div>
                 </div>
             </div>
-
             <div id="imageUploadError" class="image-upload-error hidden"></div>
-
             <div class="link-dialog-buttons">
-                <button id="imageUploadCancel" type="button">Отмена</button>
-                <button id="imageUploadOk" type="button" class="primary" disabled>Вставить</button>
+                <button id="imageUploadCancel" type="button" data-i18n="map.link_dialog_cancel">Cancel</button>
+                <button id="imageUploadOk" type="button" class="primary" disabled data-i18n="map.image_dialog_ok">Insert</button>
             </div>
         </div>
     </div>
 
-    <!-- Скрытый input для загрузки файлов -->
     <input type="file" id="fileLoader" accept=".json, .markerapp" style="display: none;">
 
     <script src="./js/sockjs.min.js"></script>
     <script src="./js/stomp.min.js"></script>
 
     <script src="./js/config.js"></script>
+    <script src="./js/i18n.js"></script>
     <script src="./js/common.js"></script>
     <script src="./js/WsClient.js"></script>
     <script src="./js/image-compress.js"></script>
     <script src="./js/chat-view.js"></script>
-    <script src="./js/map.js"></script>
+    <script>
+        (async () => {
+            await initI18n();
+            // map.js ожидает, что i18n уже готов
+            const script = document.createElement('script');
+            script.src = './js/map.js';
+            document.body.appendChild(script);
+        })();
+    </script>
 </body>
 </html>

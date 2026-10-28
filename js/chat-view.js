@@ -14,17 +14,16 @@
  *       onEditDescription:  (text) => {},
  *   });
  *   view.open(entity);
+ * Зависит от глобальной функции t() из i18n.js.
  */
 class ChatView {
     constructor(rootEl, options = {}) {
         this.root = rootEl;
 
-        // Данные о пользователе
         this.currentUserId  = options.currentUserId ?? null;
         this.currentRole    = options.currentRole   ?? 'READ_ONLY';
         this.userIdToNick   = options.userIdToNick  ?? new Map();
 
-        // Колбэки
         this.onSendMessage       = options.onSendMessage       || (() => {});
         this.onUpdateText        = options.onUpdateText        || (() => {});
         this.onUpdateVisibility  = options.onUpdateVisibility  || (() => {});
@@ -117,6 +116,7 @@ class ChatView {
             this.closeBtn.addEventListener('click', () => this.close());
         }
         if (this.expandBtn) {
+            // i18n: title обновляется в _toggleSize()
             this.expandBtn.addEventListener('click', () => this._toggleSize());
         }
 
@@ -270,7 +270,8 @@ class ChatView {
     }
 
     setTitle(title) {
-        if (this.titleEl) this.titleEl.textContent = title || 'Заметки';
+        // i18n: fallback на локализованный заголовок
+        if (this.titleEl) this.titleEl.textContent = title || t('chat.default_title');
     }
 
     setReadOnly(readOnly) {
@@ -299,7 +300,8 @@ class ChatView {
         if (entity.description) this._appendDescription(entity.description);
         if (!entity.messages || entity.messages.length === 0) {
             if (!entity.description) {
-                this.chatMessages.innerHTML = '<div class="chat-empty">Нет заметок</div>';
+                // i18n
+                this.chatMessages.innerHTML = `<div class="chat-empty">${escapeHtml(t('chat.empty'))}</div>`;
             }
             return;
         }
@@ -380,7 +382,8 @@ class ChatView {
         if (el) el.remove();
         this.entity.messages = this.entity.messages.filter(m => m.id !== messageId);
         if (this.chatMessages.children.length === 0) {
-            this.chatMessages.innerHTML = '<div class="chat-empty">Нет заметок</div>';
+            // i18n
+            this.chatMessages.innerHTML = `<div class="chat-empty">${escapeHtml(t('chat.empty'))}</div>`;
         }
     }
 
@@ -480,20 +483,22 @@ class ChatView {
         this.messageMenu.style.top  = y + 'px';
         this.messageMenu.classList.remove('hidden');
 
+        // i18n: все тексты меню
         const items = [
-            { icon: '✏️', text: 'Редактировать', action: () => this._editMessage(msg.id, markerId) },
+            { icon: '✏️', text: t('chat.menu_edit'),   action: () => this._editMessage(msg.id, markerId) },
             {
                 icon: msg.visibility ? '🚫' : '👁️',
-                text: msg.visibility ? 'Скрыть от участников' : 'Сделать видимым',
+                text: msg.visibility ? t('chat.menu_hide') : t('chat.menu_show'),
                 action: () => this.onUpdateVisibility(msg.id, !msg.visibility),
             },
-            { icon: '🗑️', text: 'Удалить', action: () => this.onDeleteMessage(msg.id) },
+            { icon: '🗑️', text: t('chat.menu_delete'), action: () => this.onDeleteMessage(msg.id) },
         ];
 
         items.forEach(item => {
             const el = document.createElement('div');
             el.className = 'context-menu-item';
-            el.innerHTML = `<span>${item.icon || ''}</span> ${item.text}`;
+            // escapeHtml для text — на случай, если в будущем в переводах окажется разметка
+            el.innerHTML = `<span>${item.icon || ''}</span> ${escapeHtml(item.text)}`;
             el.addEventListener('click', (e) => {
                 e.stopPropagation();
                 item.action();
@@ -531,12 +536,14 @@ class ChatView {
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'message-edit-cancel';
         cancelBtn.textContent = '✖';
-        cancelBtn.title = 'Отменить редактирование';
+        // i18n
+        cancelBtn.title = t('chat.edit_cancel_title');
 
         const saveBtn = document.createElement('button');
         saveBtn.className = 'message-edit-save';
         saveBtn.textContent = '✔';
-        saveBtn.title = 'Сохранить изменения';
+        // i18n
+        saveBtn.title = t('chat.edit_save_title');
 
         const prevText = textSpan.innerHTML;
         textSpan.contentEditable = 'true';
@@ -594,9 +601,10 @@ class ChatView {
         this.visChatBtn.className = this.newMessageVisibility
             ? 'visible-message-btn'
             : 'invisible-message-btn';
+        // i18n
         this.visChatBtn.title = this.newMessageVisibility
-            ? 'Заметка будет видна всем'
-            : 'Только вы будете видеть заметку';
+            ? t('chat.visibility_all_title')
+            : t('chat.visibility_me_title');
     }
 
     /* ================== Форматирование ================== */
@@ -689,7 +697,10 @@ class ChatView {
             this._savedRange = null;
         }
         this._linkDialogMode = mode;
-        this.linkDialogTitle.textContent = mode === 'link' ? 'Вставить ссылку' : 'Вставить картинку';
+        // i18n
+        this.linkDialogTitle.textContent = mode === 'link'
+            ? t('chat.link_dialog_title')
+            : t('chat.image_dialog_title');
         this.linkDialogUrl.value  = '';
         this.linkDialogText.value = selectedText;
         this.linkDialogText.style.display = mode === 'link' ? 'block' : 'none';
@@ -800,7 +811,8 @@ class ChatView {
             enabled = !!this._imageUploadFile;
         }
         this.imageDialogOk.disabled = !enabled;
-        this.imageDialogOk.textContent = 'Вставить';
+        // i18n
+        this.imageDialogOk.textContent = t('chat.image_dialog_ok');
     }
 
     async _handleImageFileSelected(file) {
@@ -820,7 +832,8 @@ class ChatView {
         }
 
         this.imageDialogOk.disabled = true;
-        this.imageDialogInfo.textContent = 'Обработка изображения...';
+        // i18n
+        this.imageDialogInfo.textContent = t('chat.image_processing');
         this.imageDialogPreviewWrap.classList.remove('hidden');
 
         try {
@@ -835,18 +848,25 @@ class ChatView {
                     const reduction = ((file.size - compressed.size) / file.size * 100).toFixed(1);
                     const orig = (file.size / (1024 * 1024)).toFixed(2);
                     const comp = (compressed.size / (1024 * 1024)).toFixed(2);
-                    this.imageDialogInfo.textContent =
-                        `Сжато: ${orig} МБ → ${comp} МБ (−${reduction}%)`;
+                    // i18n
+                    this.imageDialogInfo.textContent = t('chat.image_compressed', {
+                        from: orig,
+                        to: comp,
+                        percent: reduction
+                    });
                 } else {
-                    this.imageDialogInfo.textContent =
-                        `${(compressed.size / (1024 * 1024)).toFixed(2)} МБ`;
+                    // i18n
+                    this.imageDialogInfo.textContent = t('chat.image_size', {
+                        size: (compressed.size / (1024 * 1024)).toFixed(2)
+                    });
                 }
                 this._updateImageOkState();
             };
             reader.readAsDataURL(compressed);
         } catch (err) {
             console.error(err);
-            this._showImageError('Не удалось обработать файл. Попробуйте JPG/WEBP/AVIF');
+            // i18n
+            this._showImageError(t('chat.image_process_failed'));
             this.imageDialogFile.value = '';
             this._imageUploadFile = null;
             this.imageDialogPreviewWrap.classList.add('hidden');
@@ -883,7 +903,8 @@ class ChatView {
         this._imageUploadBusy = true;
         this.imageDialogOk.disabled = true;
         this.imageDialogCancel.disabled = true;
-        this.imageDialogOk.textContent = 'Загрузка...';
+        // i18n
+        this.imageDialogOk.textContent = t('chat.image_dialog_uploading');
 
         try {
             const formData = new FormData();
@@ -895,8 +916,8 @@ class ChatView {
             });
 
             if (!response.ok) {
-                // Сервер может вернуть текст ошибки (NotImageUploadedException)
-                let msg = 'Ошибка загрузки изображения';
+                // i18n: дефолтная ошибка загрузки
+                let msg = t('chat.image_upload_failed');
                 try {
                     const text = await response.text();
                     if (text) msg = text;
@@ -904,18 +925,18 @@ class ChatView {
                 throw new Error(msg);
             }
 
-            // Сервер возвращает plain text — URL картинки
             const raw = await response.text();
             const imageUrl = (raw || '').trim();
             if (!imageUrl) {
-                throw new Error('Сервер не вернул URL изображения');
+                // i18n
+                throw new Error(t('chat.image_server_no_url'));
             }
 
             const finalUrl = URL + imageUrl;
 
-            // Проверка, что получился валидный http(s) URL
             if (!/^https?:\/\//i.test(finalUrl)) {
-                throw new Error('Сервер вернул некорректный URL: ' + imageUrl);
+                // i18n
+                throw new Error(t('chat.image_server_bad_url', { url: imageUrl }));
             }
 
             this._insertImageAtSavedRange(finalUrl);
@@ -923,11 +944,15 @@ class ChatView {
             this._closeImageDialog();
         } catch (err) {
             console.error(err);
-            this._showImageError('Ошибка загрузки: ' + (err.message || 'неизвестно'));
+            // i18n
+            this._showImageError(t('chat.image_upload_failed_details', {
+                message: err.message || t('chat.image_unknown_error')
+            }));
         } finally {
             this._imageUploadBusy = false;
             this.imageDialogCancel.disabled = false;
-            this.imageDialogOk.textContent = 'Вставить';
+            // i18n
+            this.imageDialogOk.textContent = t('chat.image_dialog_ok');
             this._updateImageOkState();
         }
     }
@@ -958,7 +983,6 @@ class ChatView {
                 if (range.startContainer.isConnected) {
                     const insertRange = range.cloneRange();
                     insertRange.collapse(false);
-
                     insertRange.insertNode(img);
 
                     // Ставим курсор после картинки, чтобы можно было продолжить печатать
@@ -975,7 +999,7 @@ class ChatView {
                     inserted = true;
                 }
             } catch (e) {
-                console.warn('Не удалось вставить в сохранённый range:', e);
+                console.warn('Failed to insert at saved range:', e);
             }
         }
 
@@ -1105,7 +1129,12 @@ class ChatView {
     _toggleSize() {
         this.root.classList.toggle('expanded');
         if (this.expandBtn) {
-            this.expandBtn.textContent = this.root.classList.contains('expanded') ? '-' : '⤢';
+            const expanded = this.root.classList.contains('expanded');
+            this.expandBtn.textContent = expanded ? '-' : '⤢';
+            // i18n: title
+            this.expandBtn.title = expanded
+                ? t('chat.collapse_title')
+                : t('chat.expand_title');
         }
     }
 }

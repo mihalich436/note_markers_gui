@@ -9,44 +9,36 @@ class NotesApp {
         const urlParams = new URLSearchParams(window.location.search);
         this.noteId     = urlParams.get('noteId');
         this.shareToken = urlParams.get('share');
-        this.projectId  = urlParams.get('projectId');   // может прийти в URL,
-                                                        // иначе подтянется из loadNote
+        this.projectId  = urlParams.get('projectId');
 
-        // Модель
         this.note = {
             id: this.noteId,
-            title: 'Заметка',
+            title: t('note.default_title'),
             description: '',
             messages: [],
         };
 
-        // Пользователь
         this.currentUserId = null;
         this.currentRole   = null;
         this.userIdToNick  = new Map();
 
-        // View
         this.chatView = null;
 
-        // DOM-ссылки, заполняются в init()
         this.notesList          = null;
         this.notesSidebar       = null;
         this.notesSidebarToggle = null;
         this.notesSidebarOverlay= null;
         this.noteTitleTop       = null;
 
-        // WS
         this.wsClient = new WsClient(getToken(), this.shareToken, 'note', this.noteId);
         this.wsClient.onMessage(this.handleWsMessage.bind(this));
 
         this.init();
     }
 
-    /* ==================== init ==================== */
-
     init() {
         this.chatView = new ChatView(document.getElementById('viewModalContent'), {
-            currentUserId: null,        // заполним после loadNote
+            currentUserId: null,
             currentRole:   null,
             userIdToNick:  new Map(),
 
@@ -76,15 +68,14 @@ class NotesApp {
             },
         });
 
-        // Заголовок страницы — в шапке navbar, а не внутри ChatView
         this.noteTitleTop = document.getElementById('noteTitleTop');
         this.chatView.setTitle = (title) => {
-            const t = title || 'Заметка';
-            if (this.noteTitleTop) this.noteTitleTop.textContent = t;
-            document.title = `${t} — The Lazy DM's Notes`;
+            const defaultTitle = t('note.default_title');
+            const ttl = title || defaultTitle;
+            if (this.noteTitleTop) this.noteTitleTop.textContent = ttl;
+            document.title = `${ttl}${t('note.title_suffix')}`;
         };
 
-        // Сайдбар со списком заметок проекта
         this.notesList           = document.getElementById('notesList');
         this.notesSidebar        = document.getElementById('notesSidebar');
         this.notesSidebarToggle  = document.getElementById('notesSidebarToggle');
@@ -92,28 +83,25 @@ class NotesApp {
 
         this.initSidebar();
 
-        // Показываем пустой каркас сразу, чтобы не ждать сеть
         this.chatView.open({
             id: this.noteId,
-            title: 'Заметка',
+            title: t('note.default_title'),
             description: '',
             messages: [],
         });
-        this.chatView.setTitle('Заметка');
+        this.chatView.setTitle(t('note.default_title'));
 
         this.loadNote().then(() => {
-            // Пробрасываем в view актуальные данные о пользователе
             this.chatView.currentUserId = this.currentUserId;
             this.chatView.currentRole   = this.currentRole;
             this.chatView.userIdToNick  = this.userIdToNick;
 
-            this.chatView.setTitle(this.note.title || 'Заметка');
+            this.chatView.setTitle(this.note.title || t('note.default_title'));
             this.chatView.setReadOnly(this.currentRole === 'READ_ONLY');
             this.chatView.setShowInputArea(this.currentRole !== 'READ_ONLY');
 
             this.renderView();
 
-            // Список заметок — только когда знаем projectId
             if (this.projectId) {
                 this.loadNotesList();
             }
@@ -122,15 +110,13 @@ class NotesApp {
         });
     }
 
-    /* ==================== загрузка заметки ==================== */
-
     async loadNote() {
         try {
             const url = `/notes/${this.noteId}${this.shareToken ? `?share=${this.shareToken}` : ''}`;
             const response = await apiRequest(url);
 
             if (!response.ok) {
-                this.showNotification('Ошибка загрузки заметки', 'error');
+                this.showNotification(t('note.error_load'), 'error');
                 return;
             }
             const data = await response.json();
@@ -145,12 +131,11 @@ class NotesApp {
 
             this.note = {
                 id:          note.id ?? this.noteId,
-                title:       note.title || 'Заметка',
+                title:       note.title || t('note.default_title'),
                 description: note.description || '',
                 messages:    note.messages || [],
             };
 
-            // Если projectId не пришёл в URL — берём из ответа
             if (!this.projectId && note.projectId != null) {
                 this.projectId = note.projectId;
             }
@@ -163,17 +148,10 @@ class NotesApp {
             }
         } catch (e) {
             console.error(e);
-            this.showNotification('Ошибка соединения', 'error');
+            this.showNotification(t('note.error_connection'), 'error');
         }
     }
 
-    /* ==================== рендер заметки ==================== */
-
-    /**
-     * Готовит view-model (что должен отрисовать ChatView)
-     * и передаёт его в open(). View не знает про приватность —
-     * фильтрует контроллер.
-     */
     renderView() {
         const visible = (this.note.messages || []).filter(m => this._canShowMessage(m));
         const viewModel = {
@@ -191,7 +169,7 @@ class NotesApp {
         return msg.userId === this.currentUserId;
     }
 
-    /* ==================== список заметок проекта ==================== */
+    /* ==================== список заметок ==================== */
 
     initSidebar() {
         if (!this.notesSidebarToggle || !this.notesSidebar) return;
@@ -211,11 +189,11 @@ class NotesApp {
 
     async loadNotesList() {
         if (!this.notesList) return;
-        this.notesList.innerHTML = '<div class="notes-list-loading">Загрузка...</div>';
+        this.notesList.innerHTML = `<div class="notes-list-loading">${escapeHtml(t('note.list_loading'))}</div>`;
         try {
             const response = await apiRequest(`/projects/${this.projectId}/notes${this.shareToken ? `?share=${this.shareToken}` : ''}`);
             if (!response.ok) {
-                this.notesList.innerHTML = '<div class="notes-list-empty">Не удалось загрузить список</div>';
+                this.notesList.innerHTML = `<div class="notes-list-empty">${escapeHtml(t('note.list_error'))}</div>`;
                 return;
             }
             const data = await response.json();
@@ -223,13 +201,13 @@ class NotesApp {
             this.renderNotesList(notes);
         } catch (e) {
             console.error(e);
-            this.notesList.innerHTML = '<div class="notes-list-empty">Ошибка соединения</div>';
+            this.notesList.innerHTML = `<div class="notes-list-empty">${escapeHtml(t('note.error_connection'))}</div>`;
         }
     }
 
     renderNotesList(notes) {
         if (!notes.length) {
-            this.notesList.innerHTML = '<div class="notes-list-empty">Нет заметок</div>';
+            this.notesList.innerHTML = `<div class="notes-list-empty">${escapeHtml(t('note.list_empty'))}</div>`;
             return;
         }
 
@@ -242,7 +220,7 @@ class NotesApp {
 
             const title = document.createElement('div');
             title.className = 'note-list-item-title';
-            title.textContent = note.title || 'Без названия';
+            title.textContent = note.title || t('note.no_title');
 
             const preview = document.createElement('div');
             preview.className = 'note-list-item-preview';
@@ -261,7 +239,6 @@ class NotesApp {
                     this.closeSidebarOnMobile();
                     return;
                 }
-                // Каждая заметка — отдельная страница со своим WS-каналом
                 const params = new URLSearchParams();
                 params.set('noteId', note.id);
                 if (this.shareToken) params.set('share', this.shareToken);
@@ -293,12 +270,10 @@ class NotesApp {
     onMessageAdd(msg) {
         if (!msg || String(msg.noteId) !== String(this.noteId)) return;
 
-        // 1. Всегда пишем в модель
         if (!this.note.messages) this.note.messages = [];
         if (msg.id && this.note.messages.some(m => m.id === msg.id)) return;
         this.note.messages.push(msg);
 
-        // 2. Рендерим только если пользователь может видеть сообщение
         if (this._canShowMessage(msg)) {
             this.chatView.appendMessage(msg);
         }
@@ -307,13 +282,10 @@ class NotesApp {
     onMessageUpdate(msg) {
         if (!msg || String(msg.noteId) !== String(this.noteId)) return;
 
-        // 1. Обновляем модель
         if (!this.note.messages) this.note.messages = [];
         const idx = this.note.messages.findIndex(m => m.id === msg.id);
         if (idx !== -1) this.note.messages[idx] = msg;
 
-        // 2. Пробуем обновить DOM.
-        //    Если сообщения в DOM нет, а оно стало видимым — дорисуем.
         const updatedInDom = this.chatView.updateMessage(msg);
         if (!updatedInDom && this._canShowMessage(msg)) {
             this.chatView.appendMessage(msg);
@@ -323,16 +295,12 @@ class NotesApp {
     onMessageDelete(data) {
         if (!data || String(data.parentId) !== String(this.noteId)) return;
 
-        // 1. Убираем из модели
         if (this.note.messages) {
             this.note.messages = this.note.messages.filter(m => m.id !== data.messageId);
         }
 
-        // 2. Убираем из DOM
         this.chatView.removeMessage(data.messageId);
     }
-
-    /* ==================== утилиты ==================== */
 
     showNotification(message, type = 'success') {
         const n = document.createElement('div');
@@ -346,6 +314,4 @@ class NotesApp {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    window.notesApp = new NotesApp();
-});
+window.notesApp = new NotesApp();

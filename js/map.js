@@ -55,6 +55,11 @@ class MarkerApp {
         this.init();
     }
 
+    // Хелпер: дефолтное имя маркера с локализованным префиксом
+    markerDefaultTitle(id) {
+        return t('map.default_marker_title', { id: id.toString().slice(-4) });
+    }
+
     init() {
         // DOM элементы - основные
         this.mainImage = document.getElementById('mainImage');
@@ -169,7 +174,7 @@ class MarkerApp {
         this.generalInfoBtn.addEventListener('click', this.toggleGeneralInfoPanel.bind(this));
         this.closeHelpBtn.addEventListener('click', this.closeHelp.bind(this));
 
-        this.loadImageBtn.addEventListener('click', () => this.showImageUploadForm());
+        // this.loadImageBtn.addEventListener('click', () => this.showImageUploadForm());
         this.fileLoader.addEventListener('change', this.handleFileLoad.bind(this));
 
         // Закрытие меню при клике вне
@@ -194,7 +199,7 @@ class MarkerApp {
                     this.movingMarkerId = null;
                     this.copyMarker = false;
                     this.imageContainer.style.cursor = 'default';
-                    this.showTooltip('Перемещение отменено', 1000);
+                    this.showTooltip(t('map.notification_move_cancelled'), 1000);
                 }
             }
         });
@@ -453,7 +458,7 @@ class MarkerApp {
                     this.drawMarker(marker, false, true);
                 }
                 this.chatView.open(this.generalInfo);
-                this.chatView.setTitle('Общая информация');
+                this.chatView.setTitle(t('map.general_info_title'));
                 this.chatView.setShowInputArea(false);
                 document.getElementById('viewModalContent').classList.remove('hidden');
             }
@@ -472,7 +477,7 @@ class MarkerApp {
 
             this.chatView.open(viewModel);
 
-            this.chatView.setTitle(marker.title || 'Просмотр маркера');
+            this.chatView.setTitle(marker.title || this.markerDefaultTitle(marker.id));
             this.chatView.setReadOnly(this.currentRole === 'READ_ONLY');
             this.chatView.setShowInputArea(this.currentRole !== 'READ_ONLY');
             document.getElementById('viewModalContent').classList.remove('hidden');
@@ -484,7 +489,7 @@ class MarkerApp {
         else document.getElementById('viewModalContent').classList.add('hidden');
     }
 
-    /* ================= Показ подсказок и уведомлений ================= */
+    /* ================= Уведомления ================= */
 
     showTooltip(text, duration = 1500) {
         this.tooltip.textContent = text;
@@ -537,10 +542,10 @@ class MarkerApp {
 
             if (marker.visibility || this.currentRole !== 'ADMIN') {
                 this.changeMarkerVisibility.textContent = '👁️';
-                this.changeMarkerVisibility.title = 'Маркер будет виден всем';
+                this.changeMarkerVisibility.title = t('map.notification_visibility_all');
             } else {
                 this.changeMarkerVisibility.textContent = '🚫';
-                this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
+                this.changeMarkerVisibility.title = t('map.notification_visibility_me');
             }
             if (marker.color) this.currentMarkerColor.value = marker.color;
             if (marker.shape) this.currentMarkerShape.value = marker.shape;
@@ -574,33 +579,33 @@ class MarkerApp {
                 this.showContextMenu(e.clientX, e.clientY, [
                     {
                         icon: '✏️',
-                        text: 'Редактировать',
+                        text: t('common.edit'),
                         action: () => {
                             this.openEditMarkerViewImpl(markerId);
                         }
                     },
                     {
                         icon: '🖱️',
-                        text: 'Двигать',
+                        text: t('map.context_move'),
                         action: () => {
                             this.movingMarkerId = markerId;
                             this.imageContainer.style.cursor = 'crosshair';
-                            this.showTooltip('Кликните на новое место для маркера', 2000);
+                            this.showTooltip(t('map.notification_click_new_place'), 2000);
                         }
                     },
                     {
                         icon: '➕',
-                        text: 'Копировать',
+                        text: t('map.context_copy'),
                         action: () => {
                             this.movingMarkerId = markerId;
                             this.copyMarker = true;
                             this.imageContainer.style.cursor = 'crosshair';
-                            this.showTooltip('Кликните на новое место для маркера', 2000);
+                            this.showTooltip(t('map.notification_click_new_place'), 2000);
                         }
                     },
                     {
                         icon: '🗑️',
-                        text: 'Удалить',
+                        text: t('common.delete'),
                         action: () => {
                             this.deleteMarker(markerId, e);
                         }
@@ -612,7 +617,7 @@ class MarkerApp {
                 this.showContextMenu(e.clientX, e.clientY, [
                     {
                         icon: '➕',
-                        text: 'Добавить',
+                        text: t('map.context_add'),
                         action: () => {
                             this.addMarkerAtPosition(e);
                         }
@@ -622,14 +627,14 @@ class MarkerApp {
                 this.showContextMenu(e.clientX, e.clientY, [
                     {
                         icon: '📤',
-                        text: 'Загрузить изображение',
+                        text: t('map.upload_image'),
                         action: () => {
                             this.showImageUploadForm();
                         }
                     },
                     {
                         icon: '📂',
-                        text: 'Загрузить из файла',
+                        text: t('map.context_load_file'),
                         action: () => {
                             this.fileLoader.click();
                         }
@@ -668,7 +673,7 @@ class MarkerApp {
     async loadImageByUrl() {
         const url = this.imageUrlInput.value.trim();
         if (!url) {
-            this.showNotification('Введите ссылку на изображение', 'error');
+            this.showNotification(t('map.image_source_empty'), 'error');
             return;
         }
         const img = new Image();
@@ -676,7 +681,7 @@ class MarkerApp {
             document.getElementById('mainImage').src = url;
         };
         img.onerror = function() {
-            this.showNotification('Не удалось загрузить изображение. Проверьте ссылку.', 'error');
+            this.showNotification(t('map.image_source_error'), 'error');
         };
         img.src = url;
     }
@@ -694,10 +699,10 @@ class MarkerApp {
                     this.resetZoom();
                     this.imagePosition = { x: 0, y: 0 };
                     this.updateImageTransform();
-                    this.showTooltip('Изображение загружено', 1500);
+                    this.showTooltip(t('map.image_source_loaded'), 1500);
                 };
                 if (this.markers && this.markers.length) {
-                    if (!confirm('Сохранить маркеры?')) {
+                    if (!confirm(t('map.confirm_save_markers'))) {
                         this.clearMarkers();
                     }
                 }
@@ -736,10 +741,10 @@ class MarkerApp {
 
             if (this.markerSettings.defaultVisibility || this.currentRole !== 'ADMIN') {
                 this.changeMarkerVisibility.textContent = '👁️';
-                this.changeMarkerVisibility.title = 'Маркер будет виден всем';
+                this.changeMarkerVisibility.title = t('map.notification_visibility_all');
             } else {
                 this.changeMarkerVisibility.textContent = '🚫';
-                this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
+                this.changeMarkerVisibility.title = t('map.notification_visibility_me');
             }
 
             this.currentMarkerColor.value = this.markerSettings.defaultColor;
@@ -753,13 +758,13 @@ class MarkerApp {
             this.updateButtonsState();
             this.renderMarkers();
 
-            this.showTooltip('Новый маркер', 1000);
+            this.showTooltip(t('map.notification_new_marker'), 1000);
         }
     }
 
     saveNote() {
         if (this.tempMarker) {
-            const title = this.markerTitle.value.trim() || `Маркер #${this.tempMarker.id.toString().slice(-4)}`;
+            const title = this.markerTitle.value.trim() || this.markerDefaultTitle(this.tempMarker.id);
             const note = this.noteText.value.trim();
             const description = this.descriptionText.value.trim();
 
@@ -885,7 +890,7 @@ class MarkerApp {
 
     deleteMarker(markerId, e) {
         if (e) e.stopPropagation();
-        if (confirm('Удалить маркер?')) {
+        if (confirm(t('map.confirm_delete_marker'))) {
             this.requestDeleteMarker(markerId);
         }
     }
@@ -894,7 +899,7 @@ class MarkerApp {
         if (!response || response.entityType !== 'marker' || response.action !== 'del') return;
         const markerId = response.object;
         this.deleteMarkerImpl(markerId);
-        this.showTooltip('Маркер удален', 1500);
+        this.showTooltip(t('map.notification_marker_deleted'), 1500);
     }
 
     async requestMoveMarker(marker, x, y) {
@@ -935,7 +940,7 @@ class MarkerApp {
         marker.isUpdated = true;
 
         this.renderMarkers();
-        this.showTooltip('Маркер перемещен', 1500);
+        this.showTooltip(t('map.notification_marker_moved'), 1500);
     }
 
     responseSaveMarker(response) {
@@ -957,16 +962,16 @@ class MarkerApp {
         this.editPanel.classList.add('hidden');
         this.renderMarkers();
 
-        this.showTooltip('Добавлен маркер', 1500);
+        this.showTooltip(t('map.notification_marker_added'), 1500);
     }
 
     async requestSaveMarker(marker) {
         try {
             if (!this.wsClient.sendMessage(`/map/${this.mapId}/markers`, this.getMarkerDTO(marker))) {
-                this.showTooltip('Ошибка обновления маркера', 1500);
+                this.showTooltip(t('map.notification_error_update'), 1500);
             }
         } catch (error) {
-            this.showTooltip('Ошибка сохранения маркера', 1500);
+            this.showTooltip(t('map.notification_error_save'), 1500);
         }
     }
 
@@ -1008,7 +1013,7 @@ class MarkerApp {
             markerRes.isUpdated = true;
             this.markers.push(markerRes);
             this.renderMarkers();
-            this.showTooltip('Появился маркер', 1500);
+            this.showTooltip(t('map.notification_marker_appeared'), 1500);
         }
 
         this.selectedMarkerId = null;
@@ -1023,17 +1028,17 @@ class MarkerApp {
         this.editPanel.classList.add('hidden');
         this.renderMarkers();
 
-        this.showTooltip('Маркер обновлен', 1500);
+        this.showTooltip(t('map.notification_marker_updated'), 1500);
     }
 
     toggleMarkerVisibility() {
         if (this.currentRole !== 'ADMIN') return;
         if (this.changeMarkerVisibility.textContent === '🚫') {
             this.changeMarkerVisibility.textContent = '👁️';
-            this.changeMarkerVisibility.title = 'Маркер будет виден всем';
+            this.changeMarkerVisibility.title = t('map.notification_visibility_all');
         } else {
             this.changeMarkerVisibility.textContent = '🚫';
-            this.changeMarkerVisibility.title = 'Маркер будет виден только вам';
+            this.changeMarkerVisibility.title = t('map.notification_visibility_me');
         }
     }
 
@@ -1043,9 +1048,9 @@ class MarkerApp {
         this.cancelNoteBtn.disabled = !this.isAddingNote;
 
         if (this.selectedMarkerId && this.markers.find(m => m.id === this.selectedMarkerId)) {
-            this.saveNoteBtn.textContent = '✏️ Обновить';
+            this.saveNoteBtn.textContent = t('map.update_button');
         } else {
-            this.saveNoteBtn.textContent = '💾 Сохранить';
+            this.saveNoteBtn.textContent = t('map.save_button');
         }
     }
 
@@ -1139,7 +1144,7 @@ class MarkerApp {
                 if (marker.title) {
                     const titleSpan = document.createElement('span');
                     titleSpan.className = 'marker-label-title';
-                    titleSpan.textContent = marker.title || `Маркер #${marker.id.toString().slice(-4)}`;
+                    titleSpan.textContent = marker.title || this.markerDefaultTitle(marker.id);
                     titleSpan.style.color = marker.color || this.markerSettings.defaultColor;
                     titleSpan.style.fontWeight = 'bold';
                     labelDiv.appendChild(titleSpan);
@@ -1179,7 +1184,7 @@ class MarkerApp {
             if (marker.title) {
                 const titleSpan = document.createElement('span');
                 titleSpan.className = 'marker-label-title';
-                titleSpan.textContent = marker.title || `Маркер #${marker.id.toString().slice(-4)}`;
+                titleSpan.textContent = marker.title || this.markerDefaultTitle(marker.id);
                 titleSpan.style.color = marker.color || this.markerSettings.defaultColor;
                 titleSpan.style.fontWeight = 'bold';
                 labelDiv.appendChild(titleSpan);
@@ -1202,7 +1207,7 @@ class MarkerApp {
 
     renderMarkersList() {
         if (this.markers.length === 0) {
-            this.markersList.innerHTML = '<p style="color: #868e96; text-align: center;">Нет маркеров</p>';
+            this.markersList.innerHTML = `<p style="color: #868e96; text-align: center;">${escapeHtml(t('map.no_markers'))}</p>`;
             return;
         }
 
@@ -1210,14 +1215,14 @@ class MarkerApp {
             <div class="marker-item ${marker.id === this.selectedMarkerId ? 'selected-item' : ''}" 
                  onclick="app.selectMarker(${marker.id})">
                 <span class="delete-marker" onclick="app.deleteMarker(${marker.id}, event)">✖</span>
-                <div class="marker-title">${marker.title || `Маркер #${marker.id.toString().slice(-4)}`}</div>
-                ${marker.note ? `<div class="marker-note-preview">📝 ${marker.note}</div>` : ''}
+                <div class="marker-title">${escapeHtml(marker.title || this.markerDefaultTitle(marker.id))}</div>
+                ${marker.note ? `<div class="marker-note-preview">📝 ${escapeHtml(marker.note)}</div>` : ''}
                 <div style="display: flex; gap: 5px; margin-top: 5px;">
                     <span style="display: inline-block; width: 12px; height: 12px; background: ${marker.color || '#ef4444'}; border-radius: 2px;"></span>
-                    <span style="font-size: 10px; color: #868e96;">${marker.shape || 'circle'}</span>
+                    <span style="font-size: 10px; color: #868e96;">${escapeHtml(marker.shape || 'circle')}</span>
                 </div>
                 <div class="marker-meta">
-                    <span>🕒 ${marker.updatedAt || marker.createdAt || ''}</span>
+                    <span>🕒 ${escapeHtml(marker.updatedAt || marker.createdAt || '')}</span>
                     <span>📍 ${Math.round(marker.x)}, ${Math.round(marker.y)}</span>
                 </div>
             </div>
@@ -1274,7 +1279,7 @@ class MarkerApp {
             this.renderMarkers(updateShowLabels);
 
             if (!this.showLabels && updateShowLabels) {
-                this.showTooltip('Подписи скрыты, наведите на маркер для просмотра', 1000);
+                this.showTooltip(t('map.notification_labels_hidden_zoom'), 1000);
             }
         }
     }
@@ -1472,7 +1477,7 @@ class MarkerApp {
                     this.renderMarkers(updateShowLabels);
 
                     if (!this.showLabels && updateShowLabels) {
-                        this.showTooltip('Подписи скрыты, коснитесь маркера для просмотра', 1000);
+                        this.showTooltip(t('map.notification_labels_hidden_touch'), 1000);
                     }
                 }
             }
@@ -1552,7 +1557,7 @@ class MarkerApp {
         this.updateImageTransform();
         this.renderMarkers(updateShowLabels);
 
-        this.showTooltip('Масштаб сброшен', 1500);
+        this.showTooltip(t('map.zoom_reset_done'), 1500);
     }
 
     countZoomLimits() {
@@ -1634,7 +1639,7 @@ class MarkerApp {
 
     saveToFile() {
         if (!this.mainImage.src || this.mainImage.src === '#' || !this.imageData) {
-            this.showNotification('Сначала загрузите изображение', 'error');
+            this.showNotification(t('map.notification_no_image_link'), 'error');
             return;
         }
 
@@ -1659,7 +1664,7 @@ class MarkerApp {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        this.showNotification('Проект сохранен в файл');
+        this.showNotification(t('map.notification_project_saved'));
         this.fileMenu.classList.add('hidden');
     }
 
@@ -1686,19 +1691,19 @@ class MarkerApp {
                         if (data.settings) this.markerSettings = data.settings;
                         this.updateImageTransform();
                         this.renderMarkers();
-                        this.showNotification('Проект успешно загружен');
+                        this.showNotification(t('map.notification_project_loaded'));
                     };
                 } else if (Array.isArray(data)) {
                     this.clearMarkers();
                     this.markers = data;
                     this.renderMarkers();
-                    this.showNotification('Маркеры импортированы');
+                    this.showNotification(t('map.notification_markers_imported'));
                 } else {
-                    throw new Error('Неизвестный формат файла');
+                    throw new Error('Unknown file format');
                 }
             } catch (error) {
-                console.error('Ошибка загрузки файла:', error);
-                this.showNotification('Ошибка загрузки файла', 'error');
+                console.error('File load error:', error);
+                this.showNotification(t('map.notification_file_error'), 'error');
             }
         };
         reader.readAsText(file);
@@ -1710,7 +1715,7 @@ class MarkerApp {
 
     exportMarkers() {
         if (this.markers.length === 0) {
-            this.showNotification('Нет маркеров для экспорта', 'error');
+            this.showNotification(t('map.notification_no_markers_export'), 'error');
             return;
         }
 
@@ -1724,12 +1729,12 @@ class MarkerApp {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        this.showNotification('Маркеры экспортированы');
+        this.showNotification(t('map.notification_markers_exported'));
         this.fileMenu.classList.add('hidden');
     }
 
     clearLocalStorage() {
-        if (confirm('Очистить все сохраненные данные? Это действие нельзя отменить.')) {
+        if (confirm(t('map.confirm_clear_storage'))) {
             localStorage.removeItem('markerApp');
             localStorage.removeItem('markerAppSettings');
             this.clearMarkers();
@@ -1738,7 +1743,7 @@ class MarkerApp {
             this.mainImage.style.display = 'none';
             this.countZoomLimits();
             this.renderMarkers();
-            this.showNotification('localStorage очищен');
+            this.showNotification(t('map.notification_storage_cleared'));
             this.fileMenu.classList.add('hidden');
 
             this.editPanel.classList.add('hidden');
@@ -1755,7 +1760,7 @@ class MarkerApp {
             try {
                 this.markerSettings = JSON.parse(saved);
             } catch (e) {
-                console.error('Ошибка загрузки настроек', e);
+                console.error('Error loading settings', e);
             }
         }
     }
@@ -1815,7 +1820,7 @@ class MarkerApp {
         }
 
         this.saveMarkerSettings();
-        this.showNotification('Настройки сохранены как default');
+        this.showNotification(t('map.settings_saved'));
     }
 
     resetMarkerSettingsToDefault() {
@@ -1829,7 +1834,7 @@ class MarkerApp {
         };
         this.saveMarkerSettings();
         this.loadSettingsToModal();
-        this.showNotification('Настройки сброшены');
+        this.showNotification(t('map.settings_reset'));
     }
 
     /* ================= Загрузка карты ================= */
@@ -1861,7 +1866,6 @@ class MarkerApp {
                     this.userIdToNick.set(Number(key), data.userIdToNick[key]);
                 });
 
-                // Создаём ChatView — теперь у нас есть userId/currentRole/userIdToNick
                 this.initChatView();
 
                 if (map.file && map.fileName) {
@@ -1870,7 +1874,7 @@ class MarkerApp {
                 if (map.imageUrl) {
                     const url = map.imageUrl;
                     if (!url) {
-                        this.showNotification('Нет ссылки на изображение', 'error');
+                        this.showNotification(t('map.notification_no_image_link'), 'error');
                         return;
                     }
                     const img = new Image();
@@ -1889,24 +1893,24 @@ class MarkerApp {
                             this.renderMarkers();
 
                             setTimeout(() => {
-                                this.showTooltip('Данные загружены', 1500);
+                                this.showTooltip(t('map.notification_data_loaded'), 1500);
                             }, 500);
                         };
                     };
 
                     img.onerror = () => {
-                        this.showNotification('Не удалось загрузить изображение. Проверьте ссылку.', 'error');
+                        this.showNotification(t('map.image_source_error'), 'error');
                     };
 
                     img.src = url;
                     this.mainImage.style.display = 'block';
                 }
             } else {
-                this.showNotification('Ошибка загрузки карты', 'error');
+                this.showNotification(t('map.notification_error_map_load'), 'error');
             }
         } catch (error) {
             console.log(error);
-            this.showNotification('Ошибка соединения с сервером', 'error');
+            this.showNotification(t('common.error_connection'), 'error');
         }
     }
 
@@ -1931,17 +1935,17 @@ class MarkerApp {
                         this.renderMarkers();
 
                         setTimeout(() => {
-                            this.showTooltip('Данные загружены', 1500);
+                            this.showTooltip(t('map.notification_data_loaded'), 1500);
                         }, 500);
                     };
                 }
             } catch (e) {
-                console.error('Ошибка загрузки из localStorage', e);
+                console.error('Error loading from localStorage', e);
             }
         }
     }
 }
 
-// Инициализация приложения
+// Инициализация после того, как i18n готов (map.js подключается динамически из map.html)
 const app = new MarkerApp();
 window.app = app;

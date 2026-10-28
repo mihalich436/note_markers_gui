@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Управление доступом - The Lazy DM's Notes</title>
+    <title>Access management - The Lazy DM's Notes</title>
     <link rel="stylesheet" href="./css/styles.css">
     <link rel="icon" href="./icons/yellow_dragon_sleep.ico" type="image/x-icon">
 </head>
@@ -11,80 +11,90 @@
     <div class="container">
         <div class="navbar">
             <div class="logo">
-                <img src="./icons/logo.png" alt="📝 " class="logo-img">
-                The Lazy DM's Notes
+                <img src="./icons/logo.png" alt="" class="logo-img">
+                <span data-i18n="app.name">The Lazy DM's Notes</span>
             </div>
-            <div class="user-info" onclick="toggleUserMenu()">
-                <div class="user-avatar">
-                    <span id="avatarLetter"></span>
-                </div>
-                <div id="userDropdownMenu" class="user-dropdown">
-                    <div class="user-dropdown-item">
-                        <div class="user-dropdown-username" id="userNameSpan"></div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div id="langSwitcher" class="lang-switcher" aria-label="Language"></div>
+                <div class="user-info" onclick="toggleUserMenu()">
+                    <div class="user-avatar">
+                        <span id="avatarLetter"></span>
                     </div>
-                    <div id="userDropdownActions"></div>
+                    <div id="userDropdownMenu" class="user-dropdown">
+                        <div class="user-dropdown-item">
+                            <div class="user-dropdown-username" id="userNameSpan"></div>
+                        </div>
+                        <div id="userDropdownActions"></div>
+                    </div>
                 </div>
             </div>
         </div>
-        
+
         <div class="card">
             <div style="display: flex; justify-content: start; align-items: center;">
-                <button onclick="window.location.href='./projects.html'" class="menu-trigger-btn">❮</button>
-                <h2 id="projectInfo"> Управление доступом</h2>
+                <button onclick="window.location.href='./projects.html'" class="menu-trigger-btn" aria-label="Back">❮</button>
+                <h2 id="projectInfo" data-i18n="share.title">Access management</h2>
             </div>
-            <!-- <div id="projectInfo" style="margin-bottom: 20px;"></div> -->
-            
-            <!-- Блок приглашения пользователя -->
+
             <div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                <h3 style="margin-bottom: 15px;">Пригласить пользователя</h3>
+                <h3 style="margin-bottom: 15px;" data-i18n="share.invite_title">Invite a user</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <input type="email" id="inviteEmail" placeholder="Email пользователя" style="flex: 1; min-width: 200px;">
-                    <input type="text" id="nickname" placeholder="Ник в проекте" title="Ник для обозначения пользователя в проекте" style="flex: 1; min-width: 100px;">
+                    <input type="email" id="inviteEmail"
+                           data-i18n-placeholder="share.email_placeholder"
+                           placeholder="User email"
+                           style="flex: 1; min-width: 200px;">
+                    <input type="text" id="nickname"
+                           data-i18n-placeholder="share.nickname_placeholder"
+                           data-i18n-title="share.nickname_title"
+                           placeholder="Nickname in project"
+                           style="flex: 1; min-width: 100px;">
                     <select id="roleSelect" style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; background: white;">
-                        <option value="READ_ONLY">📖 Только чтение</option>
-                        <option value="CHAT">💬 Только заметки</option>
-                        <option value="EDITOR">✏️ Редактирование</option>
-                        <option value="ADMIN">✨ Мастер</option>
+                        <option value="READ_ONLY" data-i18n="share.role_readonly">📖 Read only</option>
+                        <option value="CHAT" data-i18n="share.role_chat">💬 Notes only</option>
+                        <option value="EDITOR" data-i18n="share.role_editor">✏️ Edit</option>
+                        <option value="ADMIN" data-i18n="share.role_admin">✨ DM</option>
                     </select>
-                    <button onclick="addUser()" style="width: auto; background: #28a745;">Пригласить</button>
+                    <button onclick="addUser()" style="width: auto; background: #28a745;" data-i18n="share.invite_button">Invite</button>
                 </div>
                 <div id="inviteMessage" style="margin-top: 10px; font-size: 14px; color: #666;"></div>
             </div>
 
-            <!-- Блок ссылки-приглашения -->
             <div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                <h3 style="margin-bottom: 15px;">Доступ по ссылке</h3>
+                <h3 style="margin-bottom: 15px;" data-i18n="share.link_title">Share by link</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <input type="email" id="shareLink" placeholder="Создайте ссылку для быстрого доступа игроков к проекту" style="flex: 1; min-width: 200px; user-select: all;" readonly>
-                    <button id="createShareLinkBtn" onclick="createShareLink()" style="width: auto; background: #28a745;">Создать</button>
-                    <button id="revokeShareLinkBtn" onclick="revokeShareLink()" style="width: auto; background: #D64022; display: none;">Удалить</button>
+                    <input type="email" id="shareLink"
+                           data-i18n-placeholder="share.link_placeholder"
+                           placeholder="Create a link for quick access for players to the project"
+                           style="flex: 1; min-width: 200px; user-select: all;" readonly>
+                    <button id="createShareLinkBtn" onclick="createShareLink()" style="width: auto; background: #28a745;" data-i18n="share.create_link">Create</button>
+                    <button id="revokeShareLinkBtn" onclick="revokeShareLink()" style="width: auto; background: #D64022; display: none;" data-i18n="share.revoke_link">Revoke</button>
                 </div>
-                <div id="inviteMessage" style="margin-top: 10px; font-size: 14px; color: #666;"></div>
+                <div id="inviteMessageLink" style="margin-top: 10px; font-size: 14px; color: #666;"></div>
             </div>
-            
-            <!-- Список участников -->
-            <h3>👥 Участники проекта</h3>
+
+            <h3 data-i18n="share.members_title">👥 Project members</h3>
             <div style="overflow-x: auto;">
                 <table class="shared-users-table">
                     <thead>
                         <tr>
-                            <th>Пользователь</th>
-                            <th>Email</th>
-                            <th>Ник в проекте</th>
-                            <th>Роль</th>
-                            <th>Действия</th>
+                            <th data-i18n="share.col_user">User</th>
+                            <th data-i18n="share.col_email">Email</th>
+                            <th data-i18n="share.col_nickname">Nickname</th>
+                            <th data-i18n="share.col_role">Role</th>
+                            <th data-i18n="share.col_actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="usersList">
-                        <tr><td colspan="4" style="text-align: center;">Загрузка...</td></tr>
+                        <tr><td colspan="5" style="text-align: center;" data-i18n="share.loading_users">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
         <div class="system-message-container"></div>
     </div>
-    
+
     <script src="./js/config.js"></script>
+    <script src="./js/i18n.js"></script>
     <script src="./js/common.js"></script>
     <script src="./js/share.js"></script>
 </body>

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Проекты - The Lazy DM's Notes</title>
+    <title data-i18n="nav.projects">Projects</title>
     <link rel="stylesheet" href="./css/styles.css">
     <link rel="icon" href="./icons/yellow_dragon_sleep.ico" type="image/x-icon">
 </head>
@@ -11,59 +11,62 @@
     <div class="container">
         <div class="navbar">
             <div class="logo">
-                <img src="./icons/logo.png" alt="📝 " class="logo-img">
-                The Lazy DM's Notes
+                <img src="./icons/logo.png" alt="" class="logo-img">
+                <span data-i18n="app.name">The Lazy DM's Notes</span>
             </div>
-            <div class="user-info" onclick="toggleUserMenu()">
-                <div class="user-avatar">
-                    <span id="avatarLetter"></span>
-                </div>
-                <div id="userDropdownMenu" class="user-dropdown">
-                    <div class="user-dropdown-item">
-                        <div class="user-dropdown-username" id="userNameSpan"></div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div id="langSwitcher" class="lang-switcher" aria-label="Language"></div>
+                <div class="user-info" onclick="toggleUserMenu()">
+                    <div class="user-avatar">
+                        <span id="avatarLetter"></span>
                     </div>
-                    <div id="userDropdownActions"></div>
+                    <div id="userDropdownMenu" class="user-dropdown">
+                        <div class="user-dropdown-item">
+                            <div class="user-dropdown-username" id="userNameSpan"></div>
+                        </div>
+                        <div id="userDropdownActions"></div>
+                    </div>
                 </div>
             </div>
-            <div class="system-message-container"></div>
         </div>
-        
+
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2>Мои проекты</h2>
-                <!-- <button onclick="showCreateProjectModal()" class="add-button">+ Новый проект</button> -->
+                <h2 data-i18n="projects.title">My projects</h2>
             </div>
             <div id="projectsList" class="projects-grid">
-                <div style="text-align: center; grid-column: 1/-1;">Загрузка...</div>
+                <div style="text-align: center; grid-column: 1/-1;" data-i18n="common.loading">Loading...</div>
             </div>
         </div>
+        <div class="system-message-container"></div>
     </div>
-    
-    <!-- Модальное окно создания/редактирования проекта -->
+
     <div id="projectModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="projectModalTitle">Создать проект</h3>
+                <h3 id="projectModalTitle" data-i18n="projects.create_title">Create project</h3>
                 <button class="close-modal" onclick="closeProjectModal()">&times;</button>
             </div>
             <form id="projectForm">
                 <div class="form-group">
-                    <label>Название проекта</label>
+                    <label data-i18n="projects.title_label">Project title</label>
                     <input type="text" id="projectTitle" required>
                 </div>
                 <div class="form-group">
-                    <label>Описание</label>
+                    <label data-i18n="projects.description_label">Description</label>
                     <textarea id="projectDescription" rows="4"></textarea>
                 </div>
-                <button type="submit">Сохранить</button>
+                <button type="submit" data-i18n="common.save">Save</button>
             </form>
         </div>
     </div>
 
-    <!-- Плавающая кнопка создания проекта -->
-    <button id="addButton" class="fab" onclick="showCreateProjectModal()" aria-label="Создать проект">+</button>
-    
+    <button id="addButton" class="fab" onclick="showCreateProjectModal()" aria-label="Create">
+        +
+    </button>
+
     <script src="./js/config.js"></script>
+    <script src="./js/i18n.js"></script>
     <script src="./js/common.js"></script>
     <script src="./js/projects.js"></script>
 </body>

@@ -1,71 +1,84 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Регистрация - The Lazy DM's Notes</title>
+    <title>Sign up - The Lazy DM's Notes</title>
     <link rel="stylesheet" href="./css/styles.css">
     <link rel="icon" href="./icons/yellow_dragon_sleep.ico" type="image/x-icon">
 </head>
 <body>
     <div class="container">
         <div class="card">
-            <h1>📝 Регистрация</h1>
-            <p style="color: #666; margin-bottom: 30px;">Создайте аккаунт для работы с проектами</p>
-            
+            <h1 data-i18n="auth.register_title">📝 Sign up</h1>
+            <p style="color: #666; margin-bottom: 30px;" data-i18n="auth.register_subtitle">
+                Create an account to work with projects
+            </p>
+
             <form id="registerForm">
                 <div class="form-group">
-                    <label>Имя пользователя</label>
+                    <label data-i18n="auth.username_label">Username</label>
                     <input type="text" id="username" required>
                 </div>
                 <div class="form-group">
-                    <label>Email</label>
+                    <label data-i18n="auth.email_label">Email</label>
                     <input type="email" id="email" required>
                 </div>
                 <div class="form-group">
-                    <label>Пароль</label>
+                    <label data-i18n="auth.password_label">Password</label>
                     <input type="password" id="password" required>
                 </div>
-                <button type="submit">Зарегистрироваться</button>
+                <button type="submit" data-i18n="auth.register_button">Sign up</button>
             </form>
-            
+
             <p style="margin-top: 20px; text-align: center;">
-                Уже есть аккаунт? <a href="./login.html">Войти</a>
+                <span data-i18n="auth.have_account">Already have an account?</span>
+                <a href="./login.html" data-i18n="auth.login_link">Log in</a>
             </p>
+
+            <div style="text-align: center; margin-top: 15px;">
+                <div id="langSwitcher" class="lang-switcher" aria-label="Language"></div>
+            </div>
         </div>
         <div class="system-message-container"></div>
     </div>
-    
+
     <script src="./js/config.js"></script>
+    <script src="./js/i18n.js"></script>
     <script src="./js/common.js"></script>
     <script>
-        document.getElementById('registerForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            
-            try {
-                const response = await fetch(`${API_URL}/auth/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email, password })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('username', data.username);
-                    window.location.href = './projects.html';
-                } else {
-                    showMessage(data.message || 'Ошибка регистрации');
+        (async () => {
+            await initI18n();
+            loadUserInfo();
+
+            document.getElementById('registerForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const username = document.getElementById('username').value;
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+
+                try {
+                    const response = await fetch(`${API_URL}/auth/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, email, password })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        localStorage.setItem('token', data.token);
+                        localStorage.setItem('username', data.username);
+                        window.location.href = './projects.html';
+                    } else {
+                        showMessage(data.message || t('auth.error_register'));
+                    }
+                } catch (error) {
+                    showMessage(t('common.error_connection'));
                 }
-            } catch (error) {
-                showMessage('Ошибка соединения с сервером');
-            }
-        });
+            });
+        })();
     </script>
 </body>
 </html>

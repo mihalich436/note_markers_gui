@@ -27,8 +27,8 @@ body {
 /* Шапка */
 .landing-header {
     display: flex;
-    justify-content: center;
-    margin-bottom: 40px;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .logo {
@@ -391,4 +391,99 @@ body {
     padding-left: 14px;
     /*border-left: 3px solid #948069;*/
     max-width: 460px;
+}
+
+/* Языки */
+
+.lang-switcher {
+    position: relative;
+    display: inline-block;
+    user-select: none;
+}
+
+.lang-switcher__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    min-width: 54px;
+    justify-content: center;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s;
+    line-height: 1;
+}
+
+.lang-switcher__btn:hover {
+    border-color: #667eea;
+}
+
+.lang-switcher__btn:focus-visible {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, .2);
+}
+
+.lang-switcher__code {
+    font-size: 12px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.lang-switcher__chev {
+    font-size: 9px;
+    opacity: .5;
+    margin-left: 1px;
+}
+
+.lang-switcher__menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 170px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .1);
+    padding: 4px;
+    z-index: 100;
+    display: none;
+}
+
+.lang-switcher.open .lang-switcher__menu {
+    display: block;
+}
+
+.lang-switcher__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+    text-align: left;
+    transition: background .12s;
+}
+
+.lang-switcher__item:hover {
+    background: #f2f4ff;
+}
+
+.lang-switcher__item.active {
+    background: #eef1ff;
+    font-weight: 600;
+}
+
+.lang-switcher__label {
+    font-size: 13px;
 }

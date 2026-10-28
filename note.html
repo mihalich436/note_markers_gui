@@ -1,63 +1,64 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Заметка — The Lazy DM's Notes</title>
+    <title data-i18n="note.default_title">Note — The Lazy DM's Notes</title>
     <link rel="icon" href="./icons/yellow_dragon_sleep.ico" type="image/x-icon">
     <link rel="stylesheet" href="./css/chat-view.css">
     <link rel="stylesheet" href="./css/notes_styles.css">
 </head>
 <body>
     <div class="container">
-        <!-- Верхняя навигация -->
         <div class="navbar">
             <div class="navbar-left">
-                <button id="notesSidebarToggle" class="sidebar-toggle" title="Список заметок" aria-label="Список заметок">☰</button>
+                <button id="notesSidebarToggle" class="sidebar-toggle"
+                        data-i18n-title="note.sidebar_title"
+                        title="Project notes" aria-label="Project notes">☰</button>
                 <a href="./project.html" class="logo" id="backToProjectLink">
                     <img src="./icons/logo.png" alt="" class="logo-img">
-                    <span class="logo-text">The Lazy DM's Notes</span>
+                    <span class="logo-text" data-i18n="app.name">The Lazy DM's Notes</span>
                 </a>
             </div>
             <div class="navbar-center">
-                <h1 id="noteTitleTop" class="note-title-top">Заметка</h1>
+                <h1 id="noteTitleTop" class="note-title-top" data-i18n="note.default_title">Note</h1>
+            </div>
+            <div class="navbar-right">
             </div>
         </div>
 
-        <!-- Основной контент -->
         <div class="notes-layout">
-            <!-- Левая колонка: список заметок проекта -->
-            <aside id="notesSidebar" class="notes-sidebar" aria-label="Список заметок">
+            <aside id="notesSidebar" class="notes-sidebar" aria-label="Project notes">
                 <div class="notes-sidebar-header">
-                    <span>Заметки проекта</span>
+                    <span data-i18n="note.sidebar_title">Project notes</span>
                 </div>
                 <div id="notesList" class="notes-list"></div>
             </aside>
 
-            <!-- Оверлей для мобильных, когда сайдбар открыт -->
             <div id="notesSidebarOverlay" class="sidebar-overlay hidden"></div>
 
-            <!-- Центральная колонка: сам чат -->
             <main id="viewModalContent" class="view-modal-content notes-center">
                 <div class="view-modal-body">
                     <div id="chatMessages" class="chat-messages"></div>
                     <div id="chatInputArea" class="chat-input-area">
                         <div id="staticFormatToolbar" class="static-format-toolbar">
-                            <button class="format-btn" data-format="bold" title="Жирный (Ctrl+B)"><b>B</b></button>
-                            <button class="format-btn" data-format="italic" title="Курсив (Ctrl+I)"><i>I</i></button>
-                            <button class="format-btn" data-format="underline" title="Подчёркнутый (Ctrl+U)"><u>U</u></button>
+                            <button class="format-btn" data-format="bold" data-i18n-title="map.format_bold" title="Bold (Ctrl+B)"><b>B</b></button>
+                            <button class="format-btn" data-format="italic" data-i18n-title="map.format_italic" title="Italic (Ctrl+I)"><i>I</i></button>
+                            <button class="format-btn" data-format="underline" data-i18n-title="map.format_underline" title="Underline (Ctrl+U)"><u>U</u></button>
                             <span class="format-sep"></span>
-                            <button class="format-btn" data-format="link" title="Ссылка">🔗</button>
-                            <button class="format-btn" data-format="image" title="Картинка по ссылке">🖼️</button>
+                            <button class="format-btn" data-format="link" data-i18n-title="map.format_link" title="Link">🔗</button>
+                            <button class="format-btn" data-format="image" data-i18n-title="map.format_image" title="Image by URL">🖼️</button>
                             <span class="format-sep"></span>
-                            <button class="format-btn" data-format="copy" title="Копировать">📋</button>
-                            <button class="format-btn" data-format="cut" title="Вырезать">✂️</button>
-                            <button class="format-btn" data-format="paste" title="Вставить">📥</button>
-                            <button class="format-btn" data-format="clear" title="Очистить форматирование">⌫</button>
+                            <button class="format-btn" data-format="copy" data-i18n-title="map.format_copy" title="Copy">📋</button>
+                            <button class="format-btn" data-format="cut" data-i18n-title="map.format_cut" title="Cut">✂️</button>
+                            <button class="format-btn" data-format="paste" data-i18n-title="map.format_paste" title="Paste">📥</button>
+                            <button class="format-btn" data-format="clear" data-i18n-title="map.format_clear" title="Clear formatting">⌫</button>
                         </div>
                         <div class="chat-input-row">
                             <div id="chatInput" class="chat-input-resizable" contenteditable="true"></div>
-                            <button id="visChatBtn" class="visible-message-btn" title="Заметка будет видна всем"></button>
+                            <button id="visChatBtn" class="visible-message-btn"
+                                    data-i18n-title="map.notification_visibility_all"
+                                    title="Note will be visible to everyone"></button>
                             <button id="sendChatBtn" class="send-message-btn"></button>
                         </div>
                     </div>
@@ -66,62 +67,53 @@
         </div>
     </div>
 
-    <!-- Плавающий тулбар форматирования -->
     <div id="formatToolbar" class="format-toolbar hidden">
-        <button class="format-btn" data-format="bold" title="Жирный (Ctrl+B)"><b>B</b></button>
-        <button class="format-btn" data-format="italic" title="Курсив (Ctrl+I)"><i>I</i></button>
-        <button class="format-btn" data-format="underline" title="Подчёркнутый (Ctrl+U)"><u>U</u></button>
+        <button class="format-btn" data-format="bold" data-i18n-title="map.format_bold" title="Bold (Ctrl+B)"><b>B</b></button>
+        <button class="format-btn" data-format="italic" data-i18n-title="map.format_italic" title="Italic (Ctrl+I)"><i>I</i></button>
+        <button class="format-btn" data-format="underline" data-i18n-title="map.format_underline" title="Underline (Ctrl+U)"><u>U</u></button>
         <span class="format-sep"></span>
-        <button class="format-btn" data-format="link" title="Ссылка">🔗</button>
-        <button class="format-btn" data-format="image" title="Картинка по ссылке">🖼️</button>
+        <button class="format-btn" data-format="link" data-i18n-title="map.format_link" title="Link">🔗</button>
+        <button class="format-btn" data-format="image" data-i18n-title="map.format_image" title="Image by URL">🖼️</button>
         <span class="format-sep"></span>
-        <button class="format-btn" data-format="copy" title="Копировать">📋</button>
-        <button class="format-btn" data-format="cut" title="Вырезать">✂️</button>
-        <button class="format-btn" data-format="paste" title="Вставить">📥</button>
-        <button class="format-btn" data-format="clear" title="Очистить форматирование">⌫</button>
+        <button class="format-btn" data-format="copy" data-i18n-title="map.format_copy" title="Copy">📋</button>
+        <button class="format-btn" data-format="cut" data-i18n-title="map.format_cut" title="Cut">✂️</button>
+        <button class="format-btn" data-format="paste" data-i18n-title="map.format_paste" title="Paste">📥</button>
+        <button class="format-btn" data-format="clear" data-i18n-title="map.format_clear" title="Clear formatting">⌫</button>
     </div>
 
     <div id="linkDialog" class="link-dialog hidden">
         <div class="link-dialog-content">
-            <h4 id="linkDialogTitle">Вставить ссылку</h4>
-            <input type="text" id="linkDialogUrl" placeholder="https://..." />
-            <input type="text" id="linkDialogText" placeholder="Текст ссылки (необязательно)" />
+            <h4 id="linkDialogTitle" data-i18n="map.link_dialog_title">Insert link</h4>
+            <input type="text" id="linkDialogUrl" data-i18n-placeholder="map.link_dialog_url" placeholder="https://..." />
+            <input type="text" id="linkDialogText" data-i18n-placeholder="map.link_dialog_text" placeholder="Link text (optional)" />
             <div class="link-dialog-buttons">
-                <button id="linkDialogCancel">Отмена</button>
-                <button id="linkDialogOk" class="primary">Вставить</button>
+                <button id="linkDialogCancel" data-i18n="map.link_dialog_cancel">Cancel</button>
+                <button id="linkDialogOk" class="primary" data-i18n="map.link_dialog_ok">Insert</button>
             </div>
         </div>
     </div>
 
-    <!-- Диалог загрузки изображения (по ссылке или с устройства) -->
     <div id="imageUploadDialog" class="link-dialog hidden">
         <div class="link-dialog-content image-upload-dialog-content">
-            <h4>Вставить картинку</h4>
-
+            <h4 data-i18n="map.image_dialog_title">Insert image</h4>
             <div class="image-upload-tabs">
-                <button type="button" class="image-upload-tab active" data-tab="url">По ссылке</button>
-                <button type="button" class="image-upload-tab" data-tab="file">Загрузить</button>
+                <button type="button" class="image-upload-tab active" data-tab="url" data-i18n="map.image_tab_url">By URL</button>
+                <button type="button" class="image-upload-tab" data-tab="file" data-i18n="map.image_tab_file">Upload</button>
             </div>
-
-            <!-- Вкладка: по ссылке -->
             <div class="image-upload-pane" data-pane="url">
-                <input type="text" id="imageUploadUrl" placeholder="https://..." />
+                <input type="text" id="imageUploadUrl" data-i18n-placeholder="map.image_dialog_url_placeholder" placeholder="https://..." />
             </div>
-
-            <!-- Вкладка: загрузка файла -->
             <div class="image-upload-pane hidden" data-pane="file">
                 <input type="file" id="imageUploadFile" accept="image/png,image/jpeg,image/webp,image/avif" />
                 <div id="imageUploadPreviewWrap" class="image-upload-preview-wrap hidden">
-                    <img id="imageUploadPreview" alt="Превью" />
+                    <img id="imageUploadPreview" alt="Preview" />
                     <div id="imageUploadInfo" class="image-upload-info"></div>
                 </div>
             </div>
-
             <div id="imageUploadError" class="image-upload-error hidden"></div>
-
             <div class="link-dialog-buttons">
-                <button id="imageUploadCancel" type="button">Отмена</button>
-                <button id="imageUploadOk" type="button" class="primary" disabled>Вставить</button>
+                <button id="imageUploadCancel" type="button" data-i18n="map.link_dialog_cancel">Cancel</button>
+                <button id="imageUploadOk" type="button" class="primary" disabled data-i18n="map.image_dialog_ok">Insert</button>
             </div>
         </div>
     </div>
@@ -129,10 +121,18 @@
     <script src="./js/sockjs.min.js"></script>
     <script src="./js/stomp.min.js"></script>
     <script src="./js/config.js"></script>
+    <script src="./js/i18n.js"></script>
     <script src="./js/common.js"></script>
     <script src="./js/WsClient.js"></script>
     <script src="./js/image-compress.js"></script>
     <script src="./js/chat-view.js"></script>
-    <script src="./js/notes.js"></script>
+    <script>
+        (async () => {
+            await initI18n();
+            const script = document.createElement('script');
+            script.src = './js/notes.js';
+            document.body.appendChild(script);
+        })();
+    </script>
 </body>
 </html>

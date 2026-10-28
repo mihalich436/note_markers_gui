@@ -1,14 +1,13 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Lazy DM's Notes — заметки на картах для D&D</title>
-    <meta name="description" content="Ведите заметки прямо на картах подземелий и регионов. Идеально для мастеров D&D, которые ценят своё время.">
+    <title>The Lazy DM's Notes — map notes for D&D</title>
+    <meta name="description" content="Take notes right on dungeon and region maps. Perfect for D&D Dungeon Masters who value their time.">
     <link rel="stylesheet" href="./css/landing.css">
     <link rel="icon" href="./icons/yellow_dragon_sleep.ico" type="image/x-icon">
     <script>
-        // Авторизованных сразу отправляем в проекты
         if (localStorage.getItem('token')) {
             window.location.href = './projects.html';
         }
@@ -16,56 +15,57 @@
 </head>
 <body>
     <div class="landing">
-        <!-- Логотип -->
         <header class="landing-header">
             <div class="logo">
                 <img src="./icons/logo.png" alt="" class="logo-img">
-                <span>The Lazy DM's Notes</span>
+                <span data-i18n="app.name">The Lazy DM's Notes</span>
             </div>
+            <div id="langSwitcher" class="lang-switcher" aria-label="Language"></div>
         </header>
 
-        <!-- Hero -->
         <main class="hero">
             <div class="hero-text">
-                <h1>Заметки прямо на карте</h1>
+                <h1 data-i18n="landing.title">Notes right on the map</h1>
                 <ul class="hero-steps">
                     <li>
                         <span class="step-icon">📥</span>
                         <span class="step-text">
-                            <strong>Загрузите</strong> карту подземелья, города, региона или целого мира
+                            <strong data-i18n="landing.step1_strong">Upload</strong>
+                            <span data-i18n="landing.step1_text">a dungeon, city, region or whole world map</span>
                         </span>
                     </li>
                     <li>
                         <span class="step-icon">📍</span>
                         <span class="step-text">
-                            <strong>Отмечайте</strong> ключевые места маркерами
+                            <strong data-i18n="landing.step2_strong">Mark</strong>
+                            <span data-i18n="landing.step2_text">key locations with markers</span>
                         </span>
                     </li>
                     <li>
                         <span class="step-icon">✍️</span>
                         <span class="step-text">
-                            <strong>Ведите заметки</strong> под любым маркером
+                            <strong data-i18n="landing.step3_strong">Take notes</strong>
+                            <span data-i18n="landing.step3_text">under any marker</span>
                         </span>
                     </li>
                 </ul>
 
-                <p class="hero-tagline">
-                    Без блокнотов, без таблиц, без хаоса — только вы и ваша история.
+                <p class="hero-tagline" data-i18n="landing.tagline">
+                    No notebooks, no tables, no chaos — just you and your story.
                 </p>
 
                 <div class="auth-block">
-                    <a href="./login.html" class="btn btn-primary">Войти</a>
-                    <span class="divider">или</span>
-                    <a href="./register.html" class="btn btn-secondary">Зарегистрироваться</a>
+                    <a href="./login.html" class="btn btn-primary" data-i18n="landing.login">Log in</a>
+                    <span class="divider" data-i18n="landing.or">or</span>
+                    <a href="./register.html" class="btn btn-secondary" data-i18n="landing.register">Sign up</a>
                 </div>
 
-                <p class="auth-hint">
-                    Аккаунт нужен, чтобы создавать свои проекты, загружать карты
-                    и сохранять заметки — они будут доступны с любого устройства.
+                <p class="auth-hint" data-i18n="landing.auth_hint">
+                    An account is required to create your own projects, upload maps and save notes — they will be available from any device.
                 </p>
 
-                <a href="./project.html?id=26&share=kpfu7ovqhjhpCNQpkMEA01MhO54c3gxL" class="btn btn-demo">
-                    ▶ Посмотреть демо-проект
+                <a href="./project.html?id=26&share=kpfu7ovqhjhpCNQpkMEA01MhO54c3gxL" class="btn btn-demo" data-i18n="demo.open">
+                    ▶ View demo project
                 </a>
             </div>
 
@@ -78,39 +78,43 @@
                     muted
                     playsinline
                     preload="metadata"
-                    aria-label="Демонстрация интерфейса The Lazy DM's Notes"
                 ></video>
             </div>
         </main>
 
-        <!-- Короткие преимущества -->
         <section class="features">
             <div class="feature">
                 <div class="feature-icon">🗺️</div>
                 <div class="feature-body">
-                    <h3>Карта — центр всего</h3>
-                    <p>Заметки привязаны к местам на карте, а не к абстрактным спискам.</p>
+                    <h3 data-i18n="landing.feature1_title">The map is the center</h3>
+                    <p data-i18n="landing.feature1_text">Notes are tied to places on the map, not to abstract lists.</p>
                 </div>
             </div>
             <div class="feature">
                 <div class="feature-icon">⚡</div>
                 <div class="feature-body">
-                    <h3>Быстрый ввод</h3>
-                    <p>Добавить заметку к локации — пара кликов, прямо во время игры.</p>
+                    <h3 data-i18n="landing.feature2_title">Fast input</h3>
+                    <p data-i18n="landing.feature2_text">Add a note to a location in a couple of clicks, right during the game.</p>
                 </div>
             </div>
             <div class="feature">
                 <div class="feature-icon">🤝</div>
                 <div class="feature-body">
-                    <h3>Совместный доступ</h3>
-                    <p>Делитесь проектом с игроками — по ссылке или приглашению.</p>
+                    <h3 data-i18n="landing.feature3_title">Shared access</h3>
+                    <p data-i18n="landing.feature3_text">Share your project with players — via link or invitation.</p>
                 </div>
             </div>
         </section>
 
         <footer class="landing-footer">
-            <span>© The Lazy DM's Notes</span>
+            <span data-i18n="landing.footer">© The Lazy DM's Notes</span>
         </footer>
     </div>
+
+    <script src="./js/config.js"></script>
+    <script src="./js/i18n.js"></script>
+    <script>
+        initI18n();
+    </script>
 </body>
 </html>

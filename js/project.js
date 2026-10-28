@@ -1,15 +1,11 @@
-// Получаем ID проекта из URL
 const urlParams = new URLSearchParams(window.location.search);
 const projectId = urlParams.get('id');
 
 let editingMapId = null;
 let editingNoteId = null;
-let uploadedFile = null; // загруженный файл
-
-// Текущий фильтр: 'all' | 'notes' | 'maps'
+let uploadedFile = null;
 let currentFilter = 'all';
 
-// Локальные массивы
 let projectMaps = [];
 let projectNotes = [];
 
@@ -21,29 +17,28 @@ if (!projectId) {
 async function loadProject() {
     try {
         const response = await apiRequest(`/projects/${projectId}${shareToken ? `?share=${shareToken}` : ''}`);
-        
+
         if (response.ok) {
             const projectData = await response.json();
-            this.role = projectData.role;
-            this.project = projectData.project;
-            if (this.role !== 'ADMIN') {
+            window.currentRole = projectData.role;
+            window.currentProject = projectData.project;
+
+            if (window.currentRole !== 'ADMIN') {
                 const addBtn = document.getElementById('addButtonWrapper');
                 if (addBtn) addBtn.remove();
             }
-            displayProjectInfo(this.project);
-            projectMaps = this.project.maps || [];
-            projectNotes = this.project.notes || [];
+            displayProjectInfo(window.currentProject);
+            projectMaps = window.currentProject.maps || [];
+            projectNotes = window.currentProject.notes || [];
             renderItems();
         } else if (response.status === 403) {
-            showMessage('У вас нет доступа к этому проекту');
-            setTimeout(() => {
-                window.location.href = './projects.html';
-            }, 2000);
+            showMessage(t('project.error_no_access'));
+            setTimeout(() => { window.location.href = './projects.html'; }, 2000);
         } else {
-            showMessage('Ошибка загрузки проекта');
+            showMessage(t('project.error_load_project'));
         }
     } catch (error) {
-        showMessage('Ошибка соединения с сервером');
+        showMessage(t('common.error_connection'));
     }
 }
 
@@ -52,15 +47,15 @@ function displayProjectInfo(project) {
     container.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; justify-content: center; align-items: center;">
-                <button onclick="window.location.href='./projects.html'" class="menu-trigger-btn">
+                <button onclick="window.location.href='./projects.html'" class="menu-trigger-btn" aria-label="${escapeHtml(t('common.back'))}">
                     ❮
                 </button>
-                <h2> ${escapeHtml(project.title)}</h2>
+                <h2>${escapeHtml(project.title)}</h2>
             </div>
         </div>
         <div style="margin: 15px 0;">
             <div id="projectFullDesc" style="${project.description ? '' : 'display: none;'} margin-top: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                ${project.description ? escapeHtml(project.description) : 'Описание отсутствует'}
+                ${project.description ? escapeHtml(project.description) : escapeHtml(t('common.description_missing'))}
             </div>
         </div>
     `;
@@ -74,10 +69,10 @@ async function loadMaps() {
             projectMaps = await response.json();
             renderItems();
         } else {
-            showMessage('Ошибка загрузки карт');
+            showMessage(t('project.error_load_maps'));
         }
     } catch (error) {
-        showMessage('Ошибка соединения с сервером');
+        showMessage(t('common.error_connection'));
     }
 }
 
@@ -88,10 +83,10 @@ async function loadNotes() {
             projectNotes = await response.json();
             renderItems();
         } else {
-            showMessage('Ошибка загрузки заметок');
+            showMessage(t('project.error_load_notes'));
         }
     } catch (error) {
-        showMessage('Ошибка соединения с сервером');
+        showMessage(t('common.error_connection'));
     }
 }
 
@@ -104,10 +99,10 @@ function setFilter(filter) {
     renderItems();
 }
 
-// ============ РЕНДЕР СПИСКА ============
+// ============ РЕНДЕР ============
 function renderItems() {
     const container = document.getElementById('itemsList');
-    
+
     let items = [];
     if (currentFilter === 'all') {
         items = [
@@ -119,103 +114,98 @@ function renderItems() {
     } else {
         items = projectMaps.map(m => ({ type: 'map', data: m }));
     }
-    
+
     if (items.length === 0) {
-        container.innerHTML = '<p style="color: #666; text-align: center;">Здесь пока ничего нет</p>';
+        container.innerHTML = `<p style="color: #666; text-align: center;">${escapeHtml(t('project.empty'))}</p>`;
         return;
     }
-    
+
     container.innerHTML = items.map(item => {
         if (item.type === 'note') return renderNoteItem(item.data);
         return renderMapItem(item.data);
     }).join('');
 }
 
-// ============ РЕНДЕР КАРТЫ ============
 function renderMapItem(map) {
     const isVisible = map.visibility !== false;
-    const menuDiv = this.role !== 'ADMIN' ? '' : `
+    const isAdmin = window.currentRole === 'ADMIN';
+    const menuDiv = !isAdmin ? '' : `
         <div class="map-menu-container">
             <button class="menu-trigger-btn" onclick="event.stopPropagation(); toggleItemMenu('map', ${map.id}, this)">⋮</button>
             <div id="map-menu-${map.id}" class="map-context-menu">
                 <div class="menu-item" onclick="event.stopPropagation(); toggleMapVisibilityFromCard(${map.id})">
-                    ${isVisible ? '🔒 Скрыть' : '👁️ Показать'}
+                    ${escapeHtml(isVisible ? t('project.menu_hide_map') : t('project.menu_show_map'))}
                 </div>
-                <div class="menu-item" onclick="event.stopPropagation(); editMapFromCard(${map.id})">✏️ Редактировать</div>
-                <div class="menu-item menu-item-danger" onclick="event.stopPropagation(); deleteMapFromCard(${map.id})">🗑️ Удалить</div>
+                <div class="menu-item" onclick="event.stopPropagation(); editMapFromCard(${map.id})">✏️ ${escapeHtml(t('common.edit'))}</div>
+                <div class="menu-item menu-item-danger" onclick="event.stopPropagation(); deleteMapFromCard(${map.id})">🗑️ ${escapeHtml(t('common.delete'))}</div>
             </div>
         </div>`;
-    
+
     return `
         <div class="map-item${isVisible ? '' : ' invisible'}" data-type="map" data-map-id="${map.id}"
              data-map-title="${escapeHtml(map.title)}" data-map-description="${escapeHtml(map.description || '')}"
              data-map-imageurl="${escapeHtml(map.imageUrl || '')}" data-map-visibility="${isVisible}" data-map-isFile="${map.file}"
              onclick="openMap(${map.id})">
             <div class="map-item-header">
-                <div class="map-title${isVisible ? '' : ' invisible'}">
-                    🗺️ ${escapeHtml(map.title)}
-                </div>
+                <div class="map-title${isVisible ? '' : ' invisible'}">🗺️ ${escapeHtml(map.title)}</div>
                 ${menuDiv}
             </div>
             <button class="expand-btn" onclick="event.stopPropagation(); toggleItemDescription('map', ${map.id})">
-                ► Описание
+                ${escapeHtml(t('common.description_toggle_open'))}
             </button>
             <div id="map-desc-${map.id}" class="map-description hidden">
-                ${map.description ? escapeHtml(map.description) : 'Описание отсутствует'}
+                ${map.description ? escapeHtml(map.description) : escapeHtml(t('common.description_missing'))}
             </div>
         </div>
     `;
 }
 
-// ============ РЕНДЕР ЗАМЕТКИ ============
 function renderNoteItem(note) {
     const isVisible = note.visibility !== false;
-    const menuDiv = this.role !== 'ADMIN' ? '' : `
+    const isAdmin = window.currentRole === 'ADMIN';
+    const menuDiv = !isAdmin ? '' : `
         <div class="map-menu-container">
             <button class="menu-trigger-btn" onclick="event.stopPropagation(); toggleItemMenu('note', ${note.id}, this)">⋮</button>
             <div id="note-menu-${note.id}" class="map-context-menu">
                 <div class="menu-item" onclick="event.stopPropagation(); toggleNoteVisibilityFromCard(${note.id})">
-                    ${isVisible ? '🔒 Скрыть' : '👁️ Показать'}
+                    ${escapeHtml(isVisible ? t('project.menu_hide_note') : t('project.menu_show_note'))}
                 </div>
-                <div class="menu-item" onclick="event.stopPropagation(); editNoteFromCard(${note.id})">✏️ Редактировать</div>
-                <div class="menu-item menu-item-danger" onclick="event.stopPropagation(); deleteNoteFromCard(${note.id})">🗑️ Удалить</div>
+                <div class="menu-item" onclick="event.stopPropagation(); editNoteFromCard(${note.id})">✏️ ${escapeHtml(t('common.edit'))}</div>
+                <div class="menu-item menu-item-danger" onclick="event.stopPropagation(); deleteNoteFromCard(${note.id})">🗑️ ${escapeHtml(t('common.delete'))}</div>
             </div>
         </div>`;
-    
+
     return `
         <div class="map-item note-item${isVisible ? '' : ' invisible'}" data-type="note" data-note-id="${note.id}"
              data-note-title="${escapeHtml(note.title)}" data-note-description="${escapeHtml(note.description || '')}"
              data-note-visibility="${isVisible}"
              onclick="openNote(${note.id})">
             <div class="map-item-header">
-                <div class="map-title${isVisible ? '' : ' invisible'}">
-                    📝 ${escapeHtml(note.title)}
-                </div>
+                <div class="map-title${isVisible ? '' : ' invisible'}">📝 ${escapeHtml(note.title)}</div>
                 ${menuDiv}
             </div>
             <button class="expand-btn" onclick="event.stopPropagation(); toggleItemDescription('note', ${note.id})">
-                ► Описание
+                ${escapeHtml(t('common.description_toggle_open'))}
             </button>
             <div id="note-desc-${note.id}" class="map-description hidden">
-                ${note.description ? escapeHtml(note.description) : 'Описание отсутствует'}
+                ${note.description ? escapeHtml(note.description) : escapeHtml(t('common.description_missing'))}
             </div>
         </div>
     `;
 }
 
-// ============ СВОРАЧИВАНИЕ ОПИСАНИЯ ============
 function toggleItemDescription(type, id) {
     event.stopPropagation();
     const prefix = type === 'map' ? 'map' : 'note';
     const descElement = document.getElementById(`${prefix}-desc-${id}`);
     const btn = descElement.previousElementSibling;
-    
+
     if (descElement.classList.contains('hidden')) {
         descElement.classList.remove('hidden');
-        btn.textContent = '▼ Описание';
+        btn.textContent = t('common.description_toggle_close');
     } else {
         descElement.classList.add('hidden');
-        btn.textContent = '► Описание';
+        btn.textContent = t('common.description_toggle_open');
     }
 }
 
@@ -230,9 +220,9 @@ function toggleItemMenu(type, id, btn) {
     event.stopPropagation();
     const menu = document.getElementById(`${type}-menu-${id}`);
     const isActive = menu.classList.contains('active');
-    
+
     closeAllItemMenus();
-    
+
     if (!isActive) {
         const wrapper = document.getElementById('addButtonWrapper');
         if (wrapper) wrapper.style.display = 'none';
@@ -250,7 +240,7 @@ function toggleItemMenu(type, id, btn) {
     }
 }
 
-// ============ ПОЛУЧЕНИЕ ДАННЫХ ИЗ DOM ============
+// ============ ДАННЫЕ ИЗ DOM ============
 function getMapCardData(mapId) {
     const card = document.querySelector(`.map-item[data-map-id="${mapId}"]`);
     if (card) {
@@ -279,7 +269,7 @@ function getNoteCardData(noteId) {
     return null;
 }
 
-// ============ ДЕЙСТВИЯ С КАРТАМИ ============
+// ============ ДЕЙСТВИЯ ============
 function editMapFromCard(mapId) {
     const mapData = getMapCardData(mapId);
     if (mapData) {
@@ -301,7 +291,6 @@ function deleteMapFromCard(mapId) {
     deleteMap(mapId);
 }
 
-// ============ ДЕЙСТВИЯ С ЗАМЕТКАМИ ============
 function editNoteFromCard(noteId) {
     const noteData = getNoteCardData(noteId);
     if (noteData) {
@@ -335,13 +324,13 @@ async function createMap(title, description, imageUrl, visibility = true, file) 
             closeMapModal();
             projectMaps.push(map);
             renderItems();
-            showMessage('Карта создана успешно', 'success');
+            showMessage(t('project.map_created'), 'success');
             return map.id;
         } else {
-            showMessage('Ошибка создания карты');
+            showMessage(t('project.error_create_map'));
         }
     } catch (error) {
-        showMessage('Ошибка создания карты');
+        showMessage(t('project.error_create_map'));
     }
     return null;
 }
@@ -360,12 +349,12 @@ async function updateMap(id, title, description, imageUrl, visibility, file) {
                 projectMaps[idx] = map;
                 renderItems();
             }
-            showMessage('Карта обновлена успешно', 'success');
+            showMessage(t('project.map_updated'), 'success');
         } else {
-            showMessage('Ошибка обновления карты');
+            showMessage(t('project.error_update_map'));
         }
     } catch (error) {
-        showMessage('Ошибка обновления карты');
+        showMessage(t('project.error_update_map'));
     }
 }
 
@@ -382,27 +371,27 @@ async function toggleMapVisibility(id, visibility) {
                 projectMaps[idx] = map;
                 renderItems();
             }
-            showMessage(map.visibility ? 'Карта видна всем' : 'Карта скрыта', 'success');
+            showMessage(map.visibility ? t('project.map_visible') : t('project.map_hidden'), 'success');
         } else {
-            showMessage('Ошибка обновления карты');
+            showMessage(t('project.error_update_map'));
         }
     } catch (error) {
-        showMessage('Ошибка обновления карты');
+        showMessage(t('project.error_update_map'));
     }
 }
 
 async function deleteMap(id) {
-    if (confirm('Вы уверены, что хотите удалить эту карту?')) {
+    if (confirm(t('common.confirm_delete_map'))) {
         try {
             const response = await apiRequest(`/projects/${projectId}/maps/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 loadMaps();
-                showMessage('Карта удалена успешно', 'success');
+                showMessage(t('project.map_deleted'), 'success');
             } else {
-                showMessage('Ошибка удаления карты');
+                showMessage(t('project.error_delete_map'));
             }
         } catch (error) {
-            showMessage('Ошибка удаления карты');
+            showMessage(t('project.error_delete_map'));
         }
     }
 }
@@ -419,12 +408,12 @@ async function createNote(title, description, visibility = true) {
             closeNoteModal();
             projectNotes.push(note);
             renderItems();
-            showMessage('Заметка создана успешно', 'success');
+            showMessage(t('project.note_created'), 'success');
         } else {
-            showMessage('Ошибка создания заметки');
+            showMessage(t('project.error_create_note'));
         }
     } catch (error) {
-        showMessage('Ошибка создания заметки');
+        showMessage(t('project.error_create_note'));
     }
 }
 
@@ -442,12 +431,12 @@ async function updateNote(id, title, description, visibility) {
                 projectNotes[idx] = note;
                 renderItems();
             }
-            showMessage('Заметка обновлена успешно', 'success');
+            showMessage(t('project.note_updated'), 'success');
         } else {
-            showMessage('Ошибка обновления заметки');
+            showMessage(t('project.error_update_note'));
         }
     } catch (error) {
-        showMessage('Ошибка обновления заметки');
+        showMessage(t('project.error_update_note'));
     }
 }
 
@@ -464,64 +453,64 @@ async function toggleNoteVisibility(id, visibility) {
                 projectNotes[idx] = note;
                 renderItems();
             }
-            showMessage(note.visibility ? 'Заметка видна всем' : 'Заметка скрыта', 'success');
+            showMessage(note.visibility ? t('project.note_visible') : t('project.note_hidden'), 'success');
         } else {
-            showMessage('Ошибка обновления заметки');
+            showMessage(t('project.error_update_note'));
         }
     } catch (error) {
-        showMessage('Ошибка обновления заметки');
+        showMessage(t('project.error_update_note'));
     }
 }
 
 async function deleteNote(id) {
-    if (confirm('Вы уверены, что хотите удалить эту заметку?')) {
+    if (confirm(t('common.confirm_delete_note'))) {
         try {
             const response = await apiRequest(`/projects/${projectId}/notes/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 loadNotes();
-                showMessage('Заметка удалена успешно', 'success');
+                showMessage(t('project.note_deleted'), 'success');
             } else {
-                showMessage('Ошибка удаления заметки');
+                showMessage(t('project.error_delete_note'));
             }
         } catch (error) {
-            showMessage('Ошибка удаления заметки');
+            showMessage(t('project.error_delete_note'));
         }
     }
 }
 
-// ============ МОДАЛЬНОЕ ОКНО КАРТЫ ============
+// ============ МОДАЛКИ ============
 function showCreateMapModal() {
     closeFabMenu();
     editingMapId = null;
-    document.getElementById('mapModalTitle').textContent = 'Создать карту';
+    document.getElementById('mapModalTitle').textContent = t('project.create_map');
     document.getElementById('mapTitle').value = '';
     document.getElementById('mapDescription').value = '';
     document.getElementById('mapImageUrl').value = '';
     document.getElementById('mapVisibility').checked = true;
-    
+
     uploadedFile = null;
     document.getElementById('mapImageFile').value = '';
     document.getElementById('imagePreview').classList.add('hidden');
-    
+
     document.querySelector('input[name="imageUploadType"][value="url"]').checked = true;
     document.getElementById('imageUrlGroup').classList.remove('hidden');
     document.getElementById('imageFileGroup').classList.add('hidden');
-    
+
     document.getElementById('mapModal').classList.add('active');
 }
 
 function editMap(id, title, description, imageUrl, visibility, isFile) {
     editingMapId = id;
-    document.getElementById('mapModalTitle').textContent = 'Редактировать карту';
+    document.getElementById('mapModalTitle').textContent = t('project.edit_map');
     document.getElementById('mapTitle').value = title;
     document.getElementById('mapDescription').value = description;
     document.getElementById('mapImageUrl').value = imageUrl || '';
     document.getElementById('mapVisibility').checked = visibility !== false;
-    
+
     uploadedFile = null;
     document.getElementById('mapImageFile').value = '';
     document.getElementById('imagePreview').classList.add('hidden');
-    
+
     if (isFile) {
         document.querySelector('input[name="imageUploadType"][value="file"]').checked = true;
         document.getElementById('imageUrlGroup').classList.add('hidden');
@@ -531,7 +520,7 @@ function editMap(id, title, description, imageUrl, visibility, isFile) {
         document.getElementById('imageUrlGroup').classList.remove('hidden');
         document.getElementById('imageFileGroup').classList.add('hidden');
     }
-    
+
     document.getElementById('mapModal').classList.add('active');
 }
 
@@ -549,7 +538,7 @@ function toggleImageUploadType() {
     const urlRadio = document.querySelector('input[name="imageUploadType"][value="url"]');
     const urlGroup = document.getElementById('imageUrlGroup');
     const fileGroup = document.getElementById('imageFileGroup');
-    
+
     if (urlRadio.checked) {
         urlGroup.classList.remove('hidden');
         fileGroup.classList.add('hidden');
@@ -560,11 +549,10 @@ function toggleImageUploadType() {
     }
 }
 
-// ============ МОДАЛЬНОЕ ОКНО ЗАМЕТКИ ============
 function showCreateNoteModal() {
     closeFabMenu();
     editingNoteId = null;
-    document.getElementById('noteModalTitle').textContent = 'Создать заметку';
+    document.getElementById('noteModalTitle').textContent = t('project.create_note');
     document.getElementById('noteTitle').value = '';
     document.getElementById('noteDescription').value = '';
     document.getElementById('noteVisibility').checked = true;
@@ -573,7 +561,7 @@ function showCreateNoteModal() {
 
 function editNote(id, title, description, visibility) {
     editingNoteId = id;
-    document.getElementById('noteModalTitle').textContent = 'Редактировать заметку';
+    document.getElementById('noteModalTitle').textContent = t('project.edit_note');
     document.getElementById('noteTitle').value = title;
     document.getElementById('noteDescription').value = description;
     document.getElementById('noteVisibility').checked = visibility !== false;
@@ -588,13 +576,13 @@ function closeNoteModal() {
     document.getElementById('noteModal').classList.remove('active');
 }
 
-// ============ FAB МЕНЮ ============
+// ============ FAB ============
 function toggleFabMenu(e) {
     if (e) e.stopPropagation();
     const menu = document.getElementById('fabMenu');
     const btn = document.getElementById('addButton');
     const isActive = menu.classList.contains('active');
-    
+
     if (isActive) {
         closeFabMenu();
     } else {
@@ -610,7 +598,7 @@ function closeFabMenu() {
     if (btn) btn.classList.remove('active');
 }
 
-// ============ ОБРАБОТЧИКИ ФОРМ ============
+// ============ ФОРМЫ ============
 document.getElementById('mapForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = document.getElementById('mapTitle').value;
@@ -620,7 +608,7 @@ document.getElementById('mapForm').addEventListener('submit', async (e) => {
     let mapId = editingMapId;
     const fileRadio = document.querySelector('input[name="imageUploadType"][value="file"]');
     const isFile = (fileRadio && fileRadio.checked);
-    
+
     if (editingMapId) {
         await updateMap(editingMapId, title, description, imageUrl, visibility, isFile);
     } else {
@@ -629,7 +617,7 @@ document.getElementById('mapForm').addEventListener('submit', async (e) => {
 
     if (isFile && mapId && uploadedFile) {
         uploadImageFile(mapId, uploadedFile);
-    } 
+    }
 });
 
 document.getElementById('noteForm').addEventListener('submit', async (e) => {
@@ -637,7 +625,7 @@ document.getElementById('noteForm').addEventListener('submit', async (e) => {
     const title = document.getElementById('noteTitle').value;
     const description = document.getElementById('noteDescription').value;
     const visibility = document.getElementById('noteVisibility').checked;
-    
+
     if (editingNoteId) {
         await updateNote(editingNoteId, title, description, visibility);
     } else {
@@ -649,47 +637,51 @@ document.getElementById('noteForm').addEventListener('submit', async (e) => {
 document.getElementById('mapImageFile').addEventListener('change', async function(e) {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     if (file.size > 30 * 1024 * 1024) {
-        showMessage('Файл слишком большой. Максимальный размер: 30 МБ');
+        showMessage(t('project.image_too_large'));
         this.value = '';
         return;
     }
-    
+
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/avif'];
     const fileName = file.name.toLowerCase();
     const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.avif'];
     const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
-    
+
     if (!allowedTypes.includes(file.type) && !hasValidExtension) {
-        showMessage('Неподдерживаемый формат файла. Поддерживаются: PNG, JPG, JPEG, WEBP, AVIF');
+        showMessage(t('project.image_bad_format'));
         this.value = '';
         return;
     }
-    
-    showMessage('Обработка изображения...', 'info');
+
+    showMessage(t('project.image_processing'), 'info');
     try {
         const compressedFile = await compressImage(file);
         uploadedFile = compressedFile;
-        
+
         const reader = new FileReader();
         reader.onload = function(e) {
             const preview = document.getElementById('imagePreview');
             const previewImg = document.getElementById('previewImage');
             previewImg.src = e.target.result;
             preview.classList.remove('hidden');
-            
+
             if (compressedFile !== file) {
                 const sizeReduction = ((file.size - compressedFile.size) / file.size * 100).toFixed(1);
                 const originalSize = (file.size / (1024 * 1024)).toFixed(2);
                 const compressedSize = (compressedFile.size / (1024 * 1024)).toFixed(2);
-                showMessage(`Изображение сжато: ${originalSize}MB → ${compressedSize}MB (${sizeReduction}% меньше)`, 'info');
+                showMessage(t('project.image_compressed', {
+                    from: originalSize,
+                    to: compressedSize,
+                    percent: sizeReduction
+                }), 'info');
             }
         };
         reader.readAsDataURL(compressedFile);
     } catch (error) {
         console.error('Ошибка при обработке файла:', error);
-        showMessage('Не удалось сжать файл. Попробуйте конвертировать в JPG, WEBP, AVIF');
+        showMessage(t('project.image_compress_failed'));
         this.value = '';
     }
 });
@@ -703,12 +695,12 @@ async function uploadImageFile(mapId, file) {
             body: formData
         });
         if (response.ok) {
-            showMessage('Изображение загружено успешно', 'success');
+            showMessage(t('project.image_uploaded'), 'success');
         } else {
-            showMessage('Ошибка загрузки изображения');
+            showMessage(t('project.error_load_image'));
         }
     } catch (error) {
-        showMessage('Ошибка загрузки изображения');
+        showMessage(t('project.error_load_image'));
     }
     uploadedFile = null;
 }
@@ -719,21 +711,21 @@ function removeImagePreview() {
     uploadedFile = null;
 }
 
-// ============ СЖАТИЕ ИЗОБРАЖЕНИЙ ============
+// ============ СЖАТИЕ ============
 async function compressImage(file) {
     const fileType = file.type;
     const fileName = file.name.toLowerCase();
-    
-    if (fileType === 'image/webp' || fileType === 'image/avif' || 
+
+    if (fileType === 'image/webp' || fileType === 'image/avif' ||
         fileName.endsWith('.webp') || fileName.endsWith('.avif')) {
         return file;
     }
-    
+
     try {
         const webpFile = await compressToWebP(file);
         if (webpFile) return webpFile;
-        
-        if (fileType !== 'image/jpeg' && fileType !== 'image/jpg' && 
+
+        if (fileType !== 'image/jpeg' && fileType !== 'image/jpg' &&
             !fileName.endsWith('.jpg') && !fileName.endsWith('.jpeg')) {
             const jpgFile = await compressToJPG(file);
             if (jpgFile) return jpgFile;
@@ -756,23 +748,23 @@ function compressToWebP(file) {
                     const ctx = canvas.getContext('2d');
                     let width = img.width, height = img.height;
                     const maxDimension = 8192;
-                    
+
                     if (width > maxDimension || height > maxDimension) {
                         const ratio = Math.min(maxDimension / width, maxDimension / height);
                         width = Math.round(width * ratio);
                         height = Math.round(height * ratio);
                     }
-                    
+
                     canvas.width = width;
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
-                    
+
                     const webpDataUrl = canvas.toDataURL('image/webp', 0.8);
                     fetch(webpDataUrl)
                         .then(res => res.blob())
                         .then(blob => {
-                            const webpFile = new File([blob], 
-                                file.name.replace(/\.[^.]+$/, '.webp'), 
+                            const webpFile = new File([blob],
+                                file.name.replace(/\.[^.]+$/, '.webp'),
                                 { type: 'image/webp' });
                             resolve(webpFile);
                         })
@@ -800,25 +792,25 @@ function compressToJPG(file) {
                     const ctx = canvas.getContext('2d');
                     let width = img.width, height = img.height;
                     const maxDimension = 8192;
-                    
+
                     if (width > maxDimension || height > maxDimension) {
                         const ratio = Math.min(maxDimension / width, maxDimension / height);
                         width = Math.round(width * ratio);
                         height = Math.round(height * ratio);
                     }
-                    
+
                     canvas.width = width;
                     canvas.height = height;
                     ctx.fillStyle = '#FFFFFF';
                     ctx.fillRect(0, 0, width, height);
                     ctx.drawImage(img, 0, 0, width, height);
-                    
+
                     const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.85);
                     fetch(jpgDataUrl)
                         .then(res => res.blob())
                         .then(blob => {
-                            const jpgFile = new File([blob], 
-                                file.name.replace(/\.[^.]+$/, '.jpg'), 
+                            const jpgFile = new File([blob],
+                                file.name.replace(/\.[^.]+$/, '.jpg'),
                                 { type: 'image/jpeg' });
                             resolve(jpgFile);
                         })
@@ -835,7 +827,7 @@ function compressToJPG(file) {
     });
 }
 
-// ============ ЗАКРЫТИЕ МЕНЮ ПО ESC / КЛИКУ ВНЕ ============
+// ============ КЛАВИШИ / КЛИКИ ============
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeAllItemMenus();
@@ -851,5 +843,8 @@ document.addEventListener('click', (e) => {
 });
 
 // ============ ИНИЦИАЛИЗАЦИЯ ============
-loadUserInfo();
-loadProject();
+(async () => {
+    await initI18n();
+    loadUserInfo();
+    loadProject();
+})();
