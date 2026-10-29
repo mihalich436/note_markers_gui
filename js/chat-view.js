@@ -175,7 +175,17 @@ class ChatView {
         const handlePaste = (e) => {
             e.preventDefault();
             const html = e.clipboardData.getData('text/html');
-            const text = e.clipboardData.getData('text/plain');
+            let text   = e.clipboardData.getData('text/plain');
+
+            // нормализуем plain text ДО linkify
+            text = text
+                .replace(/\r\n/g, '\n')
+                .replace(/[\u200B\uFEFF\u00AD]/g, '')
+                .replace(/[\u00A0\u202F\u2007\u2008\u2000-\u200A\u3000]/g, ' ');
+
+            // одиночная строка — тримим
+            if (!/[\n\r]/.test(text)) text = text.trim();
+
             if (html) document.execCommand('insertHTML', false, this.sanitizeHtml(html));
             else      document.execCommand('insertHTML', false, this.linkify(text));
         };
@@ -1251,7 +1261,51 @@ class ChatView {
 
     /* =================== sanitize / linkify =================== */
 
+    _cleanWordHtml(html) {
+    return html
+        .replace(/<head[\s\S]*?<\/head>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<xml[\s\S]*?<\/xml>/gi, '')
+        .replace(/<!--\[if[\s\S]*?<!\[endif\]-->/gi, '')  // mso conditional
+        .replace(/<meta[^>]*>/gi, '')
+        .replace(/<link[^>]*>/gi, '')
+        .replace(/<title[\s\S]*?<\/title>/gi, '')
+        .replace(/<\/?(html|head|body)\b[^>]*>/gi, '');    // развёрнутые обёртки
+}
+
+    _normalizeTextNodes(root) {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+            node.textContent = node.textContent
+                // zero-width и BOM
+                .replace(/[\u200B\uFEFF\u00AD]/g, '')
+                // NBSP, narrow NBSP, figure space, punctuation space → обычный пробел
+                .replace(/[\u00A0\u202F\u2007\u2008]/g, ' ')
+                // en/em/thin/hair/ideographic spaces → обычный пробел
+                .replace(/[\u2000-\u200A\u3000]/g, ' ');
+        }
+    }
+
+    _trimEdges(root) {
+        // Убираем ведущие <br>
+        while (root.firstChild) {
+            const c = root.firstChild;
+            if (c.nodeType === 1 && c.tagName === 'BR') { c.remove(); continue; }
+            if (c.nodeType === 3 && c.textContent.trim() === '') { c.remove(); continue; }
+            break;
+        }
+        // Убираем хвостовые <br>
+        while (root.lastChild) {
+            const c = root.lastChild;
+            if (c.nodeType === 1 && c.tagName === 'BR') { c.remove(); continue; }
+            if (c.nodeType === 3 && c.textContent.trim() === '') { c.remove(); continue; }
+            break;
+        }
+    }
+
     sanitizeHtml(html) {
+        html = this._cleanWordHtml(html);
         const allowed = {
             'B': [], 'STRONG': [], 'I': [], 'EM': [], 'U': [], 'BR': [],
             'A': ['href', 'target', 'rel'],
@@ -1270,6 +1324,7 @@ class ChatView {
                 if (child.nodeType !== 1) { child.remove(); continue; }
 
                 const tag = child.tagName;
+                if (/^(O|W|M):/i.test(tag)) { child.remove(); continue; }
                 if (blockTags.has(tag)) {
                     const isFirst = (child === node.firstChild) && (node === root);
                     walk(child);
@@ -1351,6 +1406,8 @@ class ChatView {
         };
         stripZeroWidth(root);
 
+        this._normalizeTextNodes(root);
+        this._trimEdges(root);
         return root.innerHTML;
     }
 
