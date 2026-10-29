@@ -1867,6 +1867,9 @@ class MarkerApp {
                 });
 
                 this.initChatView();
+                if (map.projectId != null) {
+                    this.chatView.setProjectContext(map.projectId, this.shareToken);
+                }
 
                 if (map.file && map.fileName) {
                     map.imageUrl = URL + map.imageUrl;

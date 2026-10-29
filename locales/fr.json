@@ -353,6 +353,18 @@
     "link_dialog_text_placeholder": "Texte du lien (facultatif)",
     "link_dialog_cancel": "Annuler",
     "link_dialog_ok": "Insérer",
+    "link_tab_url": "URL",
+    "link_tab_map": "Carte",
+    "link_tab_note": "Note",
+
+    "link_filter_placeholder": "Rechercher...",
+    "link_loading": "Chargement...",
+    "link_map_empty": "Aucune carte",
+    "link_note_empty": "Aucune note",
+    "link_load_error": "Impossible de charger la liste",
+
+    "app_link_map_default": "Carte #{id}",
+    "app_link_note_default": "Note #{id}",
 
     "image_dialog_title": "Insérer une image",
     "image_tab_url": "Par URL",

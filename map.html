@@ -340,12 +340,39 @@
 
     <div id="linkDialog" class="link-dialog hidden">
         <div class="link-dialog-content">
-            <h4 id="linkDialogTitle" data-i18n="map.link_dialog_title">Insert link</h4>
-            <input type="text" id="linkDialogUrl" data-i18n-placeholder="map.link_dialog_url" placeholder="https://..." />
-            <input type="text" id="linkDialogText" data-i18n-placeholder="map.link_dialog_text" placeholder="Link text (optional)" />
+            <h4 id="linkDialogTitle" data-i18n="chat.link_dialog_title">Insert link</h4>
+
+            <div class="link-dialog-tabs">
+                <button type="button" class="link-dialog-tab active" data-link-tab="url"  data-i18n="chat.link_tab_url">URL</button>
+                <button type="button" class="link-dialog-tab"        data-link-tab="map"  data-i18n="chat.link_tab_map">Map</button>
+                <button type="button" class="link-dialog-tab"        data-link-tab="note" data-i18n="chat.link_tab_note">Note</button>
+            </div>
+
+            <!-- Вкладка «Ссылка» -->
+            <div class="link-dialog-pane" data-link-pane="url">
+                <input type="text" id="linkDialogUrl" data-i18n-placeholder="chat.link_dialog_url_placeholder" placeholder="https://..." />
+            </div>
+
+            <!-- Вкладка «Карта» -->
+            <div class="link-dialog-pane hidden" data-link-pane="map">
+                <input type="text" id="linkMapFilter" class="link-dialog-filter"
+                       data-i18n-placeholder="chat.link_filter_placeholder" placeholder="Search..." />
+                <div id="linkMapList" class="link-dialog-list"></div>
+            </div>
+
+            <!-- Вкладка «Заметка» -->
+            <div class="link-dialog-pane hidden" data-link-pane="note">
+                <input type="text" id="linkNoteFilter" class="link-dialog-filter"
+                       data-i18n-placeholder="chat.link_filter_placeholder" placeholder="Search..." />
+                <div id="linkNoteList" class="link-dialog-list"></div>
+            </div>
+
+            <input type="text" id="linkDialogText"
+                   data-i18n-placeholder="chat.link_dialog_text_placeholder" placeholder="Text (optional)" />
+
             <div class="link-dialog-buttons">
-                <button id="linkDialogCancel" data-i18n="map.link_dialog_cancel">Cancel</button>
-                <button id="linkDialogOk" class="primary" data-i18n="map.link_dialog_ok">Insert</button>
+                <button id="linkDialogCancel" data-i18n="chat.link_dialog_cancel">Cancel</button>
+                <button id="linkDialogOk" class="primary" data-i18n="chat.link_dialog_ok">Insert</button>
             </div>
         </div>
     </div>

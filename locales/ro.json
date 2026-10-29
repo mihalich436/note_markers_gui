@@ -353,6 +353,18 @@
     "link_dialog_text_placeholder": "Textul linkului (opțional)",
     "link_dialog_cancel": "Anulează",
     "link_dialog_ok": "Inserează",
+    "link_tab_url": "URL",
+    "link_tab_map": "Hartă",
+    "link_tab_note": "Notiță",
+
+    "link_filter_placeholder": "Caută...",
+    "link_loading": "Se încarcă...",
+    "link_map_empty": "Fără hărți",
+    "link_note_empty": "Fără notițe",
+    "link_load_error": "Lista nu a putut fi încărcată",
+
+    "app_link_map_default": "Hartă #{id}",
+    "app_link_note_default": "Notiță #{id}",
 
     "image_dialog_title": "Inserează imagine",
     "image_tab_url": "Prin URL",

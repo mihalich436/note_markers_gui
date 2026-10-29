@@ -353,6 +353,18 @@
     "link_dialog_text_placeholder": "Texto do link (opcional)",
     "link_dialog_cancel": "Cancelar",
     "link_dialog_ok": "Inserir",
+    "link_tab_url": "URL",
+    "link_tab_map": "Mapa",
+    "link_tab_note": "Nota",
+
+    "link_filter_placeholder": "Pesquisar...",
+    "link_loading": "Carregando...",
+    "link_map_empty": "Sem mapas",
+    "link_note_empty": "Sem notas",
+    "link_load_error": "Não foi possível carregar a lista",
+
+    "app_link_map_default": "Mapa #{id}",
+    "app_link_note_default": "Nota #{id}",
 
     "image_dialog_title": "Inserir imagem",
     "image_tab_url": "Por URL",

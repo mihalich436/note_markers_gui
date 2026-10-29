@@ -14,7 +14,8 @@
  *       onEditDescription:  (text) => {},
  *   });
  *   view.open(entity);
- * Зависит от глобальной функции t() из i18n.js.
+ *   view.setProjectContext(projectId, shareToken); // для внутренних ссылок
+ * Зависит от глобальных URL, apiRequest, t(), escapeHtml из config/i18n/common.
  */
 class ChatView {
     constructor(rootEl, options = {}) {
@@ -30,38 +31,47 @@ class ChatView {
         this.onDeleteMessage     = options.onDeleteMessage     || (() => {});
         this.onEditDescription   = options.onEditDescription   || (() => {});
 
-        // Текущая сущность (маркер / заметка)
+        // Контекст проекта — для внутренних ссылок
+        this.projectId  = options.projectId  ?? null;
+        this.shareToken = options.shareToken ?? null;
+
         this.entity = null;
-
-        // Видимость нового сообщения
         this.newMessageVisibility = true;
-
-        // Флаги
         this.readOnly = false;
         this.showInputArea = true;
 
-        // Статичный тулбар (внутри chatInputArea) — для нового сообщения
         this.staticFormatToolbar = null;
-
-        // Всплывающий тулбар — только для редактируемых сообщений
         this.formatToolbar = null;
-
-        // Цель всплывающего тулбара (конкретный .chat-text)
         this._floatingTarget = null;
-
-        // Последняя активная цель форматирования (chatInput или редактируемый .chat-text).
-        // Статичный тулбар применяет формат именно сюда.
         this._lastFormatTarget = null;
 
-        // Диалог вставки ссылки/картинки
+        // Кэш списков карт/заметок проекта
+        this._mapsCache = null;   // null = не загружено
+        this._notesCache = null;
+        this._mapsLoading = false;
+        this._notesLoading = false;
+
+        // ---- linkDialog ----
         this.linkDialog      = document.getElementById('linkDialog');
         this.linkDialogTitle = document.getElementById('linkDialogTitle');
         this.linkDialogUrl   = document.getElementById('linkDialogUrl');
         this.linkDialogText  = document.getElementById('linkDialogText');
         this.linkDialogOk    = document.getElementById('linkDialogOk');
         this.linkDialogCancel= document.getElementById('linkDialogCancel');
+        this.linkDialogTabs  = this.linkDialog?.querySelectorAll('.link-dialog-tab');
+        this.linkDialogPanes = this.linkDialog?.querySelectorAll('.link-dialog-pane');
+        this.linkMapFilter   = document.getElementById('linkMapFilter');
+        this.linkNoteFilter  = document.getElementById('linkNoteFilter');
+        this.linkMapList     = document.getElementById('linkMapList');
+        this.linkNoteList    = document.getElementById('linkNoteList');
 
-        // Диалог загрузки изображения
+        // Состояние диалога
+        this._linkDialogTab = 'url';          // 'url' | 'map' | 'note'
+        this._linkSavedRange = null;
+        this._linkSelectedMap = null;         // { id, title }
+        this._linkSelectedNote = null;
+
+        // ---- imageDialog ----
         this.imageDialog            = document.getElementById('imageUploadDialog');
         this.imageDialogTabs        = this.imageDialog?.querySelectorAll('.image-upload-tab');
         this.imageDialogPanes       = this.imageDialog?.querySelectorAll('.image-upload-pane');
@@ -74,9 +84,8 @@ class ChatView {
         this.imageDialogOk          = document.getElementById('imageUploadOk');
         this.imageDialogCancel      = document.getElementById('imageUploadCancel');
 
-        // Состояние диалога загрузки
-        this._imageDialogMode   = 'url';   // 'url' | 'file'
-        this._imageUploadFile   = null;    // сжатый File
+        this._imageDialogMode   = 'url';
+        this._imageUploadFile   = null;
         this._imageUploadBusy   = false;
         this._imageSavedRange   = null;
 
@@ -97,13 +106,9 @@ class ChatView {
         this.expandBtn     = this.root.querySelector('#expandViewModal');
         this.closeBtn      = this.root.querySelector('#closeViewModal');
 
-        // Статичный тулбар — внутри chatInputArea
         this.staticFormatToolbar = this.root.querySelector('#staticFormatToolbar');
-
-        // Всплывающий тулбар — глобальный, лежит в body
         this.formatToolbar = document.getElementById('formatToolbar');
 
-        // Контекстное меню сообщений
         this.messageMenu = document.createElement('div');
         this.messageMenu.className = 'context-menu note hidden';
         document.body.appendChild(this.messageMenu);
@@ -112,19 +117,23 @@ class ChatView {
     _initEvents() {
         this.sendChatBtn.addEventListener('click', () => this.send());
         this.visChatBtn.addEventListener('click', () => this._toggleNewMessageVisibility());
-        if (this.closeBtn) {
-            this.closeBtn.addEventListener('click', () => this.close());
-        }
-        if (this.expandBtn) {
-            // i18n: title обновляется в _toggleSize()
-            this.expandBtn.addEventListener('click', () => this._toggleSize());
-        }
+        if (this.closeBtn)  this.closeBtn.addEventListener('click', () => this.close());
+        if (this.expandBtn) this.expandBtn.addEventListener('click', () => this._toggleSize());
 
         // Клик по картинке — открыть в новой вкладке
         this.chatMessages.addEventListener('click', (e) => {
             if (e.target.tagName === 'IMG') {
                 window.open(e.target.src, '_blank', 'noopener');
             }
+        });
+
+        // Клик по кнопке-ссылке на карту/заметку
+        this.chatMessages.addEventListener('click', (e) => {
+            const btn = e.target.closest('.app-link-btn');
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            this._openAppLink(btn);
         });
 
         // Контекстное меню сообщений
@@ -141,7 +150,6 @@ class ChatView {
             );
         });
 
-        // Закрытие меню по клику вне
         document.addEventListener('click', () => {
             this._closeMessageMenu();
         });
@@ -164,7 +172,6 @@ class ChatView {
             }
         });
 
-        // Paste handler
         const handlePaste = (e) => {
             e.preventDefault();
             const html = e.clipboardData.getData('text/html');
@@ -199,10 +206,8 @@ class ChatView {
             });
         }
 
-        // Показ/скрытие всплывающего тулбара
         document.addEventListener('selectionchange', () => this._handleSelectionChange());
 
-        // Запоминаем последнюю цель форматирования
         document.addEventListener('focusin', (e) => {
             const t = e.target;
             if (!t) return;
@@ -215,14 +220,36 @@ class ChatView {
             }
         });
 
-        if (this.linkDialogCancel) this.linkDialogCancel.addEventListener('click', () => this._closeLinkDialog());
-        if (this.linkDialogOk)     this.linkDialogOk.addEventListener('click', () => this._confirmLinkDialog());
-        if (this.linkDialogUrl)    this.linkDialogUrl.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') this._confirmLinkDialog();
-            if (e.key === 'Escape') this._closeLinkDialog();
-        });
+        // ===== linkDialog =====
+        if (this.linkDialog) {
+            this.linkDialogTabs?.forEach(tab => {
+                tab.addEventListener('click', () => this._switchLinkTab(tab.dataset.linkTab));
+            });
 
-        // ===== Диалог загрузки изображения =====
+            this.linkDialogUrl.addEventListener('input', () => this._updateLinkOkState());
+            this.linkDialogText.addEventListener('input', () => this._updateLinkOkState());
+
+            this.linkMapFilter.addEventListener('input', () => this._renderLinkList('map'));
+            this.linkNoteFilter.addEventListener('input', () => this._renderLinkList('note'));
+
+            this.linkDialogOk.addEventListener('click', () => this._confirmLinkDialog());
+            this.linkDialogCancel.addEventListener('click', () => this._closeLinkDialog());
+
+            this.linkDialogUrl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !this.linkDialogOk.disabled) this._confirmLinkDialog();
+                if (e.key === 'Escape') this._closeLinkDialog();
+            });
+            this.linkDialogText.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !this.linkDialogOk.disabled) this._confirmLinkDialog();
+                if (e.key === 'Escape') this._closeLinkDialog();
+            });
+
+            this.linkDialog.addEventListener('mousedown', (e) => {
+                if (e.target === this.linkDialog) this._closeLinkDialog();
+            });
+        }
+
+        // ===== imageDialog =====
         if (this.imageDialog) {
             this.imageDialogTabs.forEach(tab => {
                 tab.addEventListener('click', () => this._switchImageTab(tab.dataset.tab));
@@ -255,6 +282,20 @@ class ChatView {
 
     /* ======================== Публичное API ====================== */
 
+    /**
+     * Устанавливает контекст проекта для внутренних ссылок.
+     * Можно вызывать повторно — при смене проекта кэш сбрасывается.
+     */
+    setProjectContext(projectId, shareToken) {
+        const changed = (this.projectId !== projectId) || (this.shareToken !== shareToken);
+        this.projectId  = projectId ?? null;
+        this.shareToken = shareToken ?? null;
+        if (changed) {
+            this._mapsCache = null;
+            this._notesCache = null;
+        }
+    }
+
     open(entity) {
         this.entity = entity;
         this.setTitle(entity.title || '');
@@ -264,22 +305,20 @@ class ChatView {
     close() {
         this._hideFormatToolbar();
         this._closeMessageMenu();
+        this._closeLinkDialog();
         this._closeImageDialog(true);
         if (typeof this.onClose === 'function') this.onClose();
         else this.root.classList.add('hidden');
     }
 
     setTitle(title) {
-        // i18n: fallback на локализованный заголовок
         if (this.titleEl) this.titleEl.textContent = title || t('chat.default_title');
     }
 
     setReadOnly(readOnly) {
         this.readOnly = !!readOnly;
-        if (this.chatInputArea) {
-            this.chatInputArea.classList.toggle('hidden', this.readOnly);
-        }
-        if (this.editBtn) this.editBtn.classList.toggle('hidden', this.readOnly);
+        if (this.chatInputArea) this.chatInputArea.classList.toggle('hidden', this.readOnly);
+        if (this.editBtn)       this.editBtn.classList.toggle('hidden', this.readOnly);
     }
 
     setShowInputArea(show) {
@@ -300,7 +339,6 @@ class ChatView {
         if (entity.description) this._appendDescription(entity.description);
         if (!entity.messages || entity.messages.length === 0) {
             if (!entity.description) {
-                // i18n
                 this.chatMessages.innerHTML = `<div class="chat-empty">${escapeHtml(t('chat.empty'))}</div>`;
             }
             return;
@@ -316,10 +354,8 @@ class ChatView {
     appendMessage(msg) {
         if (!this.chatMessages) return;
         if (msg.id && this.chatMessages.querySelector(`.chat-message[data-message-id="${msg.id}"]`)) return;
-
         const empty = this.chatMessages.querySelector('.chat-empty');
         if (empty) empty.remove();
-
         this._appendMessage(msg);
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
         this._clearInput();
@@ -327,15 +363,10 @@ class ChatView {
 
     updateMessage(msg) {
         if (!this.chatMessages) return false;
-
-        const messageEl = this.chatMessages.querySelector(
-            `.chat-message[data-message-id="${msg.id}"]`
-        );
+        const messageEl = this.chatMessages.querySelector(`.chat-message[data-message-id="${msg.id}"]`);
         if (!messageEl) return false;
-
         const messageDiv = messageEl.querySelector('.chat-message-div');
         if (!messageDiv) return false;
-
         const textSpan = messageDiv.querySelector('.chat-text');
         if (!textSpan) return false;
 
@@ -349,7 +380,6 @@ class ChatView {
         textSpan.contentEditable = 'false';
         textSpan.innerHTML = this.linkify(msg.text);
 
-        // Если это сообщение было целью статичного тулбара — сбрасываем цель
         if (this._lastFormatTarget === textSpan) {
             this._lastFormatTarget = this.chatInput;
         }
@@ -363,9 +393,7 @@ class ChatView {
                 authorSpan.className = `chat-author${msg.userId === this.currentUserId ? '-me' : ''}`;
             }
             const timeSpan = bottom.querySelector('.chat-time');
-            if (timeSpan) {
-                timeSpan.textContent = msg.createdAt || '';
-            }
+            if (timeSpan) timeSpan.textContent = msg.createdAt || '';
         }
 
         const msgEntity = this.entity?.messages?.find(m => String(m.id) === String(msg.id));
@@ -373,7 +401,6 @@ class ChatView {
             msgEntity.visibility = msg.visibility;
             msgEntity.text = msg.text;
         }
-
         return true;
     }
 
@@ -382,7 +409,6 @@ class ChatView {
         if (el) el.remove();
         this.entity.messages = this.entity.messages.filter(m => m.id !== messageId);
         if (this.chatMessages.children.length === 0) {
-            // i18n
             this.chatMessages.innerHTML = `<div class="chat-empty">${escapeHtml(t('chat.empty'))}</div>`;
         }
     }
@@ -401,12 +427,22 @@ class ChatView {
         const raw = this.chatInput.innerHTML.trim();
         if (!raw) return;
         const text = this.sanitizeHtml(raw);
-        if (!text.replace(/<br\s*\/?>/gi, '').replace(/&nbsp;/g, '').trim()) return;
+        if (!this._hasMeaningfulContent(text)) return;
 
         this.onSendMessage(text, this.newMessageVisibility);
         this._clearInput();
         this._hideFormatToolbar();
         this._lastFormatTarget = this.chatInput;
+    }
+
+    _hasMeaningfulContent(html) {
+        // пусто, если после удаления пустых абзацев/br/nbsp/zero-width ничего нет
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        // кнопки-ссылки считаем содержимым
+        if (tmp.querySelector('.app-link-btn')) return true;
+        const text = tmp.textContent.replace(/[\s\u200B]/g, '');
+        return text.length > 0;
     }
 
     _clearInput() {
@@ -475,7 +511,6 @@ class ChatView {
     _showMessageMenu(x, y, messageId, markerId) {
         const msg = this.entity?.messages?.find(m => String(m.id) === String(messageId));
         if (!msg) return;
-
         if (msg.userId !== this.currentUserId && this.currentRole !== 'ADMIN') return;
 
         this.messageMenu.innerHTML = '';
@@ -483,7 +518,6 @@ class ChatView {
         this.messageMenu.style.top  = y + 'px';
         this.messageMenu.classList.remove('hidden');
 
-        // i18n: все тексты меню
         const items = [
             { icon: '✏️', text: t('chat.menu_edit'),   action: () => this._editMessage(msg.id, markerId) },
             {
@@ -497,7 +531,6 @@ class ChatView {
         items.forEach(item => {
             const el = document.createElement('div');
             el.className = 'context-menu-item';
-            // escapeHtml для text — на случай, если в будущем в переводах окажется разметка
             el.innerHTML = `<span>${item.icon || ''}</span> ${escapeHtml(item.text)}`;
             el.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -508,7 +541,7 @@ class ChatView {
         });
 
         const rect = this.messageMenu.getBoundingClientRect();
-        if (rect.right > window.innerWidth) this.messageMenu.style.left = (x - rect.width) + 'px';
+        if (rect.right > window.innerWidth)  this.messageMenu.style.left = (x - rect.width) + 'px';
         if (rect.bottom > window.innerHeight) this.messageMenu.style.top  = (y - rect.height) + 'px';
     }
 
@@ -536,13 +569,11 @@ class ChatView {
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'message-edit-cancel';
         cancelBtn.textContent = '✖';
-        // i18n
         cancelBtn.title = t('chat.edit_cancel_title');
 
         const saveBtn = document.createElement('button');
         saveBtn.className = 'message-edit-save';
         saveBtn.textContent = '✔';
-        // i18n
         saveBtn.title = t('chat.edit_save_title');
 
         const prevText = textSpan.innerHTML;
@@ -601,7 +632,6 @@ class ChatView {
         this.visChatBtn.className = this.newMessageVisibility
             ? 'visible-message-btn'
             : 'invisible-message-btn';
-        // i18n
         this.visChatBtn.title = this.newMessageVisibility
             ? t('chat.visibility_all_title')
             : t('chat.visibility_me_title');
@@ -611,7 +641,6 @@ class ChatView {
 
     _handleSelectionChange() {
         if (!this.formatToolbar) return;
-
         const sel = window.getSelection();
         if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
             this._hideFormatToolbar();
@@ -669,8 +698,8 @@ class ChatView {
             case 'bold':      document.execCommand('bold'); break;
             case 'italic':    document.execCommand('italic'); break;
             case 'underline': document.execCommand('underline'); break;
-            case 'link':  this._openLinkDialog('link');  return;
-            case 'image': this._openImageDialog();       return;
+            case 'link':  this._openLinkDialog(); return;
+            case 'image': this._openImageDialog(); return;
             case 'copy':  document.execCommand('copy'); this._hideFormatToolbar(); return;
             case 'cut':   document.execCommand('cut');  this._hideFormatToolbar(); return;
             case 'paste':
@@ -685,76 +714,299 @@ class ChatView {
         this._hideFormatToolbar();
     }
 
-    /* ============== Старый диалог вставки ссылки ============== */
+    /* ================ Диалог ссылки (3 вкладки) ================ */
 
-    _openLinkDialog(mode) {
+    _openLinkDialog() {
         const sel = window.getSelection();
         let selectedText = '';
         if (sel && sel.rangeCount > 0) {
-            this._savedRange = sel.getRangeAt(0).cloneRange();
+            this._linkSavedRange = sel.getRangeAt(0).cloneRange();
             selectedText = sel.toString().trim();
         } else {
-            this._savedRange = null;
+            this._linkSavedRange = null;
         }
-        this._linkDialogMode = mode;
-        // i18n
-        this.linkDialogTitle.textContent = mode === 'link'
-            ? t('chat.link_dialog_title')
-            : t('chat.image_dialog_title');
-        this.linkDialogUrl.value  = '';
-        this.linkDialogText.value = selectedText;
-        this.linkDialogText.style.display = mode === 'link' ? 'block' : 'none';
+
+        this._linkSelectedMap  = null;
+        this._linkSelectedNote = null;
+
+        if (this.linkDialogUrl)  this.linkDialogUrl.value  = '';
+        if (this.linkDialogText) this.linkDialogText.value = selectedText;  // ← вернули
+        if (this.linkMapFilter)  this.linkMapFilter.value  = '';
+        if (this.linkNoteFilter) this.linkNoteFilter.value = '';
+
+        this._switchLinkTab('url');
         this.linkDialog.classList.remove('hidden');
         this._hideFormatToolbar();
-        setTimeout(() => this.linkDialogUrl.focus(), 50);
+        setTimeout(() => {
+            this.linkDialogUrl?.focus();
+        }, 50);
+    }
+
+    _switchLinkTab(tab) {
+        this._linkDialogTab = tab;
+
+        this.linkDialogTabs?.forEach(t => {
+            t.classList.toggle('active', t.dataset.linkTab === tab);
+        });
+        this.linkDialogPanes?.forEach(p => {
+            p.classList.toggle('hidden', p.dataset.linkPane !== tab);
+        });
+
+        if (tab === 'map') {
+            this._ensureAppList('map').then(() => this._renderLinkList('map'));
+            setTimeout(() => this.linkMapFilter?.focus(), 30);
+        } else if (tab === 'note') {
+            this._ensureAppList('note').then(() => this._renderLinkList('note'));
+            setTimeout(() => this.linkNoteFilter?.focus(), 30);
+        } else {
+            setTimeout(() => this.linkDialogUrl?.focus(), 30);
+        }
+
+        this._updateLinkOkState();
+    }
+
+    _updateLinkOkState() {
+        if (!this.linkDialogOk) return;
+        let enabled = false;
+        if (this._linkDialogTab === 'url') {
+            enabled = !!this.linkDialogUrl.value.trim();
+        } else if (this._linkDialogTab === 'map') {
+            enabled = !!this._linkSelectedMap;
+        } else if (this._linkDialogTab === 'note') {
+            enabled = !!this._linkSelectedNote;
+        }
+        this.linkDialogOk.disabled = !enabled;
+    }
+
+    /* ---------- загрузка списков карт/заметок ---------- */
+
+    _ensureAppList(type) {
+        if (!this.projectId) {
+            // Нет контекста проекта — считаем список пустым
+            return Promise.resolve([]);
+        }
+        if (type === 'map') {
+            if (this._mapsCache) return Promise.resolve(this._mapsCache);
+            if (this._mapsLoading) return this._mapsPromise || Promise.resolve([]);
+        } else if (type === 'note') {
+            if (this._notesCache) return Promise.resolve(this._notesCache);
+            if (this._notesLoading) return this._notesPromise || Promise.resolve([]);
+        }
+
+        const endpoint = type === 'map'
+            ? `/projects/${this.projectId}/maps`
+            : `/projects/${this.projectId}/notes`;
+        const url = endpoint + (this.shareToken ? `?share=${this.shareToken}` : '');
+
+        if (type === 'map') this._mapsLoading = true;
+        else                this._notesLoading = true;
+
+        const p = apiRequest(url)
+            .then(res => {
+                if (!res.ok) throw new Error('bad response');
+                return res.json();
+            })
+            .then(data => {
+                // Терпимо к разным форматам: массив, { maps }, { notes }
+                let list = [];
+                if (Array.isArray(data)) list = data;
+                else if (Array.isArray(data.maps))  list = data.maps;
+                else if (Array.isArray(data.notes)) list = data.notes;
+
+                const normalized = list.map(x => ({
+                    id: x.id,
+                    title: x.title || ''
+                }));
+
+                if (type === 'map') this._mapsCache = normalized;
+                else                this._notesCache = normalized;
+                return normalized;
+            })
+            .catch(err => {
+                console.error('Failed to load app list:', err);
+                if (type === 'map') this._mapsCache = [];
+                else                this._notesCache = [];
+                return [];
+            })
+            .finally(() => {
+                if (type === 'map') this._mapsLoading = false;
+                else                this._notesLoading = false;
+            });
+
+        if (type === 'map') this._mapsPromise = p;
+        else                this._notesPromise = p;
+        return p;
+    }
+
+    _renderLinkList(type) {
+        const listEl   = type === 'map' ? this.linkMapList  : this.linkNoteList;
+        const filterEl = type === 'map' ? this.linkMapFilter : this.linkNoteFilter;
+        if (!listEl) return;
+
+        const cache = type === 'map' ? this._mapsCache : this._notesCache;
+        const loading = type === 'map' ? this._mapsLoading : this._notesLoading;
+
+        if (loading || cache === null) {
+            listEl.innerHTML = `<div class="link-dialog-list-empty">${escapeHtml(t('chat.link_loading'))}</div>`;
+            return;
+        }
+        if (!cache || cache.length === 0) {
+            listEl.innerHTML = `<div class="link-dialog-list-empty">${
+                escapeHtml(t(type === 'map' ? 'chat.link_map_empty' : 'chat.link_note_empty'))
+            }</div>`;
+            return;
+        }
+
+        const q = (filterEl?.value || '').trim().toLowerCase();
+        const filtered = q
+            ? cache.filter(item => (item.title || '').toLowerCase().includes(q))
+            : cache;
+
+        if (filtered.length === 0) {
+            listEl.innerHTML = `<div class="link-dialog-list-empty">${escapeHtml(t('chat.link_map_empty'))}</div>`;
+            return;
+        }
+
+        const selected = type === 'map' ? this._linkSelectedMap : this._linkSelectedNote;
+
+        listEl.innerHTML = '';
+        filtered.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'link-dialog-item';
+            if (selected && selected.id === item.id) row.classList.add('selected');
+            row.textContent = item.title || (type === 'map'
+                ? t('chat.app_link_map_default',  { id: item.id })
+                : t('chat.app_link_note_default', { id: item.id })
+            );
+            row.title = row.textContent;
+            row.addEventListener('click', () => {
+                if (type === 'map') this._linkSelectedMap  = item;
+                else                this._linkSelectedNote = item;
+                this._renderLinkList(type);
+                this._updateLinkOkState();
+            });
+            listEl.appendChild(row);
+        });
+    }
+
+    /* ---------- вставка ---------- */
+
+    _confirmLinkDialog() {
+        if (this._linkDialogTab === 'url') {
+            const url = this.linkDialogUrl.value.trim();
+            if (!url) return;
+            const text = this.linkDialogText.value.trim() || url;
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.textContent = text;
+            this._insertNodeAtLinkRange(a);
+        } else if (this._linkDialogTab === 'map' && this._linkSelectedMap) {
+            this._insertAppLinkButton('map', this._linkSelectedMap);
+        } else if (this._linkDialogTab === 'note' && this._linkSelectedNote) {
+            this._insertAppLinkButton('note', this._linkSelectedNote);
+        } else {
+            return;
+        }
+        this._closeLinkDialog();
+    }
+
+    _insertAppLinkButton(type, item) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'app-link-btn';
+        btn.dataset.appType = type;
+        btn.dataset.appId   = String(item.id);
+        btn.setAttribute('contenteditable', 'false');
+
+        const custom = (this.linkDialogText.value || '').trim();
+        const fallback = item.title || (type === 'map'
+            ? t('chat.app_link_map_default',  { id: item.id })
+            : t('chat.app_link_note_default', { id: item.id })
+        );
+        btn.textContent = custom || fallback;
+
+        this._insertNodeAtLinkRange(btn);
+    }
+
+    _insertNodeAtLinkRange(node) {
+        // Пытаемся вставить в сохранённый range
+        const range = this._linkSavedRange;
+        if (range) {
+            try {
+                if (range.startContainer.isConnected) {
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                    range.deleteContents();
+                    range.insertNode(node);
+
+                    // Ставим курсор после вставленного узла
+                    const after = document.createTextNode('\u200B');
+                    if (node.parentNode) {
+                        node.parentNode.insertBefore(after, node.nextSibling);
+                        const newRange = document.createRange();
+                        newRange.setStartAfter(after);
+                        newRange.collapse(true);
+                        sel.removeAllRanges();
+                        sel.addRange(newRange);
+                    }
+                    return;
+                }
+            } catch (e) {
+                console.warn('Failed to insert at saved link range:', e);
+            }
+        }
+
+        // Fallback — в последнюю активную цель или chatInput
+        const target = (this._lastFormatTarget &&
+            this._lastFormatTarget.isConnected &&
+            (this._lastFormatTarget === this.chatInput ||
+             this._lastFormatTarget.contentEditable === 'true'))
+            ? this._lastFormatTarget
+            : this.chatInput;
+
+        if (target) {
+            target.focus();
+            target.appendChild(node);
+            target.appendChild(document.createTextNode('\u200B'));
+        }
     }
 
     _closeLinkDialog() {
         if (this.linkDialog) this.linkDialog.classList.add('hidden');
-        this._linkDialogMode = null;
-        this._savedRange = null;
+        this._linkSavedRange = null;
+        this._linkSelectedMap = null;
+        this._linkSelectedNote = null;
+        this._linkDialogTab = 'url';
+        if (this.linkDialogUrl)  this.linkDialogUrl.value  = '';
+        if (this.linkDialogText) this.linkDialogText.value = '';
+        if (this.linkMapFilter)  this.linkMapFilter.value  = '';
+        if (this.linkNoteFilter) this.linkNoteFilter.value = '';
     }
 
-    _confirmLinkDialog() {
-        const url = this.linkDialogUrl.value.trim();
-        if (!url) return;
-        const range = this._savedRange;
-        if (!range) { this._closeLinkDialog(); return; }
+    /* ================== Кнопки-ссылки на карту/заметку ================== */
 
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
+    _buildAppUrl(type, id) {
+        const params = new URLSearchParams();
+        params.set(type === 'map' ? 'mapId' : 'noteId', id);
+        if (this.shareToken) params.set('share', this.shareToken);
+        // URL — глобальная переменная из config.js
+        return `./${type}.html?${params.toString()}`;
+    }
 
-        if (this._linkDialogMode === 'link') {
-            const text = this.linkDialogText.value.trim() || url;
-            const a = document.createElement('a');
-            a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
-            a.textContent = text;
-            range.deleteContents();
-            range.insertNode(a);
-            range.setStartAfter(a);
-            range.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(range);
-        } else if (this._linkDialogMode === 'image') {
-            const img = document.createElement('img');
-            img.src = url; img.alt = '🖼'; img.loading = 'lazy';
-            const insertRange = range.cloneRange();
-            insertRange.collapse(false);
-            range.insertNode(img);
-            insertRange.insertNode(img);
-            insertRange.setStartAfter(img);
-            insertRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(insertRange);
-        }
-        this._closeLinkDialog();
+    _openAppLink(btn) {
+        const type = btn.dataset.appType;
+        const id   = Number(btn.dataset.appId);
+        if (!type || !id || (type !== 'map' && type !== 'note')) return;
+        const href = this._buildAppUrl(type, id);
+        window.open(href, '_blank', 'noopener');
     }
 
     /* =============== Диалог загрузки изображения =============== */
 
     _openImageDialog() {
-        // Запоминаем текущий range — куда вставлять
         const sel = window.getSelection();
         if (sel && sel.rangeCount > 0) {
             this._imageSavedRange = sel.getRangeAt(0).cloneRange();
@@ -762,7 +1014,6 @@ class ChatView {
             this._imageSavedRange = null;
         }
 
-        // Сброс состояния
         this._imageDialogMode = 'url';
         this._imageUploadFile = null;
         this._imageUploadBusy = false;
@@ -811,7 +1062,6 @@ class ChatView {
             enabled = !!this._imageUploadFile;
         }
         this.imageDialogOk.disabled = !enabled;
-        // i18n
         this.imageDialogOk.textContent = t('chat.image_dialog_ok');
     }
 
@@ -832,7 +1082,6 @@ class ChatView {
         }
 
         this.imageDialogOk.disabled = true;
-        // i18n
         this.imageDialogInfo.textContent = t('chat.image_processing');
         this.imageDialogPreviewWrap.classList.remove('hidden');
 
@@ -840,7 +1089,6 @@ class ChatView {
             const compressed = await compressImage(file);
             this._imageUploadFile = compressed;
 
-            // Превью
             const reader = new FileReader();
             reader.onload = (e) => {
                 this.imageDialogPreview.src = e.target.result;
@@ -848,14 +1096,12 @@ class ChatView {
                     const reduction = ((file.size - compressed.size) / file.size * 100).toFixed(1);
                     const orig = (file.size / (1024 * 1024)).toFixed(2);
                     const comp = (compressed.size / (1024 * 1024)).toFixed(2);
-                    // i18n
                     this.imageDialogInfo.textContent = t('chat.image_compressed', {
                         from: orig,
                         to: comp,
                         percent: reduction
                     });
                 } else {
-                    // i18n
                     this.imageDialogInfo.textContent = t('chat.image_size', {
                         size: (compressed.size / (1024 * 1024)).toFixed(2)
                     });
@@ -865,7 +1111,6 @@ class ChatView {
             reader.readAsDataURL(compressed);
         } catch (err) {
             console.error(err);
-            // i18n
             this._showImageError(t('chat.image_process_failed'));
             this.imageDialogFile.value = '';
             this._imageUploadFile = null;
@@ -888,7 +1133,6 @@ class ChatView {
         if (this._imageUploadBusy) return;
         this._hideImageError();
 
-        // ---- Режим URL ----
         if (this._imageDialogMode === 'url') {
             const url = this.imageDialogUrl.value.trim();
             if (!url) return;
@@ -897,13 +1141,11 @@ class ChatView {
             return;
         }
 
-        // ---- Режим файла ----
         if (!this._imageUploadFile) return;
 
         this._imageUploadBusy = true;
         this.imageDialogOk.disabled = true;
         this.imageDialogCancel.disabled = true;
-        // i18n
         this.imageDialogOk.textContent = t('chat.image_dialog_uploading');
 
         try {
@@ -916,7 +1158,6 @@ class ChatView {
             });
 
             if (!response.ok) {
-                // i18n: дефолтная ошибка загрузки
                 let msg = t('chat.image_upload_failed');
                 try {
                     const text = await response.text();
@@ -927,15 +1168,10 @@ class ChatView {
 
             const raw = await response.text();
             const imageUrl = (raw || '').trim();
-            if (!imageUrl) {
-                // i18n
-                throw new Error(t('chat.image_server_no_url'));
-            }
+            if (!imageUrl) throw new Error(t('chat.image_server_no_url'));
 
             const finalUrl = URL + imageUrl;
-
             if (!/^https?:\/\//i.test(finalUrl)) {
-                // i18n
                 throw new Error(t('chat.image_server_bad_url', { url: imageUrl }));
             }
 
@@ -944,22 +1180,17 @@ class ChatView {
             this._closeImageDialog();
         } catch (err) {
             console.error(err);
-            // i18n
             this._showImageError(t('chat.image_upload_failed_details', {
                 message: err.message || t('chat.image_unknown_error')
             }));
         } finally {
             this._imageUploadBusy = false;
             this.imageDialogCancel.disabled = false;
-            // i18n
             this.imageDialogOk.textContent = t('chat.image_dialog_ok');
             this._updateImageOkState();
         }
     }
 
-    /**
-     * @param {boolean} force — если true, закрывает даже во время загрузки
-     */
     _closeImageDialog(force = false) {
         if (this._imageUploadBusy && !force) return;
         this._imageUploadBusy = false;
@@ -985,7 +1216,6 @@ class ChatView {
                     insertRange.collapse(false);
                     insertRange.insertNode(img);
 
-                    // Ставим курсор после картинки, чтобы можно было продолжить печатать
                     const after = document.createTextNode('\u200B');
                     if (img.parentNode) {
                         img.parentNode.insertBefore(after, img.nextSibling);
@@ -1003,7 +1233,6 @@ class ChatView {
             }
         }
 
-        // Fallback — вставляем в последнюю активную цель или chatInput
         if (!inserted) {
             const target = (this._lastFormatTarget &&
                 this._lastFormatTarget.isConnected &&
@@ -1027,6 +1256,7 @@ class ChatView {
             'B': [], 'STRONG': [], 'I': [], 'EM': [], 'U': [], 'BR': [],
             'A': ['href', 'target', 'rel'],
             'IMG': ['src', 'alt'],
+            'BUTTON': ['type', 'class', 'data-app-type', 'data-app-id'],
         };
         const blockTags = new Set(['DIV', 'P']);
 
@@ -1065,6 +1295,26 @@ class ChatView {
                     const src = child.getAttribute('src') || '';
                     if (!/^https?:\/\//i.test(src)) { child.remove(); continue; }
                 }
+                if (tag === 'BUTTON') {
+                    const appType = child.getAttribute('data-app-type') || '';
+                    const appId   = child.getAttribute('data-app-id')   || '';
+                    const validType = (appType === 'map' || appType === 'note');
+                    const validId   = /^\d+$/.test(appId);
+                    if (!validType || !validId) {
+                        child.replaceWith(doc.createTextNode(child.textContent || ''));
+                        continue;
+                    }
+                    const text = (child.textContent || '').replace(/\s+/g, ' ').trim();
+                    const newBtn = doc.createElement('button');
+                    newBtn.setAttribute('type', 'button');
+                    newBtn.setAttribute('class', 'app-link-btn');
+                    newBtn.setAttribute('data-app-type', appType);
+                    newBtn.setAttribute('data-app-id', appId);
+                    newBtn.setAttribute('contenteditable', 'false');
+                    newBtn.textContent = text;
+                    child.replaceWith(newBtn);
+                    continue;
+                }
                 walk(child);
             }
         };
@@ -1085,8 +1335,7 @@ class ChatView {
         };
         cleanup(root);
 
-        // Удаляем zero-width space (\u200B) — нужен только как якорь
-        // для курсора в contenteditable
+        // Удаляем zero-width space
         const stripZeroWidth = (node) => {
             const children = Array.from(node.childNodes);
             for (const child of children) {
@@ -1106,7 +1355,7 @@ class ChatView {
     }
 
     linkify(text) {
-        const hasHtml = /<(b|strong|i|em|u|a|br|img)\b/i.test(text);
+        const hasHtml = /<(b|strong|i|em|u|a|br|img|button)\b/i.test(text);
         let result;
         if (hasHtml) {
             result = text;
@@ -1131,7 +1380,6 @@ class ChatView {
         if (this.expandBtn) {
             const expanded = this.root.classList.contains('expanded');
             this.expandBtn.textContent = expanded ? '-' : '⤢';
-            // i18n: title
             this.expandBtn.title = expanded
                 ? t('chat.collapse_title')
                 : t('chat.expand_title');

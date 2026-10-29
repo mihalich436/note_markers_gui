@@ -353,6 +353,18 @@
     "link_dialog_text_placeholder": "Текст ссылки (необязательно)",
     "link_dialog_cancel": "Отмена",
     "link_dialog_ok": "Вставить",
+    "link_tab_url": "Ссылка",
+    "link_tab_map": "Карта",
+    "link_tab_note": "Заметка",
+
+    "link_filter_placeholder": "Поиск...",
+    "link_loading": "Загрузка...",
+    "link_map_empty": "Нет карт",
+    "link_note_empty": "Нет заметок",
+    "link_load_error": "Не удалось загрузить список",
+
+    "app_link_map_default": "Карта #{id}",
+    "app_link_note_default": "Заметка #{id}",
 
     "image_dialog_title": "Вставить картинку",
     "image_tab_url": "По ссылке",

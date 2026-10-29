@@ -103,6 +103,7 @@ class NotesApp {
             this.renderView();
 
             if (this.projectId) {
+                this.chatView.setProjectContext(this.projectId, this.shareToken);
                 this.loadNotesList();
             }
 

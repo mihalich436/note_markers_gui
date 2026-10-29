@@ -353,6 +353,18 @@
     "link_dialog_text_placeholder": "Linktext (optional)",
     "link_dialog_cancel": "Abbrechen",
     "link_dialog_ok": "Einfügen",
+    "link_tab_url": "URL",
+    "link_tab_map": "Karte",
+    "link_tab_note": "Notiz",
+
+    "link_filter_placeholder": "Suchen...",
+    "link_loading": "Wird geladen...",
+    "link_map_empty": "Keine Karten",
+    "link_note_empty": "Keine Notizen",
+    "link_load_error": "Liste konnte nicht geladen werden",
+
+    "app_link_map_default": "Karte #{id}",
+    "app_link_note_default": "Notiz #{id}",
 
     "image_dialog_title": "Bild einfügen",
     "image_tab_url": "Per URL",

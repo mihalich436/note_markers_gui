@@ -353,6 +353,18 @@
     "link_dialog_text_placeholder": "Link text (optional)",
     "link_dialog_cancel": "Cancel",
     "link_dialog_ok": "Insert",
+    "link_tab_url": "URL",
+    "link_tab_map": "Map",
+    "link_tab_note": "Note",
+
+    "link_filter_placeholder": "Search...",
+    "link_loading": "Loading...",
+    "link_map_empty": "No maps",
+    "link_note_empty": "No notes",
+    "link_load_error": "Failed to load the list",
+
+    "app_link_map_default": "Map #{id}",
+    "app_link_note_default": "Note #{id}",
 
     "image_dialog_title": "Insert image",
     "image_tab_url": "By URL",

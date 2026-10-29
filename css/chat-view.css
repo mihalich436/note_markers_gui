@@ -491,3 +491,105 @@
 .image-upload-error.hidden {
     display: none;
 }
+
+/* ====== Диалог ссылки: вкладки и списки ====== */
+.link-dialog-content { gap: 8px; }
+
+.link-dialog-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 4px;
+}
+.link-dialog-tab {
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 13px;
+    color: #495057;
+    border-radius: 4px 4px 0 0;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.link-dialog-tab:hover  { background: #f8f9fa; }
+.link-dialog-tab.active {
+    color: #2b8e3c;
+    border-bottom-color: #40c057;
+    font-weight: 600;
+}
+
+.link-dialog-pane { display: flex; flex-direction: column; gap: 6px; }
+.link-dialog-pane.hidden { display: none; }
+
+.link-dialog-filter {
+    padding: 6px 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+}
+.link-dialog-filter:focus { border-color: #40c057; }
+
+.link-dialog-list {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    background: #fefefe;
+    min-height: 60px;
+}
+
+.link-dialog-list-empty {
+    padding: 16px;
+    text-align: center;
+    color: #868e96;
+    font-size: 13px;
+}
+
+.link-dialog-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #212529;
+    border-bottom: 1px solid #f1f3f5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.link-dialog-item:last-child { border-bottom: none; }
+.link-dialog-item:hover      { background: #f8f9fa; }
+.link-dialog-item.selected   { background: #e7f5ec; color: #2b8e3c; font-weight: 600; }
+
+/* ====== Кнопка-ссылка на карту/заметку в сообщении ====== */
+.app-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 10px 1px 8px;
+    margin: 0 1px;
+    border: 1px solid #40c057;
+    border-radius: 12px;
+    background: #f1fbf3;
+    color: #2b8e3c;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    vertical-align: baseline;
+    line-height: 1.5;
+}
+.app-link-btn:hover  { background: #e3f7e7; border-color: #2f9e44; }
+.app-link-btn:active { background: #d3f0da; }
+
+.app-link-btn::before {
+    font-size: 12px;
+    line-height: 1;
+}
+.app-link-btn[data-app-type="map"]::before  { content: "🗺️"; }
+.app-link-btn[data-app-type="note"]::before { content: "📝"; }
+
+/* В режиме редактирования кнопка не должна менять contenteditable */
+.chat-text[contenteditable="true"] .app-link-btn {
+    cursor: text;
+}
