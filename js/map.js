@@ -1277,10 +1277,6 @@ class MarkerApp {
             const updateShowLabels = (this.showLabels != showLabelsOld);
 
             this.renderMarkers(updateShowLabels);
-
-            if (!this.showLabels && updateShowLabels) {
-                this.showTooltip(t('map.notification_labels_hidden_zoom'), 1000);
-            }
         }
     }
 
@@ -1556,8 +1552,6 @@ class MarkerApp {
         this.imagePosition = { x: 0, y: 0 };
         this.updateImageTransform();
         this.renderMarkers(updateShowLabels);
-
-        this.showTooltip(t('map.zoom_reset_done'), 1500);
     }
 
     countZoomLimits() {
