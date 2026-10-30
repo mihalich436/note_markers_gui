@@ -69,6 +69,52 @@ body {
     border-color: #adb5bd;
 }
 
+.map-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    text-decoration: none;
+    flex-shrink: 0;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: background 0.2s;
+    background: linear-gradient(135deg, #474641 0%, #696758 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.map-logo:hover {
+    background-color: #f1f3f5;
+    background-image: linear-gradient(135deg, #474641 0%, #696758 100%);
+}
+
+.map-logo .logo-img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    -webkit-background-clip: unset;
+    -webkit-text-fill-color: unset;
+}
+
+.map-logo .logo-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+
+@media (max-width: 768px) {
+    .map-logo .logo-text {
+        display: none;
+    }
+    .map-logo {
+        padding: 4px;
+    }
+}
+
 .file-input {
     max-width: 150px;
     overflow: hidden;

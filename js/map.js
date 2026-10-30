@@ -1869,6 +1869,13 @@ class MarkerApp {
                 this.initChatView();
                 if (map.projectId != null) {
                     this.chatView.setProjectContext(map.projectId, this.shareToken);
+                    const backLink = document.getElementById('backToProjectLink');
+                    if (backLink) {
+                        const params = new URLSearchParams();
+                        params.set('id', map.projectId);
+                        if (this.shareToken) params.set('share', this.shareToken);
+                        backLink.href = `project.html?${params.toString()}`;
+                    }
                 }
 
                 if (map.file && map.fileName) {
