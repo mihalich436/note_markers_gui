@@ -10,10 +10,10 @@
 <body>
     <div class="container">
         <div class="navbar">
-            <div class="logo">
+            <a href="./projects.html" class="logo">
                 <img src="./icons/logo.png" alt="" class="logo-img">
                 <span data-i18n="app.name">The Lazy DM's Notes</span>
-            </div>
+            </a>
             <div style="display: flex; align-items: center; gap: 15px;">
                 <div id="langSwitcher" class="lang-switcher" aria-label="Language"></div>
                 <div class="user-info" onclick="toggleUserMenu()">
@@ -30,13 +30,15 @@
             </div>
         </div>
 
-        <div class="card header">
+        <!-- <div class="card header">
             <div id="projectInfo">
                 <div style="text-align: center;" data-i18n="common.loading_project">Loading project...</div>
             </div>
-        </div>
+        </div> -->
 
         <div class="card">
+            <div id="breadcrumbs" class="breadcrumbs-wrapper"></div>
+
             <div class="tabs-filter">
                 <button class="tab-btn active" data-filter="all" onclick="setFilter('all')" data-i18n="project.tab_all">All</button>
                 <button class="tab-btn" data-filter="notes" onclick="setFilter('notes')" data-i18n="project.tab_notes">📝 Notes</button>
@@ -65,6 +67,11 @@
                 <div class="form-group">
                     <label data-i18n="project.map_description_label">Description</label>
                     <textarea id="mapDescription" rows="6"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label data-i18n="project.folder_label">Folder</label>
+                    <select id="mapFolderPicker" class="folder-picker"></select>
                 </div>
 
                 <div class="form-group">
@@ -132,6 +139,12 @@
                     <label data-i18n="project.note_description_label">Description</label>
                     <textarea id="noteDescription" rows="6"></textarea>
                 </div>
+
+                <div class="form-group">
+                    <label data-i18n="project.folder_label">Folder</label>
+                    <select id="noteFolderPicker" class="folder-picker"></select>
+                </div>
+
                 <div class="visibility-option">
                     <div class="visibility-label">
                         <span data-i18n="project.visibility_note_label">Note visibility</span>
@@ -147,8 +160,63 @@
         </div>
     </div>
 
+    <!-- Модалка папки -->
+    <div id="folderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="folderModalTitle" data-i18n="project.create_folder">Create folder</h3>
+                <button class="close-modal" onclick="closeFolderModal()">&times;</button>
+            </div>
+            <form id="folderForm">
+                <div class="form-group">
+                    <label data-i18n="project.folder_title_label">Title</label>
+                    <input type="text" id="folderTitle" required>
+                </div>
+
+                <div class="form-group">
+                    <label data-i18n="project.folder_description_label">Description</label>
+                    <textarea id="folderDescription" rows="6"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label data-i18n="project.folder_parent_label">Parent folder</label>
+                    <select id="folderParentPicker" class="folder-picker"></select>
+                </div>
+
+                <div class="visibility-option">
+                    <div class="visibility-label">
+                        <span data-i18n="project.visibility_folder_label">Folder visibility</span>
+                        <small data-i18n="project.visibility_folder_hint">If disabled, the folder will be hidden from other participants</small>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="folderVisibility" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <button type="submit" data-i18n="common.save">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модалка удаления папки -->
+    <div id="deleteFolderModal" class="modal">
+        <div class="modal-content delete-folder-modal">
+            <div class="modal-header">
+                <h3 data-i18n="project.delete_folder_title">Delete folder</h3>
+                <button class="close-modal" onclick="closeDeleteFolderModal()">&times;</button>
+            </div>
+            <p data-i18n="project.delete_folder_question">What to do with the folder contents?</p>
+            <div class="delete-folder-actions">
+                <button type="button" class="secondary" onclick="confirmDeleteFolderMove()" data-i18n="project.delete_folder_move">Move to parent</button>
+                <button type="button" class="danger" onclick="confirmDeleteFolderCascade()" data-i18n="project.delete_folder_cascade">Delete with contents</button>
+                <button type="button" class="secondary" onclick="closeDeleteFolderModal()" data-i18n="common.cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div id="addButtonWrapper" class="fab-wrapper">
         <div id="fabMenu" class="fab-menu">
+            <button class="fab-menu-item" onclick="showCreateFolderModal()" data-i18n="project.fab_folder">📁 Folder</button>
             <button class="fab-menu-item" onclick="showCreateMapModal()" data-i18n="project.fab_map">🗺️ Map</button>
             <button class="fab-menu-item" onclick="showCreateNoteModal()" data-i18n="project.fab_note">📝 Note</button>
         </div>

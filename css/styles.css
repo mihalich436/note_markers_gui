@@ -1085,3 +1085,125 @@ input:checked + .toggle-slider:before {
 .lang-switcher__label {
     font-size: 13px;
 }
+
+/* ============ Логотип-ссылка ============ */
+a.logo {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* ============ Крошки ============ */
+.breadcrumbs-wrapper {
+    margin-bottom: 12px;
+}
+
+.breadcrumbs {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    white-space: nowrap;
+    gap: 4px;
+    padding: 6px 0;
+    font-size: 14px;
+    scrollbar-width: thin;
+}
+
+.breadcrumbs::-webkit-scrollbar {
+    height: 6px;
+}
+
+.breadcrumbs::-webkit-scrollbar-thumb {
+    background: #d0c8b8;
+    border-radius: 3px;
+}
+
+.breadcrumb-link {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+    color: #948069;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    width: auto;
+    transform: none;
+    box-shadow: none;
+    line-height: 1.2;
+}
+
+.breadcrumb-link:hover {
+    background: #f5f0f7;
+    color: #734666;
+    transform: none;
+    box-shadow: none;
+}
+
+.breadcrumb-current {
+    padding: 4px 8px;
+    color: #333;
+    font-weight: 600;
+}
+
+.breadcrumb-sep {
+    color: #bbb;
+    user-select: none;
+    padding: 0 2px;
+}
+
+/* ============ Папки ============ */
+.folder-item {
+    border-left-color: #b8952e;
+}
+
+.folder-item .map-title {
+    color: #6b5312;
+}
+
+/* ============ Folder picker ============ */
+.folder-picker {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 15px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.folder-picker:focus {
+    outline: none;
+    border-color: #948069;
+}
+
+.folder-picker option:disabled {
+    color: #aaa;
+}
+
+/* ============ Модалка удаления папки ============ */
+.delete-folder-modal p {
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 18px;
+}
+
+.delete-folder-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.delete-folder-actions button {
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .breadcrumbs {
+        font-size: 13px;
+    }
+}
