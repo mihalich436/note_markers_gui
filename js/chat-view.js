@@ -451,6 +451,7 @@ class ChatView {
         tmp.innerHTML = html;
         // кнопки-ссылки считаем содержимым
         if (tmp.querySelector('.app-link-btn')) return true;
+        if (tmp.querySelector('img')) return true; 
         const text = tmp.textContent.replace(/[\s\u200B]/g, '');
         return text.length > 0;
     }
