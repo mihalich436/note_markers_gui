@@ -46,6 +46,11 @@
 .view-modal-btn:hover { background: #e9ecef; }
 .view-modal-btn.primary { background: #40c057; color: white; border-color: #2b8e3c; }
 .view-modal-btn.primary:hover { background: #2f9e44; }
+@media (max-width: 450px) {
+    #expandViewModal {
+        display: none;
+    }
+}
 
 .send-message-btn {
     width: 38px; height: 38px;
