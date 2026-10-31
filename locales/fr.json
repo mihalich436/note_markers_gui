@@ -218,7 +218,6 @@
     "zoom_in": "Zoom avant (Ctrl +)",
     "zoom_out": "Zoom arrière (Ctrl -)",
     "reset_zoom": "Réinitialiser le zoom",
-    "zoom_reset_done": "Zoom réinitialisé",
 
     "upload_image": "Télécharger une image",
     "upload_image_hint": "Télécharger une image par URL",
@@ -333,8 +332,6 @@
     "notification_error_map_load": "Erreur lors du chargement de la carte",
     "notification_no_image_link": "Aucun lien d'image",
     "notification_click_new_place": "Cliquez sur un nouvel emplacement pour le marqueur",
-    "notification_labels_hidden_zoom": "Étiquettes masquées, survolez un marqueur pour le voir",
-    "notification_labels_hidden_touch": "Étiquettes masquées, touchez un marqueur pour le voir",
     "notification_project_saved": "Projet enregistré dans un fichier",
     "notification_project_loaded": "Projet chargé avec succès",
     "notification_markers_imported": "Marqueurs importés",

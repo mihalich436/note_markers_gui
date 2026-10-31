@@ -218,7 +218,6 @@
     "zoom_in": "Acercar (Ctrl +)",
     "zoom_out": "Alejar (Ctrl -)",
     "reset_zoom": "Restablecer zoom",
-    "zoom_reset_done": "Zoom restablecido",
 
     "upload_image": "Subir imagen",
     "upload_image_hint": "Subir una imagen por URL",
@@ -333,8 +332,6 @@
     "notification_error_map_load": "Error al cargar el mapa",
     "notification_no_image_link": "Sin enlace de imagen",
     "notification_click_new_place": "Haz clic en un nuevo lugar para el marcador",
-    "notification_labels_hidden_zoom": "Etiquetas ocultas, pasa el cursor sobre un marcador para verlo",
-    "notification_labels_hidden_touch": "Etiquetas ocultas, toca un marcador para verlo",
     "notification_project_saved": "Proyecto guardado en archivo",
     "notification_project_loaded": "Proyecto cargado correctamente",
     "notification_markers_imported": "Marcadores importados",

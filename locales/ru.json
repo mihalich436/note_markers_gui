@@ -218,7 +218,6 @@
     "zoom_in": "Приблизить (Ctrl +)",
     "zoom_out": "Отдалить (Ctrl -)",
     "reset_zoom": "Сбросить масштаб",
-    "zoom_reset_done": "Масштаб сброшен",
 
     "upload_image": "Загрузить изображение",
     "upload_image_hint": "Загрузить изображение по ссылке",
@@ -333,8 +332,6 @@
     "notification_error_map_load": "Ошибка загрузки карты",
     "notification_no_image_link": "Нет ссылки на изображение",
     "notification_click_new_place": "Кликните на новое место для маркера",
-    "notification_labels_hidden_zoom": "Подписи скрыты, наведите на маркер для просмотра",
-    "notification_labels_hidden_touch": "Подписи скрыты, коснитесь маркера для просмотра",
     "notification_project_saved": "Проект сохранён в файл",
     "notification_project_loaded": "Проект успешно загружен",
     "notification_markers_imported": "Маркеры импортированы",

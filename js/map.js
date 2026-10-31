@@ -1471,10 +1471,6 @@ class MarkerApp {
                     const updateShowLabels = (this.showLabels != showLabelsOld);
 
                     this.renderMarkers(updateShowLabels);
-
-                    if (!this.showLabels && updateShowLabels) {
-                        this.showTooltip(t('map.notification_labels_hidden_touch'), 1000);
-                    }
                 }
             }
 

@@ -218,7 +218,6 @@
     "zoom_in": "Mărește (Ctrl +)",
     "zoom_out": "Micșorează (Ctrl -)",
     "reset_zoom": "Resetează zoom-ul",
-    "zoom_reset_done": "Zoom resetat",
 
     "upload_image": "Încarcă imagine",
     "upload_image_hint": "Încarcă o imagine prin URL",
@@ -333,8 +332,6 @@
     "notification_error_map_load": "Eroare la încărcarea hărții",
     "notification_no_image_link": "Fără link de imagine",
     "notification_click_new_place": "Clic pe un loc nou pentru marker",
-    "notification_labels_hidden_zoom": "Etichete ascunse, treci cu mouse-ul peste un marker pentru a vedea",
-    "notification_labels_hidden_touch": "Etichete ascunse, atinge un marker pentru a vedea",
     "notification_project_saved": "Proiect salvat în fișier",
     "notification_project_loaded": "Proiect încărcat cu succes",
     "notification_markers_imported": "Markere importate",

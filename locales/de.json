@@ -218,7 +218,6 @@
     "zoom_in": "Vergrößern (Strg +)",
     "zoom_out": "Verkleinern (Strg -)",
     "reset_zoom": "Zoom zurücksetzen",
-    "zoom_reset_done": "Zoom zurückgesetzt",
 
     "upload_image": "Bild hochladen",
     "upload_image_hint": "Bild per URL hochladen",
@@ -333,8 +332,6 @@
     "notification_error_map_load": "Fehler beim Laden der Karte",
     "notification_no_image_link": "Kein Bild-Link",
     "notification_click_new_place": "Klicke auf eine neue Stelle für den Marker",
-    "notification_labels_hidden_zoom": "Beschriftungen ausgeblendet, fahre mit der Maus über einen Marker",
-    "notification_labels_hidden_touch": "Beschriftungen ausgeblendet, tippe auf einen Marker",
     "notification_project_saved": "Projekt in Datei gespeichert",
     "notification_project_loaded": "Projekt erfolgreich geladen",
     "notification_markers_imported": "Marker importiert",

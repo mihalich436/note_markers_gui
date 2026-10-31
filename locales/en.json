@@ -218,7 +218,6 @@
     "zoom_in": "Zoom in (Ctrl +)",
     "zoom_out": "Zoom out (Ctrl -)",
     "reset_zoom": "Reset zoom",
-    "zoom_reset_done": "Zoom reset",
 
     "upload_image": "Upload image",
     "upload_image_hint": "Upload an image by URL",
@@ -333,8 +332,6 @@
     "notification_error_map_load": "Error loading the map",
     "notification_no_image_link": "No image link",
     "notification_click_new_place": "Click on a new place for the marker",
-    "notification_labels_hidden_zoom": "Labels hidden, hover over a marker to view",
-    "notification_labels_hidden_touch": "Labels hidden, tap a marker to view",
     "notification_project_saved": "Project saved to file",
     "notification_project_loaded": "Project loaded successfully",
     "notification_markers_imported": "Markers imported",
