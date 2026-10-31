@@ -221,11 +221,11 @@
 
     "upload_image": "Enviar imagem",
     "upload_image_hint": "Enviar uma imagem por URL",
-    "marker_settings": "Configurações de marcadores",
+    "marker_settings": "⚙️ Configurações de marcadores",
     "marker_settings_hint": "Configurar estilos de marcador padrão e mais",
-    "markers_list": "Lista de marcadores",
+    "markers_list": "📋 Lista de marcadores",
     "markers_list_hint": "Mostrar a lista de marcadores no mapa",
-    "help": "Ajuda",
+    "help": "❓ Ajuda",
     "help_hint": "Mostrar dicas do site",
 
     "edit_marker_title": "Editar marcador",

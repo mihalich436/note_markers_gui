@@ -221,11 +221,11 @@
 
     "upload_image": "Încarcă imagine",
     "upload_image_hint": "Încarcă o imagine prin URL",
-    "marker_settings": "Setări markere",
+    "marker_settings": "⚙️ Setări markere",
     "marker_settings_hint": "Configurează stilurile implicite ale markerelor și altele",
-    "markers_list": "Lista markerelor",
+    "markers_list": "📋 Lista markerelor",
     "markers_list_hint": "Arată lista markerelor de pe hartă",
-    "help": "Ajutor",
+    "help": "❓ Ajutor",
     "help_hint": "Arată sfaturi despre site",
 
     "edit_marker_title": "Editează markerul",

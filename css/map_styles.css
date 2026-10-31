@@ -50,23 +50,53 @@ body {
     flex-wrap: wrap;
 }
 
-.toolbar-btn {
-    padding: 8px 16px;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    background: white;
-    color: #495057;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
+.toolbar-btn,
+.zoom-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    color: #495057;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.toolbar-btn:hover {
+.toolbar-btn:hover,
+.zoom-btn:hover {
     background: #e9ecef;
-    border-color: #adb5bd;
+    color: #212529;
+}
+
+.toolbar-btn:active,
+.zoom-btn:active {
+    transform: scale(0.95);
+}
+
+.toolbar-icon,
+.toolbar-btn svg {
+    width: 22px;
+    height: 22px;
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
+.zoom-icon,
+.zoom-btn svg {
+    width: 24px;
+    height: 24px;
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
+#fileMenuBtn {
+    font-size: 22px;
+    line-height: 1;
 }
 
 .map-logo {
@@ -113,43 +143,6 @@ body {
     .map-logo {
         padding: 4px;
     }
-}
-
-.zoom-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px;
-    height: 38px;
-    padding: 0;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    background: white;
-    color: #495057;
-    cursor: pointer;
-    transition: all 0.2s;
-    padding: 0;
-}
-
-.zoom-btn:hover {
-    background: #e9ecef;
-    border-color: #adb5bd;
-    color: #212529;
-}
-
-.zoom-btn:active { transform: scale(0.95); }
-
-.zoom-btn svg {
-    width: 22px;
-    height: 22px;
-    pointer-events: none;
-}
-
-.zoom-icon {
-    width: 20px;
-    height: 20px;
-    object-fit: contain;
-    pointer-events: none;
 }
 
 /* Основной контент */
@@ -998,8 +991,15 @@ body {
 
 /* Адаптация для мобильных */
 @media (max-width: 768px) {
-    .toolbar-btn-text {
-        display: none;
+    .toolbar-btn,
+    .zoom-btn {
+        width: 34px;
+        height: 34px;
+    }
+    .toolbar-icon,
+    .zoom-icon {
+        width: 18px;
+        height: 18px;
     }
     .toolbar-group {
         justify-content: center;

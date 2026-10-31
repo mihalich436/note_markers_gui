@@ -221,11 +221,11 @@
 
     "upload_image": "Télécharger une image",
     "upload_image_hint": "Télécharger une image par URL",
-    "marker_settings": "Réglages des marqueurs",
+    "marker_settings": "⚙️ Réglages des marqueurs",
     "marker_settings_hint": "Configurer les styles de marqueur par défaut, etc.",
-    "markers_list": "Liste des marqueurs",
+    "markers_list": "📋 Liste des marqueurs",
     "markers_list_hint": "Afficher la liste des marqueurs sur la carte",
-    "help": "Aide",
+    "help": "❓ Aide",
     "help_hint": "Afficher les astuces du site",
 
     "edit_marker_title": "Modifier le marqueur",

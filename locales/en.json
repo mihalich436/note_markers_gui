@@ -221,11 +221,11 @@
 
     "upload_image": "Upload image",
     "upload_image_hint": "Upload an image by URL",
-    "marker_settings": "Marker settings",
+    "marker_settings": "⚙️ Marker settings",
     "marker_settings_hint": "Configure default marker styles and more",
-    "markers_list": "Markers list",
+    "markers_list": "📋 Markers list",
     "markers_list_hint": "Show the list of markers on the map",
-    "help": "Help",
+    "help": "❓ Help",
     "help_hint": "Show site hints",
 
     "edit_marker_title": "Edit marker",
